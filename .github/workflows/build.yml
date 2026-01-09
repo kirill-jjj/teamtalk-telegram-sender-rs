@@ -1,8 +1,12 @@
 name: Build Binaries
 
+permissions:
+  contents: write
+
 on:
   push:
     branches: [ "master" ]
+    tags: [ "v*.*.*" ]
   pull_request:
     branches: [ "master" ]
   workflow_dispatch:
@@ -22,13 +26,26 @@ jobs:
           - os: ubuntu-latest
             artifact_name: teamtalk-telegram-sender-linux
             bin_name: teamtalk-telegram-sender-rs
+            asset_name: teamtalk-telegram-sender-rs-linux.tar.gz
           - os: windows-latest
             artifact_name: teamtalk-telegram-sender-windows
             bin_name: teamtalk-telegram-sender-rs.exe
+            asset_name: teamtalk-telegram-sender-rs-windows.zip
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+
+      - name: Check version consistency
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          CARGO_VERSION=$(grep "^version" Cargo.toml | head -n 1 | cut -d '"' -f 2)
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
+            echo "Error: Cargo.toml version ($CARGO_VERSION) does not match Tag ($TAG_VERSION)"
+            exit 1
+          fi
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -41,7 +58,7 @@ jobs:
       - name: Build Release
         run: cargo build --release --verbose
 
-      - name: Prepare Artifact
+      - name: Prepare Artifacts
         shell: bash
         run: |
           mkdir payload
@@ -51,10 +68,26 @@ jobs:
             cp target/release/${{ matrix.bin_name }} payload/${{ matrix.bin_name }}
           fi
           cp config.toml.example payload/config.toml.example
-          cp -r locales payload/locales
+
+      - name: Create Archive
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          cd payload
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            7z a ../${{ matrix.asset_name }} *
+          else
+            tar -czvf ../${{ matrix.asset_name }} *
+          fi
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.artifact_name }}
           path: payload/
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ${{ matrix.asset_name }}
