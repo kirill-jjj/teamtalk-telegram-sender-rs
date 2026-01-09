@@ -1,0 +1,60 @@
+name: Build Binaries
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  SQLX_OFFLINE: true
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact_name: teamtalk-telegram-sender-linux
+            bin_name: teamtalk-telegram-sender-rs
+          - os: windows-latest
+            artifact_name: teamtalk-telegram-sender-windows
+            bin_name: teamtalk-telegram-sender-rs.exe
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+
+      - name: Build Release
+        run: cargo build --release --verbose
+
+      - name: Prepare Artifact
+        shell: bash
+        run: |
+          mkdir payload
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp target/release/${{ matrix.bin_name }} payload/${{ matrix.bin_name }}
+          else
+            cp target/release/${{ matrix.bin_name }} payload/${{ matrix.bin_name }}
+          fi
+          cp config.toml.example payload/config.toml.example
+          cp -r locales payload/locales
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: payload/
