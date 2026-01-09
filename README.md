@@ -7,7 +7,7 @@ This bot monitors your TeamTalk server for user activity (joins, leaves) and sen
 ## 🚀 Features
 
 *   **Real-time Notifications:** Receive alerts when users join or leave the server.
-*   **Two-Way Interaction:** 
+*   **Two-Way Interaction:**
     *   Chat messages sent to the bot in TeamTalk are forwarded to the Telegram Admin.
     *   Admins can reply from Telegram back to the TeamTalk user.
 *   **Admin Tools:** Kick and Ban users via an interactive Telegram interface (buttons).

@@ -56,9 +56,9 @@ resp-noon-updated = NOON status updated: { $status }
 
 # Mute Management
 mute-title = <b>Manage Mute List</b>
-    
+
     { $mode_desc }
-    
+
     ⚠️ <b>Note on Guests:</b> This server allows shared guest accounts. You cannot mute a specific guest individually. Adding a guest account to the blacklist will mute <b>ALL</b> users logged in as guests.
 
 mute-mode-blacklist = Current mode is Blacklist. You receive notifications from everyone except those on the list.
@@ -131,7 +131,7 @@ status-disabled = Disabled
 admin-alert =
     Message from server <b>{ $server }</b>
     From <b>{ $nick }</b>:
-    
+
     { $msg }
 tt-msg-sent = Message sent to Telegram.
 tt-msg-failed = Failed to send message to Telegram.
@@ -142,10 +142,10 @@ tt-admin-add-fail = Failed to add { $count } admins (already admins or invalid I
 tt-admin-removed = Successfully removed { $count } admins.
 tt-admin-remove-fail = Failed to remove { $count } admins (not admins or invalid IDs).
 tt-admin-no-ids = No valid admin IDs provided for adding or removing.
-tt-admin-help-header = 
-    
+tt-admin-help-header =
+
     Admin commands (MAIN_ADMIN from config only):
-tt-admin-help-cmds = 
+tt-admin-help-cmds =
     /add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.
     /remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin.
 

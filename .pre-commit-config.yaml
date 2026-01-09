@@ -15,6 +15,7 @@ repos:
         entry: cargo fmt
         language: system
         types: [rust]
+        pass_filenames: false
         args: ["--"]
 
       - id: clippy
@@ -23,6 +24,7 @@ repos:
         language: system
         args: ["--", "-D", "warnings"]
         types: [rust]
+        pass_filenames: false
 
       - id: sqlx-prepare
         name: cargo sqlx prepare
