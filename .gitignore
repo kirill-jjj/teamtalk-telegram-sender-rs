@@ -1,0 +1,17 @@
+.env
+/target
+
+config.toml
+
+*.db
+*.db-shm
+*.db-wal
+bot_data.db
+
+# Файлы резервных копий и временные файлы редакторов
+**/*.rs.bk
+*.swp
+*~
+.vscode/
+.idea/
+*.DS_Store

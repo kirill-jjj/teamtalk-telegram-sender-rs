@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT language_code FROM user_settings WHERE teamtalk_username = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "language_code",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "0103192bf60b981bb1a180183d2bb703fdf378417fc9ff212120c380965e8edf"
+}

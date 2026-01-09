@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO ban_list (telegram_id, teamtalk_username, ban_reason, banned_at) VALUES (?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "142f2d1e9a395e3a9839a9b37d9ca78b489e8593e4d85d1e4fc7401fb6f0cb1a"
+}

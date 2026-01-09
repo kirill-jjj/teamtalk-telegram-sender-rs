@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE user_settings SET teamtalk_username = ?, not_on_online_confirmed = 1 WHERE telegram_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "3c8f07c6ed2462cc7755bc3bc836b94bb1b3002b210a5cdc1e0d6374488c1068"
+}

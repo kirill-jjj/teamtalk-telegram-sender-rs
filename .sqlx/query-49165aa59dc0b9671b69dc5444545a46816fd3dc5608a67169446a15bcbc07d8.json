@@ -1,0 +1,44 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT * FROM ban_list ORDER BY banned_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "telegram_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "teamtalk_username",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "ban_reason",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "banned_at",
+        "ordinal": 4,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "49165aa59dc0b9671b69dc5444545a46816fd3dc5608a67169446a15bcbc07d8"
+}

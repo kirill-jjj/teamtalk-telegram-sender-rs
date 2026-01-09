@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT count(*) as count FROM ban_list WHERE teamtalk_username = ? COLLATE NOCASE",
+  "describe": {
+    "columns": [
+      {
+        "name": "count",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e2ba2c55494b7586127da1110c50aa73f7b23b08f45705e949b2ced72b9c64c1"
+}

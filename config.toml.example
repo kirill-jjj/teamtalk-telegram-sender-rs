@@ -1,0 +1,26 @@
+[teamtalk]
+host_name = "example.com"
+port = 10333
+user_name = "bot_username"
+nick_name = "Telegram Bot"
+password = "YOUR_TT_PASSWORD_HERE"
+channel = "/"
+channel_password = ""
+encrypted = false
+client_name = "telegrambot"
+gender = "male"
+server_name = ""
+status_text = "Bot status text"
+global_ignore_usernames = ["admin_bot"]
+
+[telegram]
+message_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
+event_token = "YOUR_EVENT_BOT_TOKEN_HERE"
+admin_chat_id = 123456789
+
+[general]
+admin_username = "AdminTG"
+default_lang = "ru"
+
+[database]
+db_file = "bot_data.db"

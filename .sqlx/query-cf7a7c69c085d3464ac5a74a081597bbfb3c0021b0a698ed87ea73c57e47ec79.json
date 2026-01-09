@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT CAST(not_on_online_enabled AS INTEGER) FROM user_settings WHERE telegram_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "CAST(not_on_online_enabled AS INTEGER)",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cf7a7c69c085d3464ac5a74a081597bbfb3c0021b0a698ed87ea73c57e47ec79"
+}

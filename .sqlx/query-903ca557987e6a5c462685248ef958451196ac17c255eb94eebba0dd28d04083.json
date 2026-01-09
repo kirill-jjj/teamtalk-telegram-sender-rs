@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT telegram_id FROM admins",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "903ca557987e6a5c462685248ef958451196ac17c255eb94eebba0dd28d04083"
+}

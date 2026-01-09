@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE user_settings SET not_on_online_enabled = ? WHERE telegram_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "2a9c870f8fc9d7a9f1447047cc2cc8cca763f2aa58997c766b63e26f7ce16ef4"
+}
