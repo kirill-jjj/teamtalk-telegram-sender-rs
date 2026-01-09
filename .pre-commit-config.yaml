@@ -1,0 +1,32 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-added-large-files
+
+  - repo: local
+    hooks:
+      - id: fmt
+        name: cargo fmt
+        entry: cargo fmt
+        language: system
+        types: [rust]
+        args: ["--"]
+
+      - id: clippy
+        name: cargo clippy
+        entry: cargo clippy
+        language: system
+        args: ["--", "-D", "warnings"]
+        types: [rust]
+
+      - id: sqlx-prepare
+        name: cargo sqlx prepare
+        entry: cargo sqlx prepare
+        language: system
+        types: [rust]
+        pass_filenames: false
