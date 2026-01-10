@@ -9,6 +9,8 @@ use dashmap::DashMap;
 use futures::{StreamExt, stream};
 use std::collections::HashMap;
 use std::sync::Arc;
+use teloxide::ApiError;
+use teloxide::RequestError;
 use teloxide::{prelude::*, utils::html};
 
 #[allow(clippy::too_many_arguments)]
@@ -74,6 +76,7 @@ pub async fn run_bridge(
                         })
                         .clone();
 
+                    let db_for_closure = db_clone.clone();
                     async move {
                         let mut send_silent = false;
 
@@ -90,8 +93,26 @@ pub async fn run_bridge(
                             .parse_mode(teloxide::types::ParseMode::Html)
                             .disable_notification(send_silent)
                             .await;
+
                         if let Err(e) = res {
                             log::warn!("Failed to send notification to {}: {}", sub.telegram_id, e);
+
+                            if let RequestError::Api(api_err) = e {
+                                match api_err {
+                                    ApiError::BotBlocked |
+                                    ApiError::UserDeactivated |
+                                    ApiError::ChatNotFound => {
+                                        log::info!("🗑️ [BRIDGE] Cleaning up: User {} is no longer reachable ({:?}).", sub.telegram_id, api_err);
+
+                                        if let Err(db_err) = db_for_closure.delete_user_profile(sub.telegram_id).await {
+                                            log::error!("❌ [BRIDGE] DB error during auto-cleanup for {}: {}", sub.telegram_id, db_err);
+                                        } else {
+                                            log::info!("✅ [BRIDGE] Profile for {} removed successfully.", sub.telegram_id);
+                                        }
+                                    },
+                                    _ => {}
+                                }
+                            }
                         }
                     }
                 });
