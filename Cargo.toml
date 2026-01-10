@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [profile.release]
-lto = true              # "Fat" LTO: Максимальная оптимизация всего кода сразу
-codegen-units = 1       # Компилировать в 1 поток (медленнее сборка, но код быстрее и меньше)
-strip = true            # Удалить отладочную информацию (сильно уменьшает размер файла)
+lto = true              # "Fat" LTO
+codegen-units = 1
+strip = true
 panic = "abort"
 opt-level = 3
 
@@ -22,7 +22,7 @@ anyhow = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 rand = "0.9"
 dashmap = "6.1"
-uuid = { version = "1.7", features = ["v4", "fast-rng"] } # Для генерации ссылок
+uuid = { version = "1.7", features = ["v4", "fast-rng"] }
 teamtalk = "1.0"
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"

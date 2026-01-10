@@ -61,7 +61,7 @@ pub async fn handle_mute(
         MuteAction::Toggle { username, page } => {
             toggle_mute(db, telegram_id, &username).await;
 
-            let args = args!(user = username.clone(), action = "toggled"); // Упрощение
+            let args = args!(user = username.clone(), action = "toggled");
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(lang, "toast-user-muted", args.as_ref()))
                 .await?;

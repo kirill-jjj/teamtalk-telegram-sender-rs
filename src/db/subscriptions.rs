@@ -80,9 +80,9 @@ impl Database {
                 (us.mute_list_mode = 'whitelist' AND mu.id IS NOT NULL)
             )
             "#,
-            tt_username, // Аргумент 1: имя для проверки мьюта
-            event_tag,   // Аргумент 2: проверка на join
-            event_tag    // Аргумент 3: проверка на leave
+            tt_username,
+            event_tag,
+            event_tag
         )
         .fetch_all(&self.pool)
         .await?;

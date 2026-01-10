@@ -41,7 +41,7 @@ pub async fn send_unban_list(
         |p| CallbackAction::Admin(AdminAction::UnbanList { page: p }),
         Some((
             locales::get_text(lang, "btn-back-menu", None),
-            CallbackAction::Menu(MenuAction::Who), // Или в админ-меню, если будет отдельное
+            CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
     );

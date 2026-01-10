@@ -1,7 +1,7 @@
 pub mod admin_logic;
 pub mod callback_handlers;
 pub mod callbacks;
-pub mod callbacks_types; // <-- НОВОЕ
+pub mod callbacks_types;
 pub mod commands;
 pub mod keyboards;
 pub mod settings_logic;

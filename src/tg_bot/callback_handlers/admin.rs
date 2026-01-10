@@ -42,7 +42,7 @@ pub async fn handle_admin(
                     )
                 },
                 |p| CallbackAction::Admin(AdminAction::KickList { page: p }),
-                None, // Или кнопку "Назад в меню"
+                None,
                 lang,
             );
 

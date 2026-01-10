@@ -2,7 +2,6 @@ use anyhow::{Result, anyhow};
 use std::fmt;
 use std::str::FromStr;
 
-/// Главный Enum для всех действий в коллбэках
 #[derive(Debug, PartialEq, Clone)]
 pub enum CallbackAction {
     Menu(MenuAction),
@@ -11,7 +10,7 @@ pub enum CallbackAction {
     Subscriber(SubAction),
     Mute(MuteAction),
     Unsub(UnsubAction),
-    NoOp, // <-- ДОБАВЛЕНО
+    NoOp,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -140,7 +139,7 @@ impl fmt::Display for CallbackAction {
             CallbackAction::Subscriber(a) => write!(f, "u:{}", a),
             CallbackAction::Mute(a) => write!(f, "mt:{}", a),
             CallbackAction::Unsub(a) => write!(f, "x:{}", a),
-            CallbackAction::NoOp => write!(f, "noop"), // <-- ДОБАВЛЕНО
+            CallbackAction::NoOp => write!(f, "noop"),
         }
     }
 }
@@ -253,7 +252,7 @@ impl FromStr for CallbackAction {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "noop" {
             return Ok(CallbackAction::NoOp);
-        } // <-- ДОБАВЛЕНО
+        }
 
         let mut parts = s.splitn(2, ':');
         let prefix = parts.next().ok_or_else(|| anyhow!("Empty callback"))?;

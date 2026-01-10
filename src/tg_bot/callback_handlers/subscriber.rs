@@ -133,7 +133,7 @@ pub async fn handle_subscriber_actions(
         }
         SubAction::NoonToggle { sub_id, page } => {
             db.toggle_noon(sub_id).await.ok();
-            let status = "toggled"; // Упрощаем, так как статус обновится в меню
+            let status = "toggled";
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,

@@ -80,7 +80,7 @@ where
         let (name, action) = item_mapper(item);
         buttons.push(vec![InlineKeyboardButton::callback(
             name,
-            action.to_string(), // Сериализуем Enum в строку
+            action.to_string(),
         )]);
     }
 
