@@ -74,7 +74,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         Some(username.as_str())
                     };
 
-                    let token = Uuid::new_v4().to_string().replace('-', "");
+                    let token = Uuid::now_v7().to_string().replace('-', "");
                     let res = db
                         .create_deeplink(&token, "subscribe", payload, deeplink_ttl)
                         .await;
@@ -102,7 +102,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
             } else if cmd == "/unsub" {
                 if let Some(bot_user) = &bot_username {
-                    let token = Uuid::new_v4().to_string().replace('-', "");
+                    let token = Uuid::now_v7().to_string().replace('-', "");
                     let res = db
                         .create_deeplink(&token, "unsubscribe", None, deeplink_ttl)
                         .await;

@@ -19,7 +19,7 @@ toml = "0.9"
 anyhow = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 dashmap = "6.1"
-uuid = { version = "1.7", features = ["v4", "fast-rng"] }
+uuid = { version = "1.7", features = ["fast-rng", "v7"] }
 teamtalk = "1.0"
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
