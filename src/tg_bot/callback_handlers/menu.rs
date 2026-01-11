@@ -1,11 +1,12 @@
 use crate::locales;
 use crate::tg_bot::callbacks_types::{CallbackAction, MenuAction, UnsubAction};
+use crate::tg_bot::keyboards::confirm_cancel_keyboard;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::notify_admin_error;
+use crate::tg_bot::utils::{answer_callback_empty, notify_admin_error};
 use crate::types::LanguageCode;
 use crate::types::TtCommand;
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
+use teloxide::types::ParseMode;
 
 pub async fn handle_menu(
     bot: Bot,
@@ -37,32 +38,29 @@ pub async fn handle_menu(
                 )
                 .await;
             }
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Help => {
             bot.send_message(chat_id, locales::get_text(lang.as_str(), "help-text", None))
                 .parse_mode(ParseMode::Html)
                 .await?;
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Unsub => {
             let text = locales::get_text(lang.as_str(), "unsub-confirm-text", None);
-            let keyboard = InlineKeyboardMarkup::new(vec![vec![
-                InlineKeyboardButton::callback(
-                    locales::get_text(lang.as_str(), "btn-yes", None),
-                    CallbackAction::Unsub(UnsubAction::Confirm).to_string(),
-                ),
-                InlineKeyboardButton::callback(
-                    locales::get_text(lang.as_str(), "btn-no", None),
-                    CallbackAction::Unsub(UnsubAction::Cancel).to_string(),
-                ),
-            ]]);
+            let keyboard = confirm_cancel_keyboard(
+                lang,
+                "btn-yes",
+                CallbackAction::Unsub(UnsubAction::Confirm),
+                "btn-no",
+                CallbackAction::Unsub(UnsubAction::Cancel),
+            );
 
             bot.send_message(chat_id, text)
                 .reply_markup(keyboard)
                 .await?;
 
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Settings => {}
     }

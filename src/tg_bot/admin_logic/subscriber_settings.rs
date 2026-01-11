@@ -2,11 +2,11 @@ use crate::args;
 use crate::db::Database;
 use crate::locales;
 use crate::tg_bot::callbacks_types::{CallbackAction, SubAction};
-use crate::tg_bot::keyboards::create_user_list_keyboard;
+use crate::tg_bot::keyboards::{back_btn, back_button, callback_button, create_user_list_keyboard};
 use crate::types::{LanguageCode, MuteListMode, NotificationSetting};
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::types::InlineKeyboardMarkup;
 
 pub async fn send_sub_manage_tt_menu(
     bot: &Bot,
@@ -37,7 +37,7 @@ pub async fn send_sub_manage_tt_menu(
     let mut buttons = vec![];
     if let Some(user) = tt_user {
         let args_btn = args!(user = user);
-        buttons.push(vec![InlineKeyboardButton::callback(
+        buttons.push(vec![callback_button(
             locales::get_text(lang.as_str(), "btn-unlink", args_btn.as_ref()),
             CallbackAction::Subscriber(SubAction::Unlink {
                 sub_id,
@@ -46,7 +46,7 @@ pub async fn send_sub_manage_tt_menu(
             .to_string(),
         )]);
     }
-    buttons.push(vec![InlineKeyboardButton::callback(
+    buttons.push(vec![callback_button(
         locales::get_text(lang.as_str(), "btn-link-new", None),
         CallbackAction::Subscriber(SubAction::LinkList {
             sub_id,
@@ -55,13 +55,13 @@ pub async fn send_sub_manage_tt_menu(
         })
         .to_string(),
     )]);
-    buttons.push(vec![InlineKeyboardButton::callback(
-        locales::get_text(lang.as_str(), "btn-back-user-actions", None),
+    buttons.push(vec![back_button(
+        lang,
+        "btn-back-user-actions",
         CallbackAction::Subscriber(SubAction::Details {
             sub_id,
             page: return_page,
-        })
-        .to_string(),
+        }),
     )]);
 
     bot.edit_message_text(msg.chat.id, msg.id, text)
@@ -103,8 +103,9 @@ pub async fn send_sub_link_account_list(
                 list_page: p,
             })
         },
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-manage-acc", None),
+        Some(back_btn(
+            lang,
+            "btn-back-manage-acc",
             CallbackAction::Subscriber(SubAction::ManageTt {
                 sub_id: target_id,
                 page: sub_page,
@@ -133,7 +134,7 @@ pub async fn send_sub_lang_menu(
     let text = locales::get_text(lang.as_str(), "sub-lang-title", args.as_ref());
 
     let mk_btn = |lbl: &str, l_code: &str| {
-        InlineKeyboardButton::callback(
+        callback_button(
             lbl,
             CallbackAction::Subscriber(SubAction::LangSet {
                 sub_id: target_id,
@@ -150,13 +151,13 @@ pub async fn send_sub_lang_menu(
     let keyboard = InlineKeyboardMarkup::new(vec![
         vec![mk_btn("🇷🇺 Русский", "ru")],
         vec![mk_btn("🇬🇧 English", "en")],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-user-actions", None),
+        vec![back_button(
+            lang,
+            "btn-back-user-actions",
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: return_page,
-            })
-            .to_string(),
+            }),
         )],
     ]);
 
@@ -193,29 +194,23 @@ pub async fn send_sub_notif_menu(
     };
 
     let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![InlineKeyboardButton::callback(
-            btn_all,
-            mk_act(NotificationSetting::All),
-        )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(btn_all, mk_act(NotificationSetting::All))],
+        vec![callback_button(
             btn_join,
             mk_act(NotificationSetting::JoinOff),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             btn_leave,
             mk_act(NotificationSetting::LeaveOff),
         )],
-        vec![InlineKeyboardButton::callback(
-            btn_none,
-            mk_act(NotificationSetting::None),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-user-actions", None),
+        vec![callback_button(btn_none, mk_act(NotificationSetting::None))],
+        vec![back_button(
+            lang,
+            "btn-back-user-actions",
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: return_page,
-            })
-            .to_string(),
+            }),
         )],
     ]);
 
@@ -248,21 +243,15 @@ pub async fn send_sub_mute_mode_menu(
     };
 
     let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![InlineKeyboardButton::callback(
-            bl_text,
-            mk_act(MuteListMode::Blacklist),
-        )],
-        vec![InlineKeyboardButton::callback(
-            wl_text,
-            mk_act(MuteListMode::Whitelist),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-user-actions", None),
+        vec![callback_button(bl_text, mk_act(MuteListMode::Blacklist))],
+        vec![callback_button(wl_text, mk_act(MuteListMode::Whitelist))],
+        vec![back_button(
+            lang,
+            "btn-back-user-actions",
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: return_page,
-            })
-            .to_string(),
+            }),
         )],
     ]);
 
@@ -304,8 +293,9 @@ pub async fn send_sub_mute_list(
                 view_page: p,
             })
         },
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-user-actions", None),
+        Some(back_btn(
+            lang,
+            "btn-back-user-actions",
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: sub_page,

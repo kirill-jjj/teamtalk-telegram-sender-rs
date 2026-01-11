@@ -1,14 +1,15 @@
 use crate::args;
 use crate::locales;
 use crate::tg_bot::callbacks_types::{CallbackAction, SettingsAction};
+use crate::tg_bot::keyboards::{back_button, callback_button};
 use crate::tg_bot::settings_logic::{
     send_main_settings_edit, send_mute_menu, send_notif_settings, send_sub_settings,
 };
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::check_db_err;
+use crate::tg_bot::utils::{answer_callback, check_db_err};
 use crate::types::{LanguageCode, MuteListMode, NotificationSetting};
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide::types::InlineKeyboardMarkup;
 
 pub async fn handle_settings(
     bot: Bot,
@@ -32,23 +33,24 @@ pub async fn handle_settings(
         }
         SettingsAction::LangSelect => {
             let keyboard = InlineKeyboardMarkup::new(vec![
-                vec![InlineKeyboardButton::callback(
+                vec![callback_button(
                     "🇷🇺 Русский",
                     CallbackAction::Settings(SettingsAction::LangSet {
                         lang: LanguageCode::Ru,
                     })
                     .to_string(),
                 )],
-                vec![InlineKeyboardButton::callback(
+                vec![callback_button(
                     "🇬🇧 English",
                     CallbackAction::Settings(SettingsAction::LangSet {
                         lang: LanguageCode::En,
                     })
                     .to_string(),
                 )],
-                vec![InlineKeyboardButton::callback(
-                    locales::get_text(lang.as_str(), "btn-back-settings", None),
-                    CallbackAction::Settings(SettingsAction::Main).to_string(),
+                vec![back_button(
+                    lang,
+                    "btn-back-settings",
+                    CallbackAction::Settings(SettingsAction::Main),
                 )],
             ]);
             bot.edit_message_text(
@@ -73,13 +75,13 @@ pub async fn handle_settings(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
-                    new_lang.as_str(),
-                    "toast-lang-updated",
-                    None,
-                ))
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(new_lang.as_str(), "toast-lang-updated", None),
+                false,
+            )
+            .await?;
             send_main_settings_edit(&bot, &msg, new_lang).await?;
         }
         SettingsAction::SubSelect => {
@@ -111,13 +113,17 @@ pub async fn handle_settings(
             };
             let setting_text =
                 locales::get_text(lang.as_str(), text_key, args!(marker = "").as_ref());
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "resp-sub-updated",
                     args!(text = setting_text).as_ref(),
-                ))
-                .await?;
+                ),
+                false,
+            )
+            .await?;
             send_sub_settings(&bot, &msg, db, telegram_id, lang).await?;
         }
         SettingsAction::NotifSelect => {
@@ -142,14 +148,13 @@ pub async fn handle_settings(
             };
 
             if user_settings.teamtalk_username.is_none() {
-                bot.answer_callback_query(q.id)
-                    .text(locales::get_text(
-                        lang.as_str(),
-                        "cmd-fail-noon-guest",
-                        None,
-                    ))
-                    .show_alert(true)
-                    .await?;
+                answer_callback(
+                    &bot,
+                    &q.id,
+                    locales::get_text(lang.as_str(), "cmd-fail-noon-guest", None),
+                    true,
+                )
+                .await?;
                 return Ok(());
             }
 
@@ -161,14 +166,17 @@ pub async fn handle_settings(
                         locales::get_text(lang.as_str(), "status-disabled", None)
                     };
 
-                    if let Err(e) = bot
-                        .answer_callback_query(q.id)
-                        .text(locales::get_text(
+                    if let Err(e) = answer_callback(
+                        &bot,
+                        &q.id,
+                        locales::get_text(
                             lang.as_str(),
                             "resp-noon-updated",
                             args!(status = status).as_ref(),
-                        ))
-                        .await
+                        ),
+                        false,
+                    )
+                    .await
                     {
                         tracing::error!("Failed to send noon update callback: {}", e);
                     }

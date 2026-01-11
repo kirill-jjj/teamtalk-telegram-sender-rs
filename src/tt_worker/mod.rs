@@ -13,6 +13,19 @@ use teamtalk::Client;
 use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
 use teamtalk::types::{UserAccount, UserId};
 
+pub(super) fn resolve_server_name(
+    tt_config: &crate::config::TeamTalkConfig,
+    real_name: Option<&str>,
+) -> String {
+    tt_config
+        .server_name
+        .as_deref()
+        .filter(|s| !s.is_empty())
+        .or(real_name.filter(|s| !s.is_empty()))
+        .unwrap_or(&tt_config.host_name)
+        .to_string()
+}
+
 pub struct WorkerContext {
     pub config: Arc<Config>,
     pub online_users: Arc<DashMap<i32, LiteUser>>,

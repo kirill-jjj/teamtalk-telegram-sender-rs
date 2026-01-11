@@ -1,6 +1,6 @@
 use crate::args;
 use crate::locales;
-use crate::tt_worker::WorkerContext;
+use crate::tt_worker::{WorkerContext, resolve_server_name};
 use crate::types::BridgeEvent;
 use std::fmt::Write;
 use teamtalk::Client;
@@ -16,13 +16,7 @@ pub(super) fn handle_who_command(
     let tt_config = &ctx.config.teamtalk;
 
     let real_name = client.get_server_properties().map(|p| p.name);
-    let server_name = tt_config
-        .server_name
-        .as_deref()
-        .filter(|&s| !s.is_empty())
-        .or(real_name.as_deref().filter(|&s| !s.is_empty()))
-        .unwrap_or(&tt_config.host_name)
-        .to_string();
+    let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
     let users = client.get_server_users();
     let mut channels_data: std::collections::BTreeMap<String, Vec<String>> =

@@ -1,5 +1,5 @@
-use crate::tt_worker::WorkerContext;
 use crate::tt_worker::commands;
+use crate::tt_worker::{WorkerContext, resolve_server_name};
 use crate::types::{BridgeEvent, LiteUser, NotificationType};
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
@@ -125,13 +125,7 @@ pub(super) fn handle_sdk_event(
 
                 if is_ready && !tt_config.global_ignore_usernames.contains(&user.username) {
                     let real_name = client.get_server_properties().map(|p| p.name);
-                    let server_name = tt_config
-                        .server_name
-                        .as_deref()
-                        .filter(|&s| !s.is_empty())
-                        .or(real_name.as_deref().filter(|&s| !s.is_empty()))
-                        .unwrap_or(&tt_config.host_name)
-                        .to_string();
+                    let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
                     if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
                         event_type: NotificationType::Join,
@@ -181,13 +175,7 @@ pub(super) fn handle_sdk_event(
                         .unwrap_or(false);
                     if is_ready && !tt_config.global_ignore_usernames.contains(&u.username) {
                         let real_name = client.get_server_properties().map(|p| p.name);
-                        let server_name = tt_config
-                            .server_name
-                            .as_deref()
-                            .filter(|&s| !s.is_empty())
-                            .or(real_name.as_deref().filter(|&s| !s.is_empty()))
-                            .unwrap_or(&tt_config.host_name)
-                            .to_string();
+                        let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
                         if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
                             event_type: NotificationType::Leave,

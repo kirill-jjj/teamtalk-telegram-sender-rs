@@ -3,6 +3,60 @@ use crate::tg_bot::callbacks_types::CallbackAction;
 use crate::types::LanguageCode;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
+pub fn callback_button<T, A>(text: T, action: A) -> InlineKeyboardButton
+where
+    T: Into<String>,
+    A: ToString,
+{
+    InlineKeyboardButton::callback(text.into(), action.to_string())
+}
+
+pub fn back_button(
+    lang: LanguageCode,
+    back_key: &str,
+    back_action: CallbackAction,
+) -> InlineKeyboardButton {
+    callback_button(
+        locales::get_text(lang.as_str(), back_key, None),
+        back_action,
+    )
+}
+
+pub fn confirm_cancel_keyboard(
+    lang: LanguageCode,
+    yes_key: &str,
+    yes_action: CallbackAction,
+    no_key: &str,
+    no_action: CallbackAction,
+) -> InlineKeyboardMarkup {
+    InlineKeyboardMarkup::new(vec![vec![
+        callback_button(locales::get_text(lang.as_str(), yes_key, None), yes_action),
+        callback_button(locales::get_text(lang.as_str(), no_key, None), no_action),
+    ]])
+}
+
+pub fn back_button_keyboard(
+    lang: LanguageCode,
+    back_key: &str,
+    back_action: CallbackAction,
+) -> InlineKeyboardMarkup {
+    InlineKeyboardMarkup::new(vec![vec![callback_button(
+        locales::get_text(lang.as_str(), back_key, None),
+        back_action,
+    )]])
+}
+
+pub fn back_btn(
+    lang: LanguageCode,
+    back_key: &str,
+    back_action: CallbackAction,
+) -> (String, CallbackAction) {
+    (
+        locales::get_text(lang.as_str(), back_key, None),
+        back_action,
+    )
+}
+
 pub const USERS_PER_PAGE: usize = 10;
 
 pub fn create_pagination_keyboard<F>(
@@ -20,7 +74,7 @@ where
 
     if current_page > 0 {
         let data = page_builder(current_page - 1).to_string();
-        nav_row.push(InlineKeyboardButton::callback(
+        nav_row.push(callback_button(
             locales::get_text(lang.as_str(), "btn-prev", None),
             data,
         ));
@@ -28,7 +82,7 @@ where
 
     if total_pages > 0 && current_page < total_pages - 1 {
         let data = page_builder(current_page + 1).to_string();
-        nav_row.push(InlineKeyboardButton::callback(
+        nav_row.push(callback_button(
             locales::get_text(lang.as_str(), "btn-next", None),
             data,
         ));
@@ -39,10 +93,7 @@ where
     }
 
     if let Some((text, action)) = back_btn {
-        buttons.push(vec![InlineKeyboardButton::callback(
-            text,
-            action.to_string(),
-        )]);
+        buttons.push(vec![callback_button(text, action)]);
     }
 
     InlineKeyboardMarkup::new(buttons)
@@ -79,10 +130,7 @@ where
     let mut buttons = vec![];
     for item in slice {
         let (name, action) = item_mapper(item);
-        buttons.push(vec![InlineKeyboardButton::callback(
-            name,
-            action.to_string(),
-        )]);
+        buttons.push(vec![callback_button(name, action)]);
     }
 
     let nav_kb = create_pagination_keyboard(page, total_pages, page_builder, back_btn, lang);
@@ -98,41 +146,40 @@ pub fn create_main_menu_keyboard(lang: LanguageCode, is_admin: bool) -> InlineKe
     use crate::tg_bot::callbacks_types::{AdminAction, MenuAction};
 
     let mut buttons = vec![
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-who", None),
-            CallbackAction::Menu(MenuAction::Who).to_string(),
+            CallbackAction::Menu(MenuAction::Who),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-settings", None),
-            CallbackAction::Settings(crate::tg_bot::callbacks_types::SettingsAction::Main)
-                .to_string(),
+            CallbackAction::Settings(crate::tg_bot::callbacks_types::SettingsAction::Main),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-unsub", None),
-            CallbackAction::Menu(MenuAction::Unsub).to_string(),
+            CallbackAction::Menu(MenuAction::Unsub),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-help", None),
-            CallbackAction::Menu(MenuAction::Help).to_string(),
+            CallbackAction::Menu(MenuAction::Help),
         )],
     ];
 
     if is_admin {
-        buttons.push(vec![InlineKeyboardButton::callback(
+        buttons.push(vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-kick", None),
-            CallbackAction::Admin(AdminAction::KickList { page: 0 }).to_string(),
+            CallbackAction::Admin(AdminAction::KickList { page: 0 }),
         )]);
-        buttons.push(vec![InlineKeyboardButton::callback(
+        buttons.push(vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-ban", None),
-            CallbackAction::Admin(AdminAction::BanList { page: 0 }).to_string(),
+            CallbackAction::Admin(AdminAction::BanList { page: 0 }),
         )]);
-        buttons.push(vec![InlineKeyboardButton::callback(
+        buttons.push(vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-unban", None),
-            CallbackAction::Admin(AdminAction::UnbanList { page: 0 }).to_string(),
+            CallbackAction::Admin(AdminAction::UnbanList { page: 0 }),
         )]);
-        buttons.push(vec![InlineKeyboardButton::callback(
+        buttons.push(vec![callback_button(
             locales::get_text(lang.as_str(), "btn-menu-subs", None),
-            CallbackAction::Admin(AdminAction::SubsList { page: 0 }).to_string(),
+            CallbackAction::Admin(AdminAction::SubsList { page: 0 }),
         )]);
     }
 

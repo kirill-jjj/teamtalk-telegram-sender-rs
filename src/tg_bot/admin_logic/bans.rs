@@ -1,7 +1,7 @@
 use crate::db::Database;
 use crate::locales;
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction, MenuAction};
-use crate::tg_bot::keyboards::create_user_list_keyboard;
+use crate::tg_bot::keyboards::{back_btn, create_user_list_keyboard};
 use crate::types::LanguageCode;
 use teloxide::prelude::*;
 
@@ -49,8 +49,9 @@ pub async fn send_unban_list(
             )
         },
         |p| CallbackAction::Admin(AdminAction::UnbanList { page: p }),
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-menu", None),
+        Some(back_btn(
+            lang,
+            "btn-back-menu",
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
@@ -110,8 +111,9 @@ pub async fn edit_unban_list(
             )
         },
         |p| CallbackAction::Admin(AdminAction::UnbanList { page: p }),
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-menu", None),
+        Some(back_btn(
+            lang,
+            "btn-back-menu",
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,

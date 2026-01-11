@@ -101,3 +101,37 @@ pub async fn notify_admin_error(
         tracing::error!("Failed to notify admin about error: {}", e);
     }
 }
+
+pub async fn answer_callback(
+    bot: &Bot,
+    query_id: &teloxide::types::CallbackQueryId,
+    text: String,
+    alert: bool,
+) -> ResponseResult<()> {
+    let req = bot.answer_callback_query(query_id.clone()).text(text);
+    if alert {
+        req.show_alert(true).await?;
+    } else {
+        req.await?;
+    }
+    Ok(())
+}
+
+pub async fn answer_callback_empty(
+    bot: &Bot,
+    query_id: &teloxide::types::CallbackQueryId,
+) -> ResponseResult<()> {
+    bot.answer_callback_query(query_id.clone()).await?;
+    Ok(())
+}
+
+pub async fn send_text_key(
+    bot: &Bot,
+    chat_id: teloxide::types::ChatId,
+    lang: LanguageCode,
+    key: &str,
+) -> ResponseResult<()> {
+    bot.send_message(chat_id, locales::get_text(lang.as_str(), key, None))
+        .await?;
+    Ok(())
+}

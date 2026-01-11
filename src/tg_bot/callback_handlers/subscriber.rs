@@ -5,7 +5,9 @@ use crate::tg_bot::admin_logic::subscriber_settings::{
 use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscriber_details};
 use crate::tg_bot::callbacks_types::SubAction;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::{check_db_err, notify_admin_error};
+use crate::tg_bot::utils::{
+    answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
+};
 use crate::types::{LanguageCode, TtCommand};
 use crate::{args, locales};
 use teloxide::prelude::*;
@@ -29,7 +31,7 @@ pub async fn handle_subscriber_actions(
     match action {
         SubAction::Details { sub_id, page } => {
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         SubAction::Delete { sub_id, page } => {
             if check_db_err(
@@ -45,14 +47,13 @@ pub async fn handle_subscriber_actions(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
-                    lang.as_str(),
-                    "toast-subscriber-deleted",
-                    None,
-                ))
-                .show_alert(true)
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(lang.as_str(), "toast-subscriber-deleted", None),
+                true,
+            )
+            .await?;
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
         }
         SubAction::Ban { sub_id, page } => {
@@ -101,10 +102,13 @@ pub async fn handle_subscriber_actions(
                 tracing::error!("Partial failure during ban: {}", e);
             }
 
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang.as_str(), "toast-user-banned", None))
-                .show_alert(true)
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(lang.as_str(), "toast-user-banned", None),
+                true,
+            )
+            .await?;
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
         }
         SubAction::ManageTt { sub_id, page } => {
@@ -124,14 +128,17 @@ pub async fn handle_subscriber_actions(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-account-unlinked",
                     args!(user = sub_id.to_string()).as_ref(),
-                ))
-                .show_alert(true)
-                .await?;
+                ),
+                true,
+            )
+            .await?;
             send_sub_manage_tt_menu(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::LinkList {
@@ -172,14 +179,17 @@ pub async fn handle_subscriber_actions(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-account-linked",
                     args!(user = username).as_ref(),
-                ))
-                .show_alert(true)
-                .await?;
+                ),
+                true,
+            )
+            .await?;
             send_sub_manage_tt_menu(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::LangMenu { sub_id, page } => {
@@ -203,13 +213,17 @@ pub async fn handle_subscriber_actions(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-lang-set",
                     args!(id = sub_id.to_string(), lang = new_lang.as_str()).as_ref(),
-                ))
-                .await?;
+                ),
+                false,
+            )
+            .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::NotifMenu { sub_id, page } => {
@@ -229,13 +243,17 @@ pub async fn handle_subscriber_actions(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-notif-set",
                     args!(id = sub_id.to_string(), val = val.to_string()).as_ref(),
-                ))
-                .await?;
+                ),
+                false,
+            )
+            .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::NoonToggle { sub_id, page } => {
@@ -253,13 +271,17 @@ pub async fn handle_subscriber_actions(
                 return Ok(());
             }
             let status = "toggled";
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-noon-toggled",
                     args!(id = sub_id.to_string(), status = status).as_ref(),
-                ))
-                .await?;
+                ),
+                false,
+            )
+            .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::ModeMenu { sub_id, page } => {
@@ -279,13 +301,17 @@ pub async fn handle_subscriber_actions(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-mute-mode-sub-set",
                     args!(id = sub_id.to_string(), val = mode.to_string()).as_ref(),
-                ))
-                .await?;
+                ),
+                false,
+            )
+            .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::MuteView {

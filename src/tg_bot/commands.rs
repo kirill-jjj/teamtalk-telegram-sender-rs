@@ -3,13 +3,15 @@ use crate::locales;
 use crate::tg_bot::admin_logic::bans::send_unban_list;
 use crate::tg_bot::admin_logic::subscribers::send_subscribers_list;
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction, UnsubAction};
-use crate::tg_bot::keyboards::{create_main_menu_keyboard, create_user_list_keyboard};
+use crate::tg_bot::keyboards::{
+    confirm_cancel_keyboard, create_main_menu_keyboard, create_user_list_keyboard,
+};
 use crate::tg_bot::settings_logic::send_main_settings;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::{ensure_subscribed, notify_admin_error};
+use crate::tg_bot::utils::{ensure_subscribed, notify_admin_error, send_text_key};
 use crate::types::{LanguageCode, LiteUser, TtCommand};
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
+use teloxide::types::ParseMode;
 use teloxide::utils::command::BotCommands;
 
 #[derive(BotCommands, Clone, Debug)]
@@ -72,11 +74,7 @@ pub async fn answer_command(
                 default_lang,
             )
             .await;
-            bot.send_message(
-                msg.chat.id,
-                locales::get_text(default_lang.as_str(), "cmd-error", None),
-            )
-            .await?;
+            send_text_key(&bot, msg.chat.id, default_lang, "cmd-error").await?;
             return Ok(());
         }
     };
@@ -116,11 +114,7 @@ pub async fn answer_command(
                                 }
                             };
                             if is_banned {
-                                bot.send_message(
-                                    msg.chat.id,
-                                    locales::get_text(lang.as_str(), "cmd-user-banned", None),
-                                )
-                                .await?;
+                                send_text_key(&bot, msg.chat.id, lang, "cmd-user-banned").await?;
                                 return Ok(());
                             }
 
@@ -172,11 +166,7 @@ pub async fn answer_command(
                                     lang,
                                 )
                                 .await;
-                                bot.send_message(
-                                    msg.chat.id,
-                                    locales::get_text(lang.as_str(), "cmd-error", None),
-                                )
-                                .await?;
+                                send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
                                 return Ok(());
                             }
 
@@ -192,19 +182,11 @@ pub async fn answer_command(
                                         lang,
                                     )
                                     .await;
-                                    bot.send_message(
-                                        msg.chat.id,
-                                        locales::get_text(lang.as_str(), "cmd-error", None),
-                                    )
-                                    .await?;
+                                    send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
                                     return Ok(());
                                 }
                                 let msg_key = "cmd-success-sub";
-                                bot.send_message(
-                                    msg.chat.id,
-                                    locales::get_text(lang.as_str(), msg_key, None),
-                                )
-                                .await?;
+                                send_text_key(&bot, msg.chat.id, lang, msg_key).await?;
                             } else {
                                 let msg_key = "cmd-success-sub-guest";
                                 bot.send_message(
@@ -227,33 +209,17 @@ pub async fn answer_command(
                                     lang,
                                 )
                                 .await;
-                                bot.send_message(
-                                    msg.chat.id,
-                                    locales::get_text(lang.as_str(), "cmd-error", None),
-                                )
-                                .await?;
+                                send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
                                 return Ok(());
                             }
-                            bot.send_message(
-                                msg.chat.id,
-                                locales::get_text(lang.as_str(), "cmd-success-unsub", None),
-                            )
-                            .await?;
+                            send_text_key(&bot, msg.chat.id, lang, "cmd-success-unsub").await?;
                         }
                         _ => {
-                            bot.send_message(
-                                msg.chat.id,
-                                locales::get_text(lang.as_str(), "cmd-invalid-deeplink", None),
-                            )
-                            .await?;
+                            send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
                         }
                     },
                     Ok(None) => {
-                        bot.send_message(
-                            msg.chat.id,
-                            locales::get_text(lang.as_str(), "cmd-invalid-deeplink", None),
-                        )
-                        .await?;
+                        send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
                     }
                     Err(e) => {
                         tracing::error!("DB error resolving deeplink: {}", e);
@@ -266,19 +232,11 @@ pub async fn answer_command(
                             lang,
                         )
                         .await;
-                        bot.send_message(
-                            msg.chat.id,
-                            locales::get_text(lang.as_str(), "cmd-error", None),
-                        )
-                        .await?;
+                        send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
                     }
                 }
             } else {
-                bot.send_message(
-                    msg.chat.id,
-                    locales::get_text(lang.as_str(), "hello-start", None),
-                )
-                .await?;
+                send_text_key(&bot, msg.chat.id, lang, "hello-start").await?;
             }
         }
         Command::Menu => {
@@ -336,16 +294,13 @@ pub async fn answer_command(
                 return Ok(());
             }
             let text = locales::get_text(lang.as_str(), "unsub-confirm-text", None);
-            let keyboard = InlineKeyboardMarkup::new(vec![vec![
-                InlineKeyboardButton::callback(
-                    locales::get_text(lang.as_str(), "btn-yes", None),
-                    CallbackAction::Unsub(UnsubAction::Confirm).to_string(),
-                ),
-                InlineKeyboardButton::callback(
-                    locales::get_text(lang.as_str(), "btn-no", None),
-                    CallbackAction::Unsub(UnsubAction::Cancel).to_string(),
-                ),
-            ]]);
+            let keyboard = confirm_cancel_keyboard(
+                lang,
+                "btn-yes",
+                CallbackAction::Unsub(UnsubAction::Confirm),
+                "btn-no",
+                CallbackAction::Unsub(UnsubAction::Cancel),
+            );
 
             bot.send_message(msg.chat.id, text)
                 .reply_markup(keyboard)
@@ -353,11 +308,7 @@ pub async fn answer_command(
         }
         Command::Kick | Command::Ban => {
             if !is_admin {
-                bot.send_message(
-                    msg.chat.id,
-                    locales::get_text(lang.as_str(), "cmd-unauth", None),
-                )
-                .await?;
+                send_text_key(&bot, msg.chat.id, lang, "cmd-unauth").await?;
                 return Ok(());
             }
 
@@ -403,33 +354,21 @@ pub async fn answer_command(
         }
         Command::Unban => {
             if !is_admin {
-                bot.send_message(
-                    msg.chat.id,
-                    locales::get_text(lang.as_str(), "cmd-unauth", None),
-                )
-                .await?;
+                send_text_key(&bot, msg.chat.id, lang, "cmd-unauth").await?;
                 return Ok(());
             }
             send_unban_list(&bot, msg.chat.id, db, lang, 0).await?;
         }
         Command::Subscribers => {
             if !is_admin {
-                bot.send_message(
-                    msg.chat.id,
-                    locales::get_text(lang.as_str(), "cmd-unauth", None),
-                )
-                .await?;
+                send_text_key(&bot, msg.chat.id, lang, "cmd-unauth").await?;
                 return Ok(());
             }
             send_subscribers_list(&bot, msg.chat.id, db, lang, 0).await?;
         }
         Command::Exit => {
             if !is_admin {
-                bot.send_message(
-                    msg.chat.id,
-                    locales::get_text(lang.as_str(), "cmd-unauth", None),
-                )
-                .await?;
+                send_text_key(&bot, msg.chat.id, lang, "cmd-unauth").await?;
                 return Ok(());
             }
             bot.send_message(

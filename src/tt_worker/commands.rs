@@ -1,6 +1,6 @@
 use crate::args;
 use crate::locales;
-use crate::tt_worker::WorkerContext;
+use crate::tt_worker::{WorkerContext, resolve_server_name};
 use crate::types::{LanguageCode, TtCommand};
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
@@ -243,13 +243,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     send_reply(text);
                 }
             } else {
-                let server_name = tt_config
-                    .server_name
-                    .as_deref()
-                    .filter(|s| !s.is_empty())
-                    .or(real_name_from_client.as_deref().filter(|s| !s.is_empty()))
-                    .unwrap_or(&tt_config.host_name)
-                    .to_string();
+                let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());
 
                 if let Err(e) = tx_bridge
                     .send(crate::types::BridgeEvent::ToAdmin {

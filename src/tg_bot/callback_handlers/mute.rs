@@ -3,7 +3,7 @@ use crate::locales;
 use crate::tg_bot::callbacks_types::MuteAction;
 use crate::tg_bot::settings_logic::{render_mute_list, render_mute_list_strings, send_mute_menu};
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::{check_db_err, notify_admin_error};
+use crate::tg_bot::utils::{answer_callback, check_db_err, notify_admin_error};
 use crate::types::{LanguageCode, TtCommand};
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -38,13 +38,17 @@ pub async fn handle_mute(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(
                     lang.as_str(),
                     "toast-mute-mode-set",
                     args!(mode = mode.to_string()).as_ref(),
-                ))
-                .await?;
+                ),
+                false,
+            )
+            .await?;
             send_mute_menu(&bot, msg, lang, mode).await?;
         }
         MuteAction::Menu { mode } => {
@@ -88,13 +92,13 @@ pub async fn handle_mute(
             }
 
             let args = args!(user = username.clone(), action = "toggled");
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
-                    lang.as_str(),
-                    "toast-user-muted",
-                    args.as_ref(),
-                ))
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(lang.as_str(), "toast-user-muted", args.as_ref()),
+                false,
+            )
+            .await?;
 
             let muted = db
                 .get_muted_users_list(telegram_id)
@@ -165,13 +169,13 @@ pub async fn handle_mute(
             }
 
             let args = args!(user = username.clone(), action = "toggled");
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
-                    lang.as_str(),
-                    "toast-user-muted",
-                    args.as_ref(),
-                ))
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(lang.as_str(), "toast-user-muted", args.as_ref()),
+                false,
+            )
+            .await?;
 
             let user_accounts = &state.user_accounts;
             let mut accounts: Vec<UserAccount> =

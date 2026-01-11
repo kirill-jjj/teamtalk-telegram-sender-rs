@@ -3,10 +3,10 @@ use crate::db::Database;
 use crate::locales;
 use crate::tg_bot::admin_logic::utils::format_tg_user;
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction, MenuAction, SubAction};
-use crate::tg_bot::keyboards::create_user_list_keyboard;
+use crate::tg_bot::keyboards::{back_btn, back_button, callback_button, create_user_list_keyboard};
 use crate::types::{LanguageCode, MuteListMode, NotificationSetting};
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
+use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 
 struct SubDisplayInfo {
     telegram_id: i64,
@@ -58,8 +58,9 @@ pub async fn send_subscribers_list(
             )
         },
         |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-menu", None),
+        Some(back_btn(
+            lang,
+            "btn-back-menu",
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
@@ -119,8 +120,9 @@ pub async fn edit_subscribers_list(
             )
         },
         |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-menu", None),
+        Some(back_btn(
+            lang,
+            "btn-back-menu",
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
@@ -235,7 +237,7 @@ pub async fn send_subscriber_details(
     let text = locales::get_text(lang.as_str(), "sub-details-title", args.as_ref());
 
     let btn = |text_key: &str, action: SubAction| {
-        InlineKeyboardButton::callback(
+        callback_button(
             locales::get_text(lang.as_str(), text_key, None),
             CallbackAction::Subscriber(action).to_string(),
         )
@@ -299,9 +301,10 @@ pub async fn send_subscriber_details(
                 view_page: 0,
             },
         )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-subs", None),
-            CallbackAction::Admin(AdminAction::SubsList { page: return_page }).to_string(),
+        vec![back_button(
+            lang,
+            "btn-back-subs",
+            CallbackAction::Admin(AdminAction::SubsList { page: return_page }),
         )],
     ]);
 

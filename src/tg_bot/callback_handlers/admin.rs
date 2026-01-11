@@ -5,7 +5,9 @@ use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscr
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction};
 use crate::tg_bot::keyboards::create_user_list_keyboard;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::{check_db_err, notify_admin_error};
+use crate::tg_bot::utils::{
+    answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
+};
 use crate::types::{LanguageCode, LiteUser, TtCommand};
 use teloxide::prelude::*;
 
@@ -47,7 +49,7 @@ pub async fn handle_admin(
                 lang,
             );
 
-            if page == 0 && !msg.text().unwrap_or("").contains("Page") {
+            if should_send_page(&msg, page) {
                 bot.send_message(chat_id, title)
                     .reply_markup(keyboard)
                     .await?;
@@ -56,7 +58,7 @@ pub async fn handle_admin(
                     .reply_markup(keyboard)
                     .await?;
             }
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         AdminAction::BanList { page } => {
             let mut users: Vec<LiteUser> = online_users.iter().map(|u| u.value().clone()).collect();
@@ -79,7 +81,7 @@ pub async fn handle_admin(
                 lang,
             );
 
-            if page == 0 && !msg.text().unwrap_or("").contains("Page") {
+            if should_send_page(&msg, page) {
                 bot.send_message(chat_id, title)
                     .reply_markup(keyboard)
                     .await?;
@@ -88,7 +90,7 @@ pub async fn handle_admin(
                     .reply_markup(keyboard)
                     .await?;
             }
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         AdminAction::KickPerform { user_id } => {
             if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }) {
@@ -103,9 +105,13 @@ pub async fn handle_admin(
                 )
                 .await;
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang.as_str(), "toast-command-sent", None))
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(lang.as_str(), "toast-command-sent", None),
+                false,
+            )
+            .await?;
         }
         AdminAction::BanPerform { user_id } => {
             if let Some(u) = online_users.get(&user_id) {
@@ -127,10 +133,13 @@ pub async fn handle_admin(
                         lang,
                     )
                     .await;
-                    bot.answer_callback_query(q.id)
-                        .text(locales::get_text(lang.as_str(), "cmd-error", None))
-                        .show_alert(true)
-                        .await?;
+                    answer_callback(
+                        &bot,
+                        &q.id,
+                        locales::get_text(lang.as_str(), "cmd-error", None),
+                        true,
+                    )
+                    .await?;
                     return Ok(());
                 }
 
@@ -167,23 +176,30 @@ pub async fn handle_admin(
                     )
                     .await;
                 }
-                bot.answer_callback_query(q.id)
-                    .text(locales::get_text(lang.as_str(), "toast-command-sent", None))
-                    .await?;
+                answer_callback(
+                    &bot,
+                    &q.id,
+                    locales::get_text(lang.as_str(), "toast-command-sent", None),
+                    false,
+                )
+                .await?;
             } else {
-                bot.answer_callback_query(q.id)
-                    .text(locales::get_text(lang.as_str(), "cmd-no-users", None))
-                    .show_alert(true)
-                    .await?;
+                answer_callback(
+                    &bot,
+                    &q.id,
+                    locales::get_text(lang.as_str(), "cmd-no-users", None),
+                    true,
+                )
+                .await?;
             }
         }
         AdminAction::UnbanList { page } => {
-            if page == 0 && !msg.text().unwrap_or("").contains("Page") {
+            if should_send_page(&msg, page) {
                 send_unban_list(&bot, chat_id, db, lang, 0).await?;
             } else {
                 edit_unban_list(&bot, &msg, db, lang, page).await?;
             }
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
         AdminAction::UnbanPerform { ban_db_id, page } => {
             if check_db_err(
@@ -199,23 +215,27 @@ pub async fn handle_admin(
             {
                 return Ok(());
             }
-            bot.answer_callback_query(q.id)
-                .text(locales::get_text(
-                    lang.as_str(),
-                    "toast-user-unbanned",
-                    None,
-                ))
-                .await?;
+            answer_callback(
+                &bot,
+                &q.id,
+                locales::get_text(lang.as_str(), "toast-user-unbanned", None),
+                false,
+            )
+            .await?;
             edit_unban_list(&bot, &msg, db, lang, page).await?;
         }
         AdminAction::SubsList { page } => {
-            if page == 0 && !msg.text().unwrap_or("").contains("Page") {
+            if should_send_page(&msg, page) {
                 send_subscribers_list(&bot, chat_id, db, lang, 0).await?;
             } else {
                 edit_subscribers_list(&bot, &msg, db, lang, page).await?;
             }
-            bot.answer_callback_query(q.id).await?;
+            answer_callback_empty(&bot, &q.id).await?;
         }
     }
     Ok(())
+}
+
+fn should_send_page(msg: &Message, page: usize) -> bool {
+    page == 0 && !msg.text().unwrap_or("").contains("Page")
 }

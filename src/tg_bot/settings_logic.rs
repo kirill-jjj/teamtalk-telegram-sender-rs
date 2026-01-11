@@ -2,11 +2,13 @@ use crate::args;
 use crate::db::Database;
 use crate::locales;
 use crate::tg_bot::callbacks_types::{CallbackAction, MuteAction, SettingsAction};
-use crate::tg_bot::keyboards::create_user_list_keyboard;
+use crate::tg_bot::keyboards::{
+    back_btn, back_button, back_button_keyboard, callback_button, create_user_list_keyboard,
+};
 use crate::types::{LanguageCode, MuteListMode, NotificationSetting};
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
+use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 
 pub async fn send_main_settings(
     bot: &Bot,
@@ -14,20 +16,7 @@ pub async fn send_main_settings(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let text = locales::get_text(lang.as_str(), "settings-title", None);
-    let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-lang", None),
-            CallbackAction::Settings(SettingsAction::LangSelect).to_string(),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-sub-settings", None),
-            CallbackAction::Settings(SettingsAction::SubSelect).to_string(),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-notif-settings", None),
-            CallbackAction::Settings(SettingsAction::NotifSelect).to_string(),
-        )],
-    ]);
+    let keyboard = main_settings_keyboard(lang);
     bot.send_message(chat_id, text)
         .reply_markup(keyboard)
         .parse_mode(ParseMode::Html)
@@ -41,25 +30,29 @@ pub async fn send_main_settings_edit(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let text = locales::get_text(lang.as_str(), "settings-title", None);
-    let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-lang", None),
-            CallbackAction::Settings(SettingsAction::LangSelect).to_string(),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-sub-settings", None),
-            CallbackAction::Settings(SettingsAction::SubSelect).to_string(),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-notif-settings", None),
-            CallbackAction::Settings(SettingsAction::NotifSelect).to_string(),
-        )],
-    ]);
+    let keyboard = main_settings_keyboard(lang);
     bot.edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)
         .parse_mode(ParseMode::Html)
         .await?;
     Ok(())
+}
+
+fn main_settings_keyboard(lang: LanguageCode) -> InlineKeyboardMarkup {
+    InlineKeyboardMarkup::new(vec![
+        vec![callback_button(
+            locales::get_text(lang.as_str(), "btn-lang", None),
+            CallbackAction::Settings(SettingsAction::LangSelect),
+        )],
+        vec![callback_button(
+            locales::get_text(lang.as_str(), "btn-sub-settings", None),
+            CallbackAction::Settings(SettingsAction::SubSelect),
+        )],
+        vec![callback_button(
+            locales::get_text(lang.as_str(), "btn-notif-settings", None),
+            CallbackAction::Settings(SettingsAction::NotifSelect),
+        )],
+    ])
 }
 
 pub async fn send_sub_settings(
@@ -127,25 +120,20 @@ pub async fn send_sub_settings(
     };
 
     let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![InlineKeyboardButton::callback(
-            btn_all,
-            mk_act(NotificationSetting::All),
-        )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(btn_all, mk_act(NotificationSetting::All))],
+        vec![callback_button(
             btn_join,
             mk_act(NotificationSetting::LeaveOff),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             btn_leave,
             mk_act(NotificationSetting::JoinOff),
         )],
-        vec![InlineKeyboardButton::callback(
-            btn_none,
-            mk_act(NotificationSetting::None),
-        )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-settings", None),
-            CallbackAction::Settings(SettingsAction::Main).to_string(),
+        vec![callback_button(btn_none, mk_act(NotificationSetting::None))],
+        vec![back_button(
+            lang,
+            "btn-back-settings",
+            CallbackAction::Settings(SettingsAction::Main),
         )],
     ]);
 
@@ -199,17 +187,18 @@ pub async fn send_notif_settings(
     );
 
     let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             noon_text,
             CallbackAction::Settings(SettingsAction::NoonToggle).to_string(),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             locales::get_text(lang.as_str(), "btn-mute-manage", None),
             CallbackAction::Settings(SettingsAction::MuteManage).to_string(),
         )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-settings", None),
-            CallbackAction::Settings(SettingsAction::Main).to_string(),
+        vec![back_button(
+            lang,
+            "btn-back-settings",
+            CallbackAction::Settings(SettingsAction::Main),
         )],
     ]);
 
@@ -276,14 +265,14 @@ pub async fn send_mute_menu(
 
     let keyboard = InlineKeyboardMarkup::new(vec![
         vec![
-            InlineKeyboardButton::callback(
+            callback_button(
                 btn_bl_text,
                 CallbackAction::Mute(MuteAction::ModeSet {
                     mode: MuteListMode::Blacklist,
                 })
                 .to_string(),
             ),
-            InlineKeyboardButton::callback(
+            callback_button(
                 btn_wl_text,
                 CallbackAction::Mute(MuteAction::ModeSet {
                     mode: MuteListMode::Whitelist,
@@ -291,17 +280,18 @@ pub async fn send_mute_menu(
                 .to_string(),
             ),
         ],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             btn_manage_text,
             CallbackAction::Mute(MuteAction::List { page: 0 }).to_string(),
         )],
-        vec![InlineKeyboardButton::callback(
+        vec![callback_button(
             locales::get_text(lang.as_str(), "btn-mute-server-list", None),
             CallbackAction::Mute(MuteAction::ServerList { page: 0 }).to_string(),
         )],
-        vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-notif", None),
-            CallbackAction::Settings(SettingsAction::NotifSelect).to_string(),
+        vec![back_button(
+            lang,
+            "btn-back-notif",
+            CallbackAction::Settings(SettingsAction::NotifSelect),
         )],
     ]);
 
@@ -361,8 +351,9 @@ pub async fn render_mute_list(
             )
         },
         |p| CallbackAction::Mute(MuteAction::ServerList { page: p }),
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-mute", None),
+        Some(back_btn(
+            lang,
+            "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         )),
         lang,
@@ -389,10 +380,11 @@ pub async fn render_mute_list_strings(
 ) -> ResponseResult<()> {
     if items.is_empty() {
         let text = locales::get_text(lang.as_str(), "list-mute-empty", None);
-        let keyboard = InlineKeyboardMarkup::new(vec![vec![InlineKeyboardButton::callback(
-            locales::get_text(lang.as_str(), "btn-back-mute", None),
-            CallbackAction::Settings(SettingsAction::MuteManage).to_string(),
-        )]]);
+        let keyboard = back_button_keyboard(
+            lang,
+            "btn-back-mute",
+            CallbackAction::Settings(SettingsAction::MuteManage),
+        );
         bot.edit_message_text(msg.chat.id, msg.id, text)
             .reply_markup(keyboard)
             .await?;
@@ -423,8 +415,9 @@ pub async fn render_mute_list_strings(
             )
         },
         |p| CallbackAction::Mute(MuteAction::List { page: p }),
-        Some((
-            locales::get_text(lang.as_str(), "btn-back-mute", None),
+        Some(back_btn(
+            lang,
+            "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         )),
         lang,
