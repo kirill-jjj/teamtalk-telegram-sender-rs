@@ -2,7 +2,7 @@ use crate::args;
 use crate::locales;
 use crate::tg_bot::admin_logic::bans::send_unban_list;
 use crate::tg_bot::admin_logic::subscribers::send_subscribers_list;
-use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction};
+use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction, UnsubAction};
 use crate::tg_bot::keyboards::{create_main_menu_keyboard, create_user_list_keyboard};
 use crate::tg_bot::settings_logic::send_main_settings;
 use crate::tg_bot::state::AppState;
@@ -195,11 +195,11 @@ pub async fn answer_command(
             let keyboard = InlineKeyboardMarkup::new(vec![vec![
                 InlineKeyboardButton::callback(
                     locales::get_text(lang, "btn-yes", None),
-                    "unsub_confirm",
+                    CallbackAction::Unsub(UnsubAction::Confirm).to_string(),
                 ),
                 InlineKeyboardButton::callback(
                     locales::get_text(lang, "btn-no", None),
-                    "unsub_cancel",
+                    CallbackAction::Unsub(UnsubAction::Cancel).to_string(),
                 ),
             ]]);
 
