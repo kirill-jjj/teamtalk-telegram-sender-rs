@@ -24,6 +24,7 @@
 - Use `snake_case` for functions/vars, `CamelCase` for types, `SCREAMING_SNAKE_CASE` for constants.
 - Prefer `Result` with contextual errors over `unwrap` in non-test code.
 - Keep modules focused; avoid widening `pub` visibility unless needed.
+- Completely avoid adding code comments unless explicitly requested.
 
 ## Testing Guidelines
 - Use `cargo test` to run unit and integration tests.
