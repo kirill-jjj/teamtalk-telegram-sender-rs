@@ -79,11 +79,15 @@ pub async fn answer_command(
         }
     };
     let lang = LanguageCode::from_str_or_default(&settings.language_code, default_lang);
-    let is_admin = match db.get_all_admins().await {
-        Ok(admins) => admins.contains(&telegram_id),
-        Err(e) => {
-            tracing::error!("Failed to load admin list: {}", e);
-            false
+    let is_admin = if telegram_id == config.telegram.admin_chat_id {
+        true
+    } else {
+        match db.get_all_admins().await {
+            Ok(admins) => admins.contains(&telegram_id),
+            Err(e) => {
+                tracing::error!("Failed to load admin list: {}", e);
+                false
+            }
         }
     };
 

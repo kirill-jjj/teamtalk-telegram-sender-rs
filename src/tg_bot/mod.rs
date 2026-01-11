@@ -115,13 +115,17 @@ async fn set_bot_commands(
             .await?;
     }
 
-    let admin_ids = match db.get_all_admins().await {
+    let mut admin_ids = match db.get_all_admins().await {
         Ok(ids) => ids,
         Err(e) => {
             tracing::error!("Failed to load admin list: {}", e);
             Vec::new()
         }
     };
+    let config_admin_id = config.telegram.admin_chat_id;
+    if !admin_ids.contains(&config_admin_id) {
+        admin_ids.push(config_admin_id);
+    }
     for admin_id in admin_ids {
         let user_settings = db
             .get_or_create_user(admin_id, default_lang)
