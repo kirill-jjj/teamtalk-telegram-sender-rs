@@ -58,6 +58,15 @@ jobs:
       - name: Build Release
         run: cargo build --release --verbose
 
+      - name: Cargo Check
+        run: cargo check
+
+      - name: Cargo Clippy
+        run: cargo clippy --all-targets --all-features
+
+      - name: Cargo Fmt
+        run: cargo fmt --check
+
       - name: Prepare Artifacts
         shell: bash
         run: |
