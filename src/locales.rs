@@ -2,7 +2,7 @@ use fluent_templates::fluent_bundle::FluentValue;
 use fluent_templates::{Loader, static_loader};
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::sync::LazyLock;
 use unic_langid::LanguageIdentifier;
 
 static_loader! {
@@ -13,13 +13,15 @@ static_loader! {
     };
 }
 
-static LANG_RU: OnceLock<LanguageIdentifier> = OnceLock::new();
-static LANG_EN: OnceLock<LanguageIdentifier> = OnceLock::new();
+static LANG_RU: LazyLock<LanguageIdentifier> =
+    LazyLock::new(|| "ru".parse().expect("Valid RU langid"));
+static LANG_EN: LazyLock<LanguageIdentifier> =
+    LazyLock::new(|| "en".parse().expect("Valid EN langid"));
 
-fn get_lang_id(lang_code: &str) -> &'static LanguageIdentifier {
+fn get_lang_id(lang_code: &str) -> &LanguageIdentifier {
     match lang_code {
-        "ru" => LANG_RU.get_or_init(|| "ru".parse().expect("Valid RU langid")),
-        _ => LANG_EN.get_or_init(|| "en".parse().expect("Valid EN langid")),
+        "ru" => &LANG_RU,
+        _ => &LANG_EN,
     }
 }
 

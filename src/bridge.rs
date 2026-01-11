@@ -6,7 +6,7 @@ use crate::{
     types::{self, BridgeEvent},
 };
 use dashmap::DashMap;
-use futures::{StreamExt, stream};
+use futures_util::{StreamExt, stream};
 use std::collections::HashMap;
 use std::sync::Arc;
 use teloxide::ApiError;
