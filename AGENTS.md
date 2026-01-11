@@ -34,6 +34,18 @@
 - Use Conventional Commits (e.g., `feat:`, `fix:`, `docs:`, `chore:`), imperative mood, <= 72 chars.
 - One change type per commit; add a body when rationale is needed.
 - PRs should describe the change, link related issues, and note test results.
+## Commit Message Body Guidance
+- Use a body only for large or multi-part changes; keep small changes title-only.
+- If you are told to include or omit a body, follow the request.
+## Commit Title Format and Examples
+- Format: `type: short description` (English, imperative, no trailing period).
+- Optional scope for clarity: `type(scope): short description`.
+- Types used in this repo include `docs`, `feat`, `fix`, `refactor`, `ci`, `chore`, `build`, `style`.
+- Examples based on recent commits:
+  - `docs: refresh configuration guidance`
+  - `feat: apply TeamTalk gender on login`
+  - `fix(tg_bot): Use correct callback data for /unsub command`
+  - `ci: add check/clippy/fmt`
 
 ## Security & Configuration Tips
 - Do not log secrets (tokens, chat IDs, DB URLs).
