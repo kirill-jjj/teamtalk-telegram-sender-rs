@@ -63,7 +63,7 @@ pub async fn answer_command(
     {
         Ok(s) => s,
         Err(e) => {
-            log::error!("Failed to get or create user {}: {}", telegram_id, e);
+            tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
             bot.send_message(msg.chat.id, "Database error. Please try again later.")
                 .await?;
             return Ok(());

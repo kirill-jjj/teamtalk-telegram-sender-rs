@@ -25,7 +25,7 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
     {
         Ok(settings) => settings,
         Err(e) => {
-            log::error!(
+            tracing::error!(
                 "Failed to get/create user {} in callback: {}",
                 telegram_id,
                 e
@@ -50,7 +50,7 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
     let action = match CallbackAction::from_str(&callback_data_str) {
         Ok(a) => a,
         Err(e) => {
-            log::warn!(
+            tracing::warn!(
                 "Unknown or legacy callback data '{}': {}",
                 callback_data_str,
                 e

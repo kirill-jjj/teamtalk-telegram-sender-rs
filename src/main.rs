@@ -16,6 +16,7 @@ use std::sync::mpsc as std_mpsc;
 use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
+use tracing_subscriber::EnvFilter;
 
 fn update_bot() -> Result<(), Box<dyn std::error::Error>> {
     let target = if cfg!(windows) { "windows" } else { "linux" };
@@ -47,9 +48,10 @@ async fn main() -> Result<()> {
         std::process::exit(0);
     }
 
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    tracing_subscriber::fmt().with_env_filter(filter).init();
 
-    log::info!("🚀 Starting Application...");
+    tracing::info!("🚀 Starting Application...");
 
     let args: Vec<String> = std::env::args().collect();
     let config_path = if let Some(idx) = args.iter().position(|a| a == "--config") {
@@ -60,7 +62,7 @@ async fn main() -> Result<()> {
         "config.toml".to_string()
     };
 
-    log::info!("📂 Loading config from: {}", config_path);
+    tracing::info!("📂 Loading config from: {}", config_path);
 
     let config_content = std::fs::read_to_string(&config_path)?;
     let mut config: config::Config = toml::from_str(&config_content)?;
@@ -78,7 +80,7 @@ async fn main() -> Result<()> {
         .to_str()
         .ok_or_else(|| anyhow!("Invalid DB path"))?
         .to_string();
-    log::info!("💾 Database path: {}", db_path_str);
+    tracing::info!("💾 Database path: {}", db_path_str);
 
     config.database.db_file = db_path_str.clone();
 
@@ -96,14 +98,16 @@ async fn main() -> Result<()> {
     let event_bot = if let Some(token) = &shared_config.telegram.event_token {
         Some(Bot::new(token))
     } else {
-        log::warn!("⚠️ 'event_token' missing. Telegram interactions and notifications disabled.");
+        tracing::warn!(
+            "⚠️ 'event_token' missing. Telegram interactions and notifications disabled."
+        );
         None
     };
 
     let message_bot = if let Some(token) = &shared_config.telegram.message_token {
         Some(Bot::new(token))
     } else {
-        log::warn!("⚠️ 'message_token' missing. Admin alerts disabled.");
+        tracing::warn!("⚠️ 'message_token' missing. Admin alerts disabled.");
         None
     };
 
@@ -113,7 +117,7 @@ async fn main() -> Result<()> {
             .username
             .clone()
             .ok_or_else(|| anyhow!("Bot must have a username!"))?;
-        log::info!("✅ Interaction Bot username: @{}", username);
+        tracing::info!("✅ Interaction Bot username: @{}", username);
         Some(username)
     } else {
         None
@@ -149,7 +153,7 @@ async fn main() -> Result<()> {
     });
 
     match rx_init.recv() {
-        Ok(Ok(_)) => log::info!("✅ TeamTalk Worker started successfully"),
+        Ok(Ok(_)) => tracing::info!("✅ TeamTalk Worker started successfully"),
         Ok(Err(e)) => return Err(anyhow!("❌ TeamTalk Worker failed to start: {}", e)),
         Err(_) => return Err(anyhow!("❌ TeamTalk Worker disconnected during startup")),
     }

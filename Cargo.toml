@@ -16,8 +16,6 @@ teloxide = { version = "0.17", default-features = false, features = ["macros", "
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-native-tls", "sqlite", "chrono", "macros", "migrate"] }
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.9"
-log = "0.4"
-env_logger = "0.11"
 anyhow = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 dashmap = "6.1"
@@ -26,3 +24,6 @@ teamtalk = "1.0"
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
 self_update = { version = "0.42", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-futures = "0.2"

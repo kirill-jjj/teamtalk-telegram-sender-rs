@@ -36,7 +36,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 ("Unknown".to_string(), "".to_string())
             };
 
-            log::info!("💬 [TT_WORKER] Msg from {}: {}", nick, content);
+            tracing::info!("💬 [TT_WORKER] Msg from {}: {}", nick, content);
 
             let reply_lang = if !username.is_empty() {
                 db.get_user_lang_by_tt_user(&username)

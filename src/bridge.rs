@@ -26,7 +26,7 @@ pub async fn run_bridge(
     let default_lang = &config.general.default_lang;
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
 
-    log::info!("🌉 [BRIDGE] Bridge task started.");
+    tracing::info!("🌉 [BRIDGE] Bridge task started.");
     while let Some(event) = rx_bridge.recv().await {
         match event {
             types::BridgeEvent::Broadcast {
@@ -95,19 +95,19 @@ pub async fn run_bridge(
                             .await;
 
                         if let Err(e) = res {
-                            log::warn!("Failed to send notification to {}: {}", sub.telegram_id, e);
+                            tracing::warn!("Failed to send notification to {}: {}", sub.telegram_id, e);
 
                             if let RequestError::Api(api_err) = e {
                                 match api_err {
                                     ApiError::BotBlocked |
                                     ApiError::UserDeactivated |
                                     ApiError::ChatNotFound => {
-                                        log::info!("🗑️ [BRIDGE] Cleaning up: User {} is no longer reachable ({:?}).", sub.telegram_id, api_err);
+                                        tracing::info!("🗑️ [BRIDGE] Cleaning up: User {} is no longer reachable ({:?}).", sub.telegram_id, api_err);
 
                                         if let Err(db_err) = db_for_closure.delete_user_profile(sub.telegram_id).await {
-                                            log::error!("❌ [BRIDGE] DB error during auto-cleanup for {}: {}", sub.telegram_id, db_err);
+                                            tracing::error!("❌ [BRIDGE] DB error during auto-cleanup for {}: {}", sub.telegram_id, db_err);
                                         } else {
-                                            log::info!("✅ [BRIDGE] Profile for {} removed successfully.", sub.telegram_id);
+                                            tracing::info!("✅ [BRIDGE] Profile for {} removed successfully.", sub.telegram_id);
                                         }
                                     },
                                     _ => {}
@@ -119,7 +119,10 @@ pub async fn run_bridge(
 
                 while let Some(res) = set.join_next().await {
                     if let Err(e) = res {
-                        log::error!("[BRIDGE] A notification task failed after joining: {:?}", e);
+                        tracing::error!(
+                            "[BRIDGE] A notification task failed after joining: {:?}",
+                            e
+                        );
                     }
                 }
             }
@@ -136,7 +139,10 @@ pub async fn run_bridge(
                     let admin_lang = match admin_settings {
                         Ok(u) => u.language_code,
                         Err(e) => {
-                            log::error!("Failed to get admin settings: {}. Defaulting to 'en'.", e);
+                            tracing::error!(
+                                "Failed to get admin settings: {}. Defaulting to 'en'.",
+                                e
+                            );
                             "en".to_string()
                         }
                     };
@@ -177,7 +183,7 @@ pub async fn run_bridge(
                         })
                         .ok();
                 } else {
-                    log::debug!("Skipping Admin Alert: 'message_token' is not configured.");
+                    tracing::debug!("Skipping Admin Alert: 'message_token' is not configured.");
                 }
             }
             types::BridgeEvent::WhoReport { chat_id, text } => {

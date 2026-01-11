@@ -126,7 +126,7 @@ pub async fn handle_settings(
                         }
                     }
                     Err(e) => {
-                        log::error!("DB error in toggle_noon: {}", e);
+                        tracing::error!("DB error in toggle_noon: {}", e);
                         bot.answer_callback_query(q.id)
                             .text(locales::get_text(lang, "cmd-error", None))
                             .show_alert(true)

@@ -67,7 +67,7 @@ pub async fn send_sub_settings(
 ) -> ResponseResult<()> {
     let settings = match db.get_or_create_user(telegram_id, "en").await {
         Ok(s) => {
-            log::debug!(
+            tracing::debug!(
                 "[UI] Fetched settings for {}: enabled={}",
                 telegram_id,
                 s.not_on_online_enabled
@@ -75,7 +75,7 @@ pub async fn send_sub_settings(
             s
         }
         Err(e) => {
-            log::error!("Failed to get or create user {}: {}", telegram_id, e);
+            tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
@@ -161,7 +161,7 @@ pub async fn send_notif_settings(
 ) -> ResponseResult<()> {
     let settings = match db.get_or_create_user(telegram_id, "en").await {
         Ok(s) => {
-            log::debug!(
+            tracing::debug!(
                 "[UI] Fetched settings for {}: enabled={}",
                 telegram_id,
                 s.not_on_online_enabled
@@ -169,7 +169,7 @@ pub async fn send_notif_settings(
             s
         }
         Err(e) => {
-            log::error!("Failed to get or create user {}: {}", telegram_id, e);
+            tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,

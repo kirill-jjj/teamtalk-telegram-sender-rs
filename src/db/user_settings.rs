@@ -61,7 +61,7 @@ impl Database {
         {
             Ok(res) => res,
             Err(e) => {
-                log::error!(
+                tracing::error!(
                     "Failed to get user lang for tt_user '{}': {}",
                     tt_username,
                     e
@@ -114,7 +114,7 @@ impl Database {
         let new_bool = current_val == 0;
         let new_int = if new_bool { 1 } else { 0 };
 
-        log::debug!(
+        tracing::debug!(
             "[DB] Toggling NOON for {}: current={}, new_bool={}",
             telegram_id,
             current_val,

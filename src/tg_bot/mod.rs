@@ -41,7 +41,7 @@ pub async fn run_tg_bot(
     };
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
-        log::error!("Failed to set bot commands: {}", e);
+        tracing::error!("Failed to set bot commands: {}", e);
     }
 
     let handler = dptree::entry()
@@ -59,7 +59,7 @@ pub async fn run_tg_bot(
             |err: teloxide::errors::RequestError| async move {
                 let err_str = err.to_string();
                 if !err_str.contains("TerminatedByOtherGetUpdates") {
-                    log::error!("❌ [TELEGRAM] Update listener error: {}", err);
+                    tracing::error!("❌ [TELEGRAM] Update listener error: {}", err);
                 }
             },
         ))

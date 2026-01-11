@@ -14,7 +14,7 @@ pub(super) fn handle_sdk_event(
     reconnect_handler: &mut ReconnectHandler,
     ready_time: &mut Option<Instant>,
 ) {
-    log::trace!("📥 [TT_WORKER] Event received: {:?}", event);
+    tracing::trace!("📥 [TT_WORKER] Event received: {:?}", event);
     let tt_config = &ctx.config.teamtalk;
 
     match event {
@@ -33,7 +33,7 @@ pub(super) fn handle_sdk_event(
             reconnect_handler.mark_disconnected();
             ctx.online_users.clear();
             *ready_time = None;
-            log::warn!(
+            tracing::warn!(
                 "❌ [TT_WORKER] Disconnection event ({:?}). Reconnect pending...",
                 e
             );
@@ -78,7 +78,7 @@ pub(super) fn handle_sdk_event(
                 }
 
                 if existing_lite_user.nickname != user.nickname {
-                    log::info!(
+                    tracing::info!(
                         "🔄 [TT_WORKER] Nickname changed for {}: {} -> {}",
                         user.username,
                         existing_lite_user.nickname,

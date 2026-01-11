@@ -105,7 +105,7 @@ pub async fn handle_admin(
                     )
                     .await
                 {
-                    log::error!("Failed to add ban: {}", e);
+                    tracing::error!("Failed to add ban: {}", e);
                 }
                 if let Ok(Some(tg_id)) = sqlx::query_scalar::<_, i64>(
                     "SELECT telegram_id FROM user_settings WHERE teamtalk_username = ?",

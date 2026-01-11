@@ -61,7 +61,7 @@ pub fn run_teamtalk_thread(
         }
         Err(e) => {
             let err_msg = format!("Failed to initialize TeamTalk SDK: {}", e);
-            log::error!("{}", err_msg);
+            tracing::error!("{}", err_msg);
             let _ = tx_init.send(Err(err_msg));
             return;
         }
@@ -83,7 +83,7 @@ pub fn run_teamtalk_thread(
         encrypted: tt_config.encrypted,
     };
 
-    log::info!(
+    tracing::info!(
         "🔌 [TT_WORKER] Connecting to {}:{} (Encrypted: {})...",
         tt_config.host_name,
         tt_config.port,
@@ -117,7 +117,7 @@ pub fn run_teamtalk_thread(
                     reports::handle_who_command(&client, &ctx, chat_id, lang);
                 }
                 TtCommand::LoadAccounts => {
-                    log::info!("📥 [TT_WORKER] Requesting full user accounts list...");
+                    tracing::info!("📥 [TT_WORKER] Requesting full user accounts list...");
                     client.list_user_accounts(0, 1000);
                 }
             }

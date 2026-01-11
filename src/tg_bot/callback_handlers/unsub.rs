@@ -20,7 +20,7 @@ pub async fn handle_unsub_action(
     match action {
         UnsubAction::Confirm => {
             if let Err(e) = db.delete_user_profile(telegram_id).await {
-                log::error!("Failed to unsubscribe user {}: {}", telegram_id, e);
+                tracing::error!("Failed to unsubscribe user {}: {}", telegram_id, e);
                 bot.answer_callback_query(q.id)
                     .text("Database error")
                     .await?;

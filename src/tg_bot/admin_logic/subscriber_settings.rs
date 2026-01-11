@@ -18,7 +18,7 @@ pub async fn send_sub_manage_tt_menu(
     let settings = match db.get_or_create_user(sub_id, "en").await {
         Ok(s) => s,
         Err(e) => {
-            log::error!("Failed to get or create user {}: {}", sub_id, e);
+            tracing::error!("Failed to get or create user {}: {}", sub_id, e);
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
