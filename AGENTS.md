@@ -14,6 +14,10 @@
 - `cargo fmt` formats Rust code with rustfmt.
 - `cargo clippy --all-targets --all-features` runs lint checks.
 - After changes, run `cargo check`, then `cargo clippy --all-targets --all-features` if check passes, and `cargo fmt` if clippy passes.
+## Verification and Delivery Sequence
+- After each significant change (or a batch of related changes), run `cargo check`, then `cargo clippy --all-targets --all-features`, then `cargo fmt`.
+- Before committing, run `cargo test` (especially after major changes).
+- After tests pass, commit and push.
 
 ## Coding Style & Naming Conventions
 - Follow rustfmt defaults; keep diffs minimal and avoid formatting churn.
