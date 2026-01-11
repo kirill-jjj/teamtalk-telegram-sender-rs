@@ -1,3 +1,4 @@
+use crate::types::{LanguageCode, MuteListMode, NotificationSetting};
 use anyhow::{Result, anyhow};
 use std::fmt;
 use std::str::FromStr;
@@ -36,9 +37,9 @@ pub enum AdminAction {
 pub enum SettingsAction {
     Main,
     LangSelect,
-    LangSet { lang: String },
+    LangSet { lang: LanguageCode },
     SubSelect,
-    SubSet { setting: String },
+    SubSet { setting: NotificationSetting },
     NotifSelect,
     NoonToggle,
     MuteManage,
@@ -83,7 +84,7 @@ pub enum SubAction {
     LangSet {
         sub_id: i64,
         page: usize,
-        lang: String,
+        lang: LanguageCode,
     },
     NotifMenu {
         sub_id: i64,
@@ -92,7 +93,7 @@ pub enum SubAction {
     NotifSet {
         sub_id: i64,
         page: usize,
-        val: String,
+        val: NotificationSetting,
     },
     NoonToggle {
         sub_id: i64,
@@ -105,7 +106,7 @@ pub enum SubAction {
     ModeSet {
         sub_id: i64,
         page: usize,
-        mode: String,
+        mode: MuteListMode,
     },
     MuteView {
         sub_id: i64,
@@ -116,8 +117,8 @@ pub enum SubAction {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum MuteAction {
-    ModeSet { mode: String },
-    Menu { mode: String },
+    ModeSet { mode: MuteListMode },
+    Menu { mode: MuteListMode },
     List { page: usize },
     Toggle { username: String, page: usize },
     ServerList { page: usize },
@@ -174,7 +175,7 @@ impl fmt::Display for SettingsAction {
         match self {
             SettingsAction::Main => write!(f, "main"),
             SettingsAction::LangSelect => write!(f, "lsel"),
-            SettingsAction::LangSet { lang } => write!(f, "lset:{}", lang),
+            SettingsAction::LangSet { lang } => write!(f, "lset:{}", lang.as_str()),
             SettingsAction::SubSelect => write!(f, "ssel"),
             SettingsAction::SubSet { setting } => write!(f, "sset:{}", setting),
             SettingsAction::NotifSelect => write!(f, "nsel"),
@@ -204,7 +205,7 @@ impl fmt::Display for SubAction {
             } => write!(f, "lprf:{}:{}:{}", sub_id, page, username),
             SubAction::LangMenu { sub_id, page } => write!(f, "lmn:{}:{}", sub_id, page),
             SubAction::LangSet { sub_id, page, lang } => {
-                write!(f, "lset:{}:{}:{}", sub_id, page, lang)
+                write!(f, "lset:{}:{}:{}", sub_id, page, lang.as_str())
             }
             SubAction::NotifMenu { sub_id, page } => write!(f, "nmn:{}:{}", sub_id, page),
             SubAction::NotifSet { sub_id, page, val } => {
@@ -331,11 +332,13 @@ impl FromStr for SettingsAction {
             "main" => Ok(SettingsAction::Main),
             "lsel" => Ok(SettingsAction::LangSelect),
             "lset" => Ok(SettingsAction::LangSet {
-                lang: parts.next().unwrap_or("en").to_string(),
+                lang: LanguageCode::try_from(parts.next().unwrap_or("en"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "ssel" => Ok(SettingsAction::SubSelect),
             "sset" => Ok(SettingsAction::SubSet {
-                setting: parts.next().unwrap_or("all").to_string(),
+                setting: NotificationSetting::try_from(parts.next().unwrap_or("all"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "nsel" => Ok(SettingsAction::NotifSelect),
             "noon" => Ok(SettingsAction::NoonToggle),
@@ -382,20 +385,23 @@ impl FromStr for SubAction {
             "lset" => Ok(SubAction::LangSet {
                 sub_id,
                 page,
-                lang: parts.next().unwrap_or("en").to_string(),
+                lang: LanguageCode::try_from(parts.next().unwrap_or("en"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "nmn" => Ok(SubAction::NotifMenu { sub_id, page }),
             "nset" => Ok(SubAction::NotifSet {
                 sub_id,
                 page,
-                val: parts.next().unwrap_or("all").to_string(),
+                val: NotificationSetting::try_from(parts.next().unwrap_or("all"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "noon" => Ok(SubAction::NoonToggle { sub_id, page }),
             "mmn" => Ok(SubAction::ModeMenu { sub_id, page }),
             "mset" => Ok(SubAction::ModeSet {
                 sub_id,
                 page,
-                mode: parts.next().unwrap_or("blacklist").to_string(),
+                mode: MuteListMode::try_from(parts.next().unwrap_or("blacklist"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "mvw" => {
                 let view_page = parts.next().unwrap_or("0").parse()?;
@@ -421,10 +427,12 @@ impl FromStr for MuteAction {
 
         match cmd {
             "mset" => Ok(MuteAction::ModeSet {
-                mode: parts.next().unwrap_or("blacklist").to_string(),
+                mode: MuteListMode::try_from(parts.next().unwrap_or("blacklist"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "menu" => Ok(MuteAction::Menu {
-                mode: parts.next().unwrap_or("blacklist").to_string(),
+                mode: MuteListMode::try_from(parts.next().unwrap_or("blacklist"))
+                    .map_err(|e: &'static str| anyhow!(e))?,
             }),
             "lst" => Ok(MuteAction::List {
                 page: parts.next().unwrap_or("0").parse()?,

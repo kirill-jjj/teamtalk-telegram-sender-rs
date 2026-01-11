@@ -1,4 +1,4 @@
-use crate::types::NotificationSetting;
+use crate::types::{LanguageCode, NotificationSetting};
 use anyhow::Result;
 
 use super::{Database, types::UserSettings};
@@ -7,7 +7,7 @@ impl Database {
     pub async fn get_or_create_user(
         &self,
         telegram_id: i64,
-        default_lang: &str,
+        default_lang: LanguageCode,
     ) -> Result<UserSettings> {
         let user = sqlx::query_as!(
             UserSettings,
@@ -31,10 +31,11 @@ impl Database {
         if let Some(u) = user {
             Ok(u)
         } else {
+            let default_lang_code = default_lang.as_str();
             sqlx::query!(
                 "INSERT OR IGNORE INTO user_settings (telegram_id, language_code) VALUES (?, ?)",
                 telegram_id,
-                default_lang
+                default_lang_code
             )
             .execute(&self.pool)
             .await?;
@@ -62,7 +63,7 @@ impl Database {
         }
     }
 
-    pub async fn get_user_lang_by_tt_user(&self, tt_username: &str) -> Option<String> {
+    pub async fn get_user_lang_by_tt_user(&self, tt_username: &str) -> Option<LanguageCode> {
         let res: Option<String> = match sqlx::query_scalar!(
             "SELECT language_code FROM user_settings WHERE teamtalk_username = ?",
             tt_username
@@ -81,7 +82,7 @@ impl Database {
             }
         };
 
-        res
+        res.and_then(|lang| LanguageCode::try_from(lang.as_str()).ok())
     }
 
     pub async fn update_notification_setting(
@@ -100,10 +101,11 @@ impl Database {
         Ok(())
     }
 
-    pub async fn update_language(&self, telegram_id: i64, lang: &str) -> Result<()> {
+    pub async fn update_language(&self, telegram_id: i64, lang: LanguageCode) -> Result<()> {
+        let lang_code = lang.as_str();
         sqlx::query!(
             "UPDATE user_settings SET language_code = ? WHERE telegram_id = ?",
-            lang,
+            lang_code,
             telegram_id
         )
         .execute(&self.pool)

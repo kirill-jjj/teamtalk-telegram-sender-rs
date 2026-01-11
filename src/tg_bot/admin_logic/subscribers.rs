@@ -4,6 +4,7 @@ use crate::locales;
 use crate::tg_bot::admin_logic::utils::format_tg_user;
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction, MenuAction, SubAction};
 use crate::tg_bot::keyboards::create_user_list_keyboard;
+use crate::types::{LanguageCode, MuteListMode, NotificationSetting};
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
 
@@ -17,7 +18,7 @@ pub async fn send_subscribers_list(
     bot: &Bot,
     chat_id: teloxide::types::ChatId,
     db: &Database,
-    lang: &str,
+    lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
     let subs = match db.get_subscribers().await {
@@ -29,64 +30,9 @@ pub async fn send_subscribers_list(
     };
 
     if subs.is_empty() {
-        bot.send_message(chat_id, locales::get_text(lang, "list-subs-empty", None))
-            .await?;
-        return Ok(());
-    }
-
-    let display_list = prepare_display_list(bot, subs).await;
-
-    let keyboard = create_user_list_keyboard(
-        &display_list,
-        page,
-        |s| {
-            let mut parts = vec![s.display_name.clone()];
-            if let Some(tt) = &s.tt_username {
-                parts.push(format!("TT: {}", tt));
-            }
-            let name = parts.join(", ");
-            (
-                name,
-                CallbackAction::Subscriber(SubAction::Details {
-                    sub_id: s.telegram_id,
-                    page,
-                }),
-            )
-        },
-        |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
-        Some((
-            locales::get_text(lang, "btn-back-menu", None),
-            CallbackAction::Menu(MenuAction::Who),
-        )),
-        lang,
-    );
-
-    bot.send_message(chat_id, locales::get_text(lang, "list-subs-title", None))
-        .reply_markup(keyboard)
-        .await?;
-    Ok(())
-}
-
-pub async fn edit_subscribers_list(
-    bot: &Bot,
-    msg: &Message,
-    db: &Database,
-    lang: &str,
-    page: usize,
-) -> ResponseResult<()> {
-    let subs = match db.get_subscribers().await {
-        Ok(list) => list,
-        Err(e) => {
-            tracing::error!("Failed to load subscribers: {}", e);
-            Vec::new()
-        }
-    };
-
-    if subs.is_empty() {
-        bot.edit_message_text(
-            msg.chat.id,
-            msg.id,
-            locales::get_text(lang, "list-subs-empty", None),
+        bot.send_message(
+            chat_id,
+            locales::get_text(lang.as_str(), "list-subs-empty", None),
         )
         .await?;
         return Ok(());
@@ -113,7 +59,68 @@ pub async fn edit_subscribers_list(
         },
         |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
         Some((
-            locales::get_text(lang, "btn-back-menu", None),
+            locales::get_text(lang.as_str(), "btn-back-menu", None),
+            CallbackAction::Menu(MenuAction::Who),
+        )),
+        lang,
+    );
+
+    bot.send_message(
+        chat_id,
+        locales::get_text(lang.as_str(), "list-subs-title", None),
+    )
+    .reply_markup(keyboard)
+    .await?;
+    Ok(())
+}
+
+pub async fn edit_subscribers_list(
+    bot: &Bot,
+    msg: &Message,
+    db: &Database,
+    lang: LanguageCode,
+    page: usize,
+) -> ResponseResult<()> {
+    let subs = match db.get_subscribers().await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load subscribers: {}", e);
+            Vec::new()
+        }
+    };
+
+    if subs.is_empty() {
+        bot.edit_message_text(
+            msg.chat.id,
+            msg.id,
+            locales::get_text(lang.as_str(), "list-subs-empty", None),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let display_list = prepare_display_list(bot, subs).await;
+
+    let keyboard = create_user_list_keyboard(
+        &display_list,
+        page,
+        |s| {
+            let mut parts = vec![s.display_name.clone()];
+            if let Some(tt) = &s.tt_username {
+                parts.push(format!("TT: {}", tt));
+            }
+            let name = parts.join(", ");
+            (
+                name,
+                CallbackAction::Subscriber(SubAction::Details {
+                    sub_id: s.telegram_id,
+                    page,
+                }),
+            )
+        },
+        |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
+        Some((
+            locales::get_text(lang.as_str(), "btn-back-menu", None),
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
@@ -122,7 +129,7 @@ pub async fn edit_subscribers_list(
     bot.edit_message_text(
         msg.chat.id,
         msg.id,
-        locales::get_text(lang, "list-subs-title", None),
+        locales::get_text(lang.as_str(), "list-subs-title", None),
     )
     .reply_markup(keyboard)
     .await?;
@@ -160,12 +167,12 @@ pub async fn send_subscriber_details(
     bot: &Bot,
     msg: &Message,
     db: &Database,
-    lang: &str,
+    lang: LanguageCode,
     sub_id: i64,
     return_page: usize,
 ) -> ResponseResult<()> {
     let settings = db
-        .get_or_create_user(sub_id, "en")
+        .get_or_create_user(sub_id, LanguageCode::En)
         .await
         .unwrap_or_else(|e| {
             tracing::error!("Failed to load subscriber settings for {}: {}", sub_id, e);
@@ -185,40 +192,51 @@ pub async fn send_subscriber_details(
         Err(_) => sub_id.to_string(),
     };
 
-    let notif_map = |s: &str| match s {
-        "all" => locales::get_text(lang, "btn-sub-all", args!(marker = "").as_ref()),
-        "join_off" => locales::get_text(lang, "btn-sub-leave", args!(marker = "").as_ref()),
-        "leave_off" => locales::get_text(lang, "btn-sub-join", args!(marker = "").as_ref()),
-        "none" => locales::get_text(lang, "btn-sub-none", args!(marker = "").as_ref()),
-        _ => s.to_string(),
+    let notif_setting = NotificationSetting::try_from(settings.notification_settings.as_str())
+        .unwrap_or(NotificationSetting::All);
+    let notif_text = match notif_setting {
+        NotificationSetting::All => {
+            locales::get_text(lang.as_str(), "btn-sub-all", args!(marker = "").as_ref())
+        }
+        NotificationSetting::JoinOff => {
+            locales::get_text(lang.as_str(), "btn-sub-leave", args!(marker = "").as_ref())
+        }
+        NotificationSetting::LeaveOff => {
+            locales::get_text(lang.as_str(), "btn-sub-join", args!(marker = "").as_ref())
+        }
+        NotificationSetting::None => {
+            locales::get_text(lang.as_str(), "btn-sub-none", args!(marker = "").as_ref())
+        }
     };
 
-    let mode_map = |s: &str| match s {
-        "blacklist" => locales::get_text(lang, "mode-blacklist", None),
-        "whitelist" => locales::get_text(lang, "mode-whitelist", None),
-        _ => s.to_string(),
+    let mute_mode =
+        MuteListMode::try_from(settings.mute_list_mode.as_str()).unwrap_or(MuteListMode::Blacklist);
+    let mode_text = match mute_mode {
+        MuteListMode::Blacklist => locales::get_text(lang.as_str(), "mode-blacklist", None),
+        MuteListMode::Whitelist => locales::get_text(lang.as_str(), "mode-whitelist", None),
     };
+    let sub_lang = LanguageCode::from_str_or_default(&settings.language_code, LanguageCode::En);
 
     let args = args!(
         name = display_name,
         tt_user = settings
             .teamtalk_username
-            .unwrap_or_else(|| locales::get_text(lang, "val-none", None)),
-        lang = settings.language_code,
+            .unwrap_or_else(|| locales::get_text(lang.as_str(), "val-none", None)),
+        lang = sub_lang.as_str(),
         noon = if settings.not_on_online_enabled {
-            locales::get_text(lang, "status-enabled", None)
+            locales::get_text(lang.as_str(), "status-enabled", None)
         } else {
-            locales::get_text(lang, "status-disabled", None)
+            locales::get_text(lang.as_str(), "status-disabled", None)
         },
-        notif = notif_map(&settings.notification_settings),
-        mode = mode_map(&settings.mute_list_mode)
+        notif = notif_text,
+        mode = mode_text
     );
 
-    let text = locales::get_text(lang, "sub-details-title", args.as_ref());
+    let text = locales::get_text(lang.as_str(), "sub-details-title", args.as_ref());
 
     let btn = |text_key: &str, action: SubAction| {
         InlineKeyboardButton::callback(
-            locales::get_text(lang, text_key, None),
+            locales::get_text(lang.as_str(), text_key, None),
             CallbackAction::Subscriber(action).to_string(),
         )
     };
@@ -282,7 +300,7 @@ pub async fn send_subscriber_details(
             },
         )],
         vec![InlineKeyboardButton::callback(
-            locales::get_text(lang, "btn-back-subs", None),
+            locales::get_text(lang.as_str(), "btn-back-subs", None),
             CallbackAction::Admin(AdminAction::SubsList { page: return_page }).to_string(),
         )],
     ]);

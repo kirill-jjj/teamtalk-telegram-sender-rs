@@ -3,6 +3,7 @@ use crate::tg_bot::callback_handlers::{admin, menu, mute, settings, subscriber, 
 use crate::tg_bot::callbacks_types::CallbackAction;
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::notify_admin_error;
+use crate::types::LanguageCode;
 use std::str::FromStr;
 use teloxide::prelude::*;
 use teloxide::types::MaybeInaccessibleMessage;
@@ -14,16 +15,15 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
 
     let db = &state.db;
     let config = &state.config;
+    let default_lang =
+        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
 
     let _msg = match &q.message {
         Some(MaybeInaccessibleMessage::Regular(m)) => m,
         _ => return Ok(()),
     };
 
-    let user_settings = match db
-        .get_or_create_user(telegram_id, &config.general.default_lang)
-        .await
-    {
+    let user_settings = match db.get_or_create_user(telegram_id, default_lang).await {
         Ok(settings) => settings,
         Err(e) => {
             tracing::error!(
@@ -37,27 +37,23 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
                 telegram_id,
                 "admin-error-context-callback",
                 &e.to_string(),
-                &config.general.default_lang,
+                default_lang,
             )
             .await;
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(
-                    &config.general.default_lang,
-                    "cmd-error",
-                    None,
-                ))
+                .text(locales::get_text(default_lang.as_str(), "cmd-error", None))
                 .show_alert(true)
                 .await?;
             return Ok(());
         }
     };
-    let lang = &user_settings.language_code;
+    let lang = LanguageCode::from_str_or_default(&user_settings.language_code, default_lang);
 
     match db.is_subscribed(telegram_id).await {
         Ok(true) => {}
         Ok(false) => {
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(lang, "cmd-not-subscribed", None))
+                .text(locales::get_text(lang.as_str(), "cmd-not-subscribed", None))
                 .show_alert(true)
                 .await?;
             return Ok(());
@@ -74,7 +70,7 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
             )
             .await;
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(lang, "cmd-error", None))
+                .text(locales::get_text(lang.as_str(), "cmd-error", None))
                 .show_alert(true)
                 .await?;
             return Ok(());

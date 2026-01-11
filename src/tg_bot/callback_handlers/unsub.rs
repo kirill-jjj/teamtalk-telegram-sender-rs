@@ -2,6 +2,7 @@ use crate::locales;
 use crate::tg_bot::callbacks_types::UnsubAction;
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::notify_admin_error;
+use crate::types::LanguageCode;
 use teloxide::prelude::*;
 
 pub async fn handle_unsub_action(
@@ -9,7 +10,7 @@ pub async fn handle_unsub_action(
     q: CallbackQuery,
     state: AppState,
     action: UnsubAction,
-    lang: &str,
+    lang: LanguageCode,
 ) -> ResponseResult<()> {
     let msg = match q.message {
         Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
@@ -33,25 +34,25 @@ pub async fn handle_unsub_action(
                 )
                 .await;
                 bot.answer_callback_query(q.id)
-                    .text(locales::get_text(lang, "cmd-error", None))
+                    .text(locales::get_text(lang.as_str(), "cmd-error", None))
                     .await?;
                 return Ok(());
             }
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang, "cmd-success-unsub", None),
+                locales::get_text(lang.as_str(), "cmd-success-unsub", None),
             )
             .await?;
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "cmd-success-unsub", None))
+                .text(locales::get_text(lang.as_str(), "cmd-success-unsub", None))
                 .await?;
         }
         UnsubAction::Cancel => {
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang, "unsub-cancelled", None),
+                locales::get_text(lang.as_str(), "unsub-cancelled", None),
             )
             .await?;
             bot.answer_callback_query(q.id).await?;

@@ -6,7 +6,7 @@ use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction};
 use crate::tg_bot::keyboards::create_user_list_keyboard;
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::{check_db_err, notify_admin_error};
-use crate::types::{LiteUser, TtCommand};
+use crate::types::{LanguageCode, LiteUser, TtCommand};
 use teloxide::prelude::*;
 
 pub async fn handle_admin(
@@ -14,7 +14,7 @@ pub async fn handle_admin(
     q: CallbackQuery,
     state: AppState,
     action: AdminAction,
-    lang: &str,
+    lang: LanguageCode,
 ) -> ResponseResult<()> {
     let msg = match q.message {
         Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
@@ -31,7 +31,7 @@ pub async fn handle_admin(
             users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
 
             let args = args!(server = config.teamtalk.display_name().to_string());
-            let title = locales::get_text(lang, "list-kick-title", args.as_ref());
+            let title = locales::get_text(lang.as_str(), "list-kick-title", args.as_ref());
 
             let keyboard = create_user_list_keyboard(
                 &users,
@@ -63,7 +63,7 @@ pub async fn handle_admin(
             users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
 
             let args = args!(server = config.teamtalk.display_name().to_string());
-            let title = locales::get_text(lang, "list-ban-title", args.as_ref());
+            let title = locales::get_text(lang.as_str(), "list-ban-title", args.as_ref());
 
             let keyboard = create_user_list_keyboard(
                 &users,
@@ -104,7 +104,7 @@ pub async fn handle_admin(
                 .await;
             }
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "toast-command-sent", None))
+                .text(locales::get_text(lang.as_str(), "toast-command-sent", None))
                 .await?;
         }
         AdminAction::BanPerform { user_id } => {
@@ -128,7 +128,7 @@ pub async fn handle_admin(
                     )
                     .await;
                     bot.answer_callback_query(q.id)
-                        .text(locales::get_text(lang, "cmd-error", None))
+                        .text(locales::get_text(lang.as_str(), "cmd-error", None))
                         .show_alert(true)
                         .await?;
                     return Ok(());
@@ -168,11 +168,11 @@ pub async fn handle_admin(
                     .await;
                 }
                 bot.answer_callback_query(q.id)
-                    .text(locales::get_text(lang, "toast-command-sent", None))
+                    .text(locales::get_text(lang.as_str(), "toast-command-sent", None))
                     .await?;
             } else {
                 bot.answer_callback_query(q.id)
-                    .text(locales::get_text(lang, "cmd-no-users", None))
+                    .text(locales::get_text(lang.as_str(), "cmd-no-users", None))
                     .show_alert(true)
                     .await?;
             }
@@ -200,7 +200,11 @@ pub async fn handle_admin(
                 return Ok(());
             }
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "toast-user-unbanned", None))
+                .text(locales::get_text(
+                    lang.as_str(),
+                    "toast-user-unbanned",
+                    None,
+                ))
                 .await?;
             edit_unban_list(&bot, &msg, db, lang, page).await?;
         }

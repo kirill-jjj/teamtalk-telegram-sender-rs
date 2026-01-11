@@ -12,7 +12,7 @@ use crate::config::Config;
 use crate::db::Database;
 use crate::locales;
 use crate::tg_bot::utils::notify_admin_error;
-use crate::types::{LiteUser, TtCommand};
+use crate::types::{LanguageCode, LiteUser, TtCommand};
 use dashmap::DashMap;
 use std::sync::Arc;
 use std::sync::mpsc::Sender;
@@ -68,13 +68,17 @@ pub async fn run_tg_bot(
                     let err_str = err.to_string();
                     if !err_str.contains("TerminatedByOtherGetUpdates") {
                         tracing::error!("[TELEGRAM] Update listener error: {}", err);
+                        let default_lang = LanguageCode::from_str_or_default(
+                            &admin_config.general.default_lang,
+                            LanguageCode::En,
+                        );
                         notify_admin_error(
                             &admin_bot,
                             &admin_config,
                             0,
                             "admin-error-context-update-listener",
                             &err_str,
-                            &admin_config.general.default_lang,
+                            default_lang,
                         )
                         .await;
                     }
@@ -91,22 +95,23 @@ async fn set_bot_commands(
     db: &Database,
     config: &Config,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let languages = vec!["en", "ru"];
+    let languages = vec![LanguageCode::En, LanguageCode::Ru];
 
-    let default_lang = &config.general.default_lang;
+    let default_lang =
+        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
     let global_commands = get_user_commands(default_lang);
     bot.set_my_commands(global_commands)
         .scope(BotCommandScope::AllPrivateChats)
         .await?;
 
     for lang in &languages {
-        if lang == default_lang {
+        if *lang == default_lang {
             continue;
         }
-        let cmds = get_user_commands(lang);
+        let cmds = get_user_commands(*lang);
         bot.set_my_commands(cmds)
             .scope(BotCommandScope::AllPrivateChats)
-            .language_code(*lang)
+            .language_code(lang.as_str())
             .await?;
     }
 
@@ -125,7 +130,7 @@ async fn set_bot_commands(
                 tracing::error!("Failed to load admin settings for {}: {}", admin_id, e);
                 crate::db::types::UserSettings {
                     telegram_id: admin_id,
-                    language_code: default_lang.clone(),
+                    language_code: default_lang.as_str().to_string(),
                     notification_settings: "all".to_string(),
                     mute_list_mode: "blacklist".to_string(),
                     teamtalk_username: None,
@@ -134,7 +139,9 @@ async fn set_bot_commands(
                 }
             });
 
-        let admin_cmds = get_admin_commands(&user_settings.language_code);
+        let admin_lang =
+            LanguageCode::from_str_or_default(&user_settings.language_code, default_lang);
+        let admin_cmds = get_admin_commands(admin_lang);
 
         bot.set_my_commands(admin_cmds)
             .scope(BotCommandScope::Chat {
@@ -150,30 +157,54 @@ async fn set_bot_commands(
     Ok(())
 }
 
-fn get_user_commands(lang: &str) -> Vec<BotCommand> {
+fn get_user_commands(lang: LanguageCode) -> Vec<BotCommand> {
     vec![
-        BotCommand::new("menu", locales::get_text(lang, "cmd-desc-menu", None)),
-        BotCommand::new("who", locales::get_text(lang, "cmd-desc-who", None)),
+        BotCommand::new(
+            "menu",
+            locales::get_text(lang.as_str(), "cmd-desc-menu", None),
+        ),
+        BotCommand::new(
+            "who",
+            locales::get_text(lang.as_str(), "cmd-desc-who", None),
+        ),
         BotCommand::new(
             "settings",
-            locales::get_text(lang, "cmd-desc-settings", None),
+            locales::get_text(lang.as_str(), "cmd-desc-settings", None),
         ),
-        BotCommand::new("unsub", locales::get_text(lang, "cmd-desc-unsub", None)),
-        BotCommand::new("help", locales::get_text(lang, "cmd-desc-help", None)),
+        BotCommand::new(
+            "unsub",
+            locales::get_text(lang.as_str(), "cmd-desc-unsub", None),
+        ),
+        BotCommand::new(
+            "help",
+            locales::get_text(lang.as_str(), "cmd-desc-help", None),
+        ),
     ]
 }
 
-fn get_admin_commands(lang: &str) -> Vec<BotCommand> {
+fn get_admin_commands(lang: LanguageCode) -> Vec<BotCommand> {
     let mut cmds = get_user_commands(lang);
     cmds.extend(vec![
-        BotCommand::new("kick", locales::get_text(lang, "cmd-desc-kick", None)),
-        BotCommand::new("ban", locales::get_text(lang, "cmd-desc-ban", None)),
-        BotCommand::new("unban", locales::get_text(lang, "cmd-desc-unban", None)),
+        BotCommand::new(
+            "kick",
+            locales::get_text(lang.as_str(), "cmd-desc-kick", None),
+        ),
+        BotCommand::new(
+            "ban",
+            locales::get_text(lang.as_str(), "cmd-desc-ban", None),
+        ),
+        BotCommand::new(
+            "unban",
+            locales::get_text(lang.as_str(), "cmd-desc-unban", None),
+        ),
         BotCommand::new(
             "subscribers",
-            locales::get_text(lang, "cmd-desc-subscribers", None),
+            locales::get_text(lang.as_str(), "cmd-desc-subscribers", None),
         ),
-        BotCommand::new("exit", locales::get_text(lang, "cmd-desc-exit", None)),
+        BotCommand::new(
+            "exit",
+            locales::get_text(lang.as_str(), "cmd-desc-exit", None),
+        ),
     ]);
     cmds
 }

@@ -3,7 +3,7 @@ use crate::{
     config::Config,
     db::Database,
     locales,
-    types::{self, BridgeEvent},
+    types::{self, BridgeEvent, LanguageCode},
 };
 use dashmap::DashMap;
 use std::collections::HashMap;
@@ -23,7 +23,8 @@ pub async fn run_bridge(
     msg_bot: Option<Bot>,
     tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
 ) {
-    let default_lang = &config.general.default_lang;
+    let default_lang =
+        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
 
     tracing::info!("🌉 [BRIDGE] Bridge task started.");
@@ -65,21 +66,22 @@ pub async fn run_bridge(
                     crate::types::NotificationType::Leave => "event-leave",
                 };
 
-                let mut rendered_text_cache: HashMap<String, String> = HashMap::new();
+                let mut rendered_text_cache: HashMap<LanguageCode, String> = HashMap::new();
                 let mut set = JoinSet::new();
 
                 for sub in recipients {
                     let bot = bot.clone();
                     let online_users_by_username = online_users_by_username.clone();
 
+                    let lang = LanguageCode::from_str_or_default(&sub.language_code, default_lang);
                     let text = rendered_text_cache
-                        .entry(sub.language_code.clone())
+                        .entry(lang)
                         .or_insert_with(|| {
                             let args = args!(
                                 nickname = escaped_nick.clone(),
                                 server = escaped_server.clone()
                             );
-                            locales::get_text(&sub.language_code, key, args.as_ref())
+                            locales::get_text(lang.as_str(), key, args.as_ref())
                         })
                         .clone();
 
@@ -145,13 +147,13 @@ pub async fn run_bridge(
                     let admin_settings =
                         db_clone.get_or_create_user(admin_id.0, default_lang).await;
                     let admin_lang = match admin_settings {
-                        Ok(u) => u.language_code,
+                        Ok(u) => LanguageCode::from_str_or_default(&u.language_code, default_lang),
                         Err(e) => {
                             tracing::error!(
                                 "Failed to get admin settings: {}. Defaulting to 'en'.",
                                 e
                             );
-                            "en".to_string()
+                            LanguageCode::En
                         }
                     };
 
@@ -161,7 +163,7 @@ pub async fn run_bridge(
                         msg = html::escape(&msg_content)
                     );
                     let text_admin =
-                        locales::get_text(&admin_lang, "admin-alert", args_admin.as_ref());
+                        locales::get_text(admin_lang.as_str(), "admin-alert", args_admin.as_ref());
 
                     let res = bot
                         .send_message(admin_id, &text_admin)
@@ -172,9 +174,9 @@ pub async fn run_bridge(
                         db_clone
                             .get_user_lang_by_tt_user(&tt_username)
                             .await
-                            .unwrap_or_else(|| default_lang.to_string())
+                            .unwrap_or(default_lang)
                     } else {
-                        default_lang.to_string()
+                        default_lang
                     };
 
                     let key_reply = if res.is_ok() {
@@ -182,7 +184,7 @@ pub async fn run_bridge(
                     } else {
                         "tt-msg-failed"
                     };
-                    let reply_text = locales::get_text(&reply_lang, key_reply, None);
+                    let reply_text = locales::get_text(reply_lang.as_str(), key_reply, None);
 
                     if let Err(e) = tx_tt_cmd.send(types::TtCommand::ReplyToUser {
                         user_id,

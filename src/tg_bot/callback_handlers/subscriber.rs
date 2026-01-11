@@ -6,7 +6,7 @@ use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscr
 use crate::tg_bot::callbacks_types::SubAction;
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::{check_db_err, notify_admin_error};
-use crate::types::{MuteListMode, NotificationSetting, TtCommand};
+use crate::types::{LanguageCode, TtCommand};
 use crate::{args, locales};
 use teloxide::prelude::*;
 
@@ -15,7 +15,7 @@ pub async fn handle_subscriber_actions(
     q: CallbackQuery,
     state: AppState,
     action: SubAction,
-    lang: &str,
+    lang: LanguageCode,
 ) -> ResponseResult<()> {
     let msg = match q.message {
         Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
@@ -46,7 +46,11 @@ pub async fn handle_subscriber_actions(
                 return Ok(());
             }
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "toast-subscriber-deleted", None))
+                .text(locales::get_text(
+                    lang.as_str(),
+                    "toast-subscriber-deleted",
+                    None,
+                ))
                 .show_alert(true)
                 .await?;
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
@@ -98,7 +102,7 @@ pub async fn handle_subscriber_actions(
             }
 
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "toast-user-banned", None))
+                .text(locales::get_text(lang.as_str(), "toast-user-banned", None))
                 .show_alert(true)
                 .await?;
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
@@ -122,7 +126,7 @@ pub async fn handle_subscriber_actions(
             }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-account-unlinked",
                     args!(user = sub_id.to_string()).as_ref(),
                 ))
@@ -170,7 +174,7 @@ pub async fn handle_subscriber_actions(
             }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-account-linked",
                     args!(user = username).as_ref(),
                 ))
@@ -189,7 +193,7 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_language(sub_id, &new_lang).await,
+                db.update_language(sub_id, new_lang).await,
                 config,
                 q.from.id.0 as i64,
                 "admin-error-context-callback",
@@ -201,9 +205,9 @@ pub async fn handle_subscriber_actions(
             }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-lang-set",
-                    args!(id = sub_id.to_string(), lang = new_lang).as_ref(),
+                    args!(id = sub_id.to_string(), lang = new_lang.as_str()).as_ref(),
                 ))
                 .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
@@ -215,8 +219,7 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_notification_setting(sub_id, NotificationSetting::from(val.as_str()))
-                    .await,
+                db.update_notification_setting(sub_id, val.clone()).await,
                 config,
                 q.from.id.0 as i64,
                 "admin-error-context-callback",
@@ -228,9 +231,9 @@ pub async fn handle_subscriber_actions(
             }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-notif-set",
-                    args!(id = sub_id.to_string(), val = val).as_ref(),
+                    args!(id = sub_id.to_string(), val = val.to_string()).as_ref(),
                 ))
                 .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
@@ -252,7 +255,7 @@ pub async fn handle_subscriber_actions(
             let status = "toggled";
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-noon-toggled",
                     args!(id = sub_id.to_string(), status = status).as_ref(),
                 ))
@@ -266,8 +269,7 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_mute_mode(sub_id, MuteListMode::from(mode.as_str()))
-                    .await,
+                db.update_mute_mode(sub_id, mode.clone()).await,
                 config,
                 q.from.id.0 as i64,
                 "admin-error-context-callback",
@@ -279,9 +281,9 @@ pub async fn handle_subscriber_actions(
             }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-mute-mode-sub-set",
-                    args!(id = sub_id.to_string(), val = mode).as_ref(),
+                    args!(id = sub_id.to_string(), val = mode.to_string()).as_ref(),
                 ))
                 .await?;
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;

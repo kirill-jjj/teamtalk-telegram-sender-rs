@@ -5,7 +5,14 @@ use crate::types::BridgeEvent;
 use std::fmt::Write;
 use teamtalk::Client;
 
-pub(super) fn handle_who_command(client: &Client, ctx: &WorkerContext, chat_id: i64, lang: String) {
+use crate::types::LanguageCode;
+
+pub(super) fn handle_who_command(
+    client: &Client,
+    ctx: &WorkerContext,
+    chat_id: i64,
+    lang: LanguageCode,
+) {
     let tt_config = &ctx.config.teamtalk;
 
     let real_name = client.get_server_properties().map(|p| p.name);
@@ -47,7 +54,7 @@ pub(super) fn handle_who_command(client: &Client, ctx: &WorkerContext, chat_id: 
     let total = users.len();
 
     let header_args = args!(server = server_name, count = total);
-    let header = locales::get_text(&lang, "tt-report-header", header_args.as_ref());
+    let header = locales::get_text(lang.as_str(), "tt-report-header", header_args.as_ref());
 
     let mut report = String::with_capacity(1024);
     if let Err(e) = writeln!(report, "{}\n", header) {
@@ -60,20 +67,20 @@ pub(super) fn handle_who_command(client: &Client, ctx: &WorkerContext, chat_id: 
         let user_list = nicks.join(", ");
 
         let location = if chan_name == "ROOT_MARKER" {
-            locales::get_text(&lang, "tt-report-root", None)
+            locales::get_text(lang.as_str(), "tt-report-root", None)
         } else {
             chan_name
         };
 
         let row_args = args!(users = user_list, channel = location);
-        let row_text = locales::get_text(&lang, "tt-report-row", row_args.as_ref());
+        let row_text = locales::get_text(lang.as_str(), "tt-report-row", row_args.as_ref());
 
         if let Err(e) = writeln!(report, "{}", row_text) {
             tracing::error!("Failed to write who report row: {}", e);
         }
     }
     if !unauth_users.is_empty() {
-        let unauth_label = locales::get_text(&lang, "tt-report-unauth", None);
+        let unauth_label = locales::get_text(lang.as_str(), "tt-report-unauth", None);
         if let Err(e) = writeln!(report, "{} {}", unauth_users.join(", "), unauth_label) {
             tracing::error!("Failed to write who report unauth row: {}", e);
         }

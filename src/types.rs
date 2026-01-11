@@ -1,5 +1,42 @@
 use std::fmt;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LanguageCode {
+    En,
+    Ru,
+}
+
+impl LanguageCode {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LanguageCode::En => "en",
+            LanguageCode::Ru => "ru",
+        }
+    }
+
+    pub fn from_str_or_default(value: &str, fallback: LanguageCode) -> LanguageCode {
+        LanguageCode::try_from(value).unwrap_or(fallback)
+    }
+}
+
+impl fmt::Display for LanguageCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl TryFrom<&str> for LanguageCode {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_ascii_lowercase().as_str() {
+            "en" => Ok(LanguageCode::En),
+            "ru" => Ok(LanguageCode::Ru),
+            _ => Err("unsupported language code"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum NotificationSetting {
     All,
@@ -19,13 +56,16 @@ impl fmt::Display for NotificationSetting {
     }
 }
 
-impl From<&str> for NotificationSetting {
-    fn from(s: &str) -> Self {
-        match s {
-            "join_off" => NotificationSetting::JoinOff,
-            "leave_off" => NotificationSetting::LeaveOff,
-            "none" => NotificationSetting::None,
-            _ => NotificationSetting::All,
+impl TryFrom<&str> for NotificationSetting {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "all" => Ok(NotificationSetting::All),
+            "join_off" => Ok(NotificationSetting::JoinOff),
+            "leave_off" => Ok(NotificationSetting::LeaveOff),
+            "none" => Ok(NotificationSetting::None),
+            _ => Err("unsupported notification setting"),
         }
     }
 }
@@ -45,11 +85,14 @@ impl fmt::Display for MuteListMode {
     }
 }
 
-impl From<&str> for MuteListMode {
-    fn from(s: &str) -> Self {
-        match s {
-            "whitelist" => MuteListMode::Whitelist,
-            _ => MuteListMode::Blacklist,
+impl TryFrom<&str> for MuteListMode {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "blacklist" => Ok(MuteListMode::Blacklist),
+            "whitelist" => Ok(MuteListMode::Whitelist),
+            _ => Err("unsupported mute list mode"),
         }
     }
 }
@@ -86,7 +129,7 @@ pub enum TtCommand {
     ReplyToUser { user_id: i32, text: String },
     KickUser { user_id: i32 },
     BanUser { user_id: i32 },
-    Who { chat_id: i64, lang: String },
+    Who { chat_id: i64, lang: LanguageCode },
     LoadAccounts,
 }
 

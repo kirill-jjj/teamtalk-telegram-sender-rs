@@ -4,7 +4,7 @@ use crate::tg_bot::callbacks_types::MuteAction;
 use crate::tg_bot::settings_logic::{render_mute_list, render_mute_list_strings, send_mute_menu};
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::{check_db_err, notify_admin_error};
-use crate::types::{MuteListMode, TtCommand};
+use crate::types::{LanguageCode, TtCommand};
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
 
@@ -13,7 +13,7 @@ pub async fn handle_mute(
     q: CallbackQuery,
     state: AppState,
     action: MuteAction,
-    lang: &str,
+    lang: LanguageCode,
 ) -> ResponseResult<()> {
     let msg = match &q.message {
         Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
@@ -25,11 +25,10 @@ pub async fn handle_mute(
 
     match action {
         MuteAction::ModeSet { mode } => {
-            let new_mode = MuteListMode::from(mode.as_str());
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_mute_mode(telegram_id, new_mode.clone()).await,
+                db.update_mute_mode(telegram_id, mode.clone()).await,
                 config,
                 telegram_id,
                 "admin-error-context-callback",
@@ -41,15 +40,15 @@ pub async fn handle_mute(
             }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
-                    lang,
+                    lang.as_str(),
                     "toast-mute-mode-set",
-                    args!(mode = new_mode.to_string()).as_ref(),
+                    args!(mode = mode.to_string()).as_ref(),
                 ))
                 .await?;
-            send_mute_menu(&bot, msg, lang, &new_mode.to_string()).await?;
+            send_mute_menu(&bot, msg, lang, mode).await?;
         }
         MuteAction::Menu { mode } => {
-            send_mute_menu(&bot, msg, lang, &mode).await?;
+            send_mute_menu(&bot, msg, lang, mode).await?;
         }
         MuteAction::List { page } => {
             let muted = match db.get_muted_users_list(telegram_id).await {
@@ -90,7 +89,11 @@ pub async fn handle_mute(
 
             let args = args!(user = username.clone(), action = "toggled");
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "toast-user-muted", args.as_ref()))
+                .text(locales::get_text(
+                    lang.as_str(),
+                    "toast-user-muted",
+                    args.as_ref(),
+                ))
                 .await?;
 
             let muted = db
@@ -163,7 +166,11 @@ pub async fn handle_mute(
 
             let args = args!(user = username.clone(), action = "toggled");
             bot.answer_callback_query(q.id)
-                .text(locales::get_text(lang, "toast-user-muted", args.as_ref()))
+                .text(locales::get_text(
+                    lang.as_str(),
+                    "toast-user-muted",
+                    args.as_ref(),
+                ))
                 .await?;
 
             let user_accounts = &state.user_accounts;

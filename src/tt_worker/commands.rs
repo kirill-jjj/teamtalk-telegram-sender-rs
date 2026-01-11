@@ -1,7 +1,7 @@
 use crate::args;
 use crate::locales;
 use crate::tt_worker::WorkerContext;
-use crate::types::TtCommand;
+use crate::types::{LanguageCode, TtCommand};
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
 use uuid::Uuid;
@@ -17,7 +17,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
     let db = ctx.db.clone();
     let online_users = ctx.online_users.clone();
 
-    let default_lang = ctx.config.general.default_lang.clone();
+    let default_lang =
+        LanguageCode::from_str_or_default(&ctx.config.general.default_lang, LanguageCode::En);
     let admin_username = ctx.config.general.admin_username.clone();
     let tt_config = ctx.config.teamtalk.clone();
     let deeplink_ttl = ctx.config.operational_parameters.deeplink_ttl_seconds;
@@ -41,9 +42,9 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let reply_lang = if !username.is_empty() {
                 db.get_user_lang_by_tt_user(&username)
                     .await
-                    .unwrap_or_else(|| default_lang.clone())
+                    .unwrap_or(default_lang)
             } else {
-                default_lang.clone()
+                default_lang
             };
 
             let parts: Vec<&str> = content.split_whitespace().collect();
@@ -85,14 +86,15 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         Ok(_) => {
                             let link = format!("https://t.me/{}?start={}", bot_user, token);
                             let text = locales::get_text(
-                                &reply_lang,
+                                reply_lang.as_str(),
                                 "tt-sub-link",
                                 args!(link = link).as_ref(),
                             );
                             send_reply(text);
                         }
                         Err(_) => {
-                            let text = locales::get_text(&reply_lang, "tt-error-generic", None);
+                            let text =
+                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
                             send_reply(text);
                         }
                     }
@@ -113,14 +115,15 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         Ok(_) => {
                             let link = format!("https://t.me/{}?start={}", bot_user, token);
                             let text = locales::get_text(
-                                &reply_lang,
+                                reply_lang.as_str(),
                                 "tt-unsub-link",
                                 args!(link = link).as_ref(),
                             );
                             send_reply(text);
                         }
                         Err(_) => {
-                            let text = locales::get_text(&reply_lang, "tt-error-generic", None);
+                            let text =
+                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
                             send_reply(text);
                         }
                     }
@@ -135,10 +138,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .as_ref()
                     .map(|u| u == &username)
                     .unwrap_or(false);
-                let mut help_msg = locales::get_text(&reply_lang, "help-text", None);
+                let mut help_msg = locales::get_text(reply_lang.as_str(), "help-text", None);
                 if is_main_admin {
-                    let header = locales::get_text(&reply_lang, "tt-admin-help-header", None);
-                    let cmds = locales::get_text(&reply_lang, "tt-admin-help-cmds", None);
+                    let header =
+                        locales::get_text(reply_lang.as_str(), "tt-admin-help-header", None);
+                    let cmds = locales::get_text(reply_lang.as_str(), "tt-admin-help-cmds", None);
                     help_msg.push_str(&header);
                     help_msg.push_str(&cmds);
                 }
@@ -149,12 +153,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .map(|u| u == &username)
                     .unwrap_or(false);
                 if !is_main_admin {
-                    let text = locales::get_text(&reply_lang, "cmd-unauth", None);
+                    let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
                     send_reply(text);
                     return;
                 }
                 if parts.len() < 2 {
-                    let text = locales::get_text(&reply_lang, "tt-admin-no-ids", None);
+                    let text = locales::get_text(reply_lang.as_str(), "tt-admin-no-ids", None);
                     send_reply(text);
                     return;
                 }
@@ -178,12 +182,14 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 if added_count > 0 {
                     let args = args!(count = added_count);
-                    let text = locales::get_text(&reply_lang, "tt-admin-added", args.as_ref());
+                    let text =
+                        locales::get_text(reply_lang.as_str(), "tt-admin-added", args.as_ref());
                     send_reply(text);
                 }
                 if failed_count > 0 {
                     let args = args!(count = failed_count);
-                    let text = locales::get_text(&reply_lang, "tt-admin-add-fail", args.as_ref());
+                    let text =
+                        locales::get_text(reply_lang.as_str(), "tt-admin-add-fail", args.as_ref());
                     send_reply(text);
                 }
             } else if cmd == "/remove_admin" {
@@ -192,12 +198,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .map(|u| u == &username)
                     .unwrap_or(false);
                 if !is_main_admin {
-                    let text = locales::get_text(&reply_lang, "cmd-unauth", None);
+                    let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
                     send_reply(text);
                     return;
                 }
                 if parts.len() < 2 {
-                    let text = locales::get_text(&reply_lang, "tt-admin-no-ids", None);
+                    let text = locales::get_text(reply_lang.as_str(), "tt-admin-no-ids", None);
                     send_reply(text);
                     return;
                 }
@@ -223,13 +229,17 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 if removed_count > 0 {
                     let args = args!(count = removed_count);
-                    let text = locales::get_text(&reply_lang, "tt-admin-removed", args.as_ref());
+                    let text =
+                        locales::get_text(reply_lang.as_str(), "tt-admin-removed", args.as_ref());
                     send_reply(text);
                 }
                 if failed_count > 0 {
                     let args = args!(count = failed_count);
-                    let text =
-                        locales::get_text(&reply_lang, "tt-admin-remove-fail", args.as_ref());
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        "tt-admin-remove-fail",
+                        args.as_ref(),
+                    );
                     send_reply(text);
                 }
             } else {
