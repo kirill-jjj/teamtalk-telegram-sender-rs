@@ -16,6 +16,7 @@ use std::sync::mpsc as std_mpsc;
 use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
+use tokio::time::Duration;
 use tracing_subscriber::EnvFilter;
 
 fn update_bot() -> Result<(), Box<dyn std::error::Error>> {
@@ -87,6 +88,25 @@ async fn main() -> Result<()> {
     let shared_config = Arc::new(config);
 
     let db = db::Database::new(&db_path_str).await?;
+    let db_for_cleanup = db.clone();
+    let cleanup_interval = shared_config
+        .operational_parameters
+        .deeplink_cleanup_interval_seconds;
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(cleanup_interval));
+        loop {
+            interval.tick().await;
+            match db_for_cleanup.cleanup_expired_deeplinks().await {
+                Ok(count) if count > 0 => {
+                    tracing::info!("🧹 Cleaned up {} expired deeplinks.", count);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("Failed to clean up expired deeplinks: {}", e);
+                }
+            }
+        }
+    });
 
     let online_users: Arc<DashMap<i32, types::LiteUser>> = Arc::new(DashMap::new());
     let online_users_by_username: Arc<DashMap<String, i32>> = Arc::new(DashMap::new());
@@ -137,19 +157,19 @@ async fn main() -> Result<()> {
     let (tx_init, rx_init) = std::sync::mpsc::channel();
 
     std::thread::spawn(move || {
-        tt_worker::run_teamtalk_thread(
-            config_for_worker,
-            tt_users,
-            tt_users_by_username,
-            tt_accounts,
-            tx_bridge_clone,
-            rx_tt_cmd,
-            tx_tt_cmd_for_worker,
-            db_for_tt,
-            rt_handle,
-            bot_username_for_tt,
+        tt_worker::run_teamtalk_thread(tt_worker::RunTeamtalkArgs {
+            config: config_for_worker,
+            online_users: tt_users,
+            online_users_by_username: tt_users_by_username,
+            user_accounts: tt_accounts,
+            tx_bridge: tx_bridge_clone,
+            rx_cmd: rx_tt_cmd,
+            tx_cmd_clone: tx_tt_cmd_for_worker,
+            db: db_for_tt,
+            rt: rt_handle,
+            bot_username: bot_username_for_tt,
             tx_init,
-        );
+        });
     });
 
     match rx_init.recv() {
@@ -164,13 +184,15 @@ async fn main() -> Result<()> {
     let users_by_username_clone = online_users_by_username.clone();
 
     let bridge_handle = tokio::spawn(bridge::run_bridge(
+        bridge::BridgeContext {
+            db: db_clone,
+            online_users_by_username: users_by_username_clone,
+            config: shared_config.clone(),
+            event_bot: event_bot_clone,
+            msg_bot: msg_bot_clone,
+            tx_tt_cmd: tx_tt_cmd.clone(),
+        },
         rx_bridge,
-        db_clone,
-        users_by_username_clone,
-        shared_config.clone(),
-        event_bot_clone,
-        msg_bot_clone,
-        tx_tt_cmd.clone(),
     ));
 
     if let Some(bot) = event_bot {

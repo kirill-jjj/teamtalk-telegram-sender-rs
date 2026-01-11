@@ -13,16 +13,27 @@ use teloxide::RequestError;
 use teloxide::{prelude::*, utils::html};
 use tokio::task::JoinSet;
 
-#[allow(clippy::too_many_arguments)]
+pub struct BridgeContext {
+    pub db: Database,
+    pub online_users_by_username: Arc<DashMap<String, i32>>,
+    pub config: Arc<Config>,
+    pub event_bot: Option<Bot>,
+    pub msg_bot: Option<Bot>,
+    pub tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
+}
+
 pub async fn run_bridge(
+    ctx: BridgeContext,
     mut rx_bridge: tokio::sync::mpsc::Receiver<BridgeEvent>,
-    db_clone: Database,
-    online_users_by_username: Arc<DashMap<String, i32>>,
-    config: Arc<Config>,
-    event_bot: Option<Bot>,
-    msg_bot: Option<Bot>,
-    tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
 ) {
+    let BridgeContext {
+        db: db_clone,
+        online_users_by_username,
+        config,
+        event_bot,
+        msg_bot,
+        tx_tt_cmd,
+    } = ctx;
     let default_lang =
         LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);

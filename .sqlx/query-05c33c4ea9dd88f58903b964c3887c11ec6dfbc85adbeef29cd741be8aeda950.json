@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM deeplinks WHERE expiry_time < ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "05c33c4ea9dd88f58903b964c3887c11ec6dfbc85adbeef29cd741be8aeda950"
+}

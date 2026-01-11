@@ -4,9 +4,7 @@ use chrono::NaiveDateTime;
 pub struct UserSettings {
     pub telegram_id: i64,
     pub language_code: String,
-    #[allow(dead_code)]
     pub notification_settings: String,
-    #[allow(dead_code)]
     pub mute_list_mode: String,
     pub teamtalk_username: Option<String>,
     pub not_on_online_enabled: bool,
@@ -19,7 +17,6 @@ pub struct Deeplink {
     pub token: String,
     pub action: String,
     pub payload: Option<String>,
-    #[allow(dead_code)]
     pub expected_telegram_id: Option<i64>,
     pub expiry_time: NaiveDateTime,
 }

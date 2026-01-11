@@ -1,7 +1,10 @@
 use crate::args;
 use crate::locales;
 use crate::tg_bot::callbacks_types::MuteAction;
-use crate::tg_bot::settings_logic::{render_mute_list, render_mute_list_strings, send_mute_menu};
+use crate::tg_bot::settings_logic::{
+    RenderMuteListArgs, RenderMuteListStringsArgs, render_mute_list, render_mute_list_strings,
+    send_mute_menu,
+};
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::{answer_callback, check_db_err, notify_admin_error};
 use crate::types::{LanguageCode, TtCommand};
@@ -63,17 +66,15 @@ pub async fn handle_mute(
                 }
             };
             let guest_username = state.config.teamtalk.guest_username.as_deref();
-            render_mute_list_strings(
-                &bot,
+            render_mute_list_strings(RenderMuteListStringsArgs {
+                bot: &bot,
                 msg,
-                telegram_id,
                 lang,
-                &muted,
+                items: &muted,
                 page,
-                false,
-                "list-mute-title",
+                title_key: "list-mute-title",
                 guest_username,
-            )
+            })
             .await?;
         }
         MuteAction::Toggle { username, page } => {
@@ -108,17 +109,15 @@ pub async fn handle_mute(
                     Vec::new()
                 });
             let guest_username = state.config.teamtalk.guest_username.as_deref();
-            render_mute_list_strings(
-                &bot,
+            render_mute_list_strings(RenderMuteListStringsArgs {
+                bot: &bot,
                 msg,
-                telegram_id,
                 lang,
-                &muted,
+                items: &muted,
                 page,
-                false,
-                "list-mute-title",
+                title_key: "list-mute-title",
                 guest_username,
-            )
+            })
             .await?;
         }
         MuteAction::ServerList { page } => {
@@ -140,17 +139,17 @@ pub async fn handle_mute(
             accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
 
             let guest_username = state.config.teamtalk.guest_username.as_deref();
-            render_mute_list(
-                &bot,
+            render_mute_list(RenderMuteListArgs {
+                bot: &bot,
                 msg,
                 db,
                 telegram_id,
                 lang,
-                &accounts,
+                accounts: &accounts,
                 page,
-                "list-all-accs-title",
+                title_key: "list-all-accs-title",
                 guest_username,
-            )
+            })
             .await?;
         }
         MuteAction::ServerToggle { username, page } => {
@@ -183,17 +182,17 @@ pub async fn handle_mute(
             accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
             let guest_username = state.config.teamtalk.guest_username.as_deref();
 
-            render_mute_list(
-                &bot,
+            render_mute_list(RenderMuteListArgs {
+                bot: &bot,
                 msg,
                 db,
                 telegram_id,
                 lang,
-                &accounts,
+                accounts: &accounts,
                 page,
-                "list-all-accs-title",
+                title_key: "list-all-accs-title",
                 guest_username,
-            )
+            })
             .await?;
         }
     }

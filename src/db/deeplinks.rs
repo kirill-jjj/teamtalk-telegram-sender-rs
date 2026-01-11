@@ -9,14 +9,16 @@ impl Database {
         token: &str,
         action: &str,
         payload: Option<&str>,
+        expected_telegram_id: Option<i64>,
         ttl_seconds: i64,
     ) -> Result<()> {
         let expiry = Utc::now() + Duration::seconds(ttl_seconds);
         sqlx::query!(
-            "INSERT INTO deeplinks (token, action, payload, expiry_time) VALUES (?, ?, ?, ?)",
+            "INSERT INTO deeplinks (token, action, payload, expected_telegram_id, expiry_time) VALUES (?, ?, ?, ?, ?)",
             token,
             action,
             payload,
+            expected_telegram_id,
             expiry
         )
         .execute(&self.pool)
@@ -54,5 +56,13 @@ impl Database {
             return Ok(Some(d));
         }
         Ok(None)
+    }
+
+    pub async fn cleanup_expired_deeplinks(&self) -> Result<u64> {
+        let now = Utc::now().naive_utc();
+        let res = sqlx::query!("DELETE FROM deeplinks WHERE expiry_time < ?", now)
+            .execute(&self.pool)
+            .await?;
+        Ok(res.rows_affected())
     }
 }

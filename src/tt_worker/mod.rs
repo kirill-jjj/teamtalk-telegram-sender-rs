@@ -38,20 +38,34 @@ pub struct WorkerContext {
     pub bot_username: Option<String>,
 }
 
-#[allow(clippy::too_many_arguments)]
-pub fn run_teamtalk_thread(
-    config: Arc<Config>,
-    online_users: Arc<DashMap<i32, LiteUser>>,
-    online_users_by_username: Arc<DashMap<String, i32>>,
-    user_accounts: Arc<DashMap<String, UserAccount>>,
-    tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
-    rx_cmd: Receiver<TtCommand>,
-    tx_cmd_clone: Sender<TtCommand>,
-    db: Database,
-    rt: tokio::runtime::Handle,
-    bot_username: Option<String>,
-    tx_init: std::sync::mpsc::Sender<Result<(), String>>,
-) {
+pub struct RunTeamtalkArgs {
+    pub config: Arc<Config>,
+    pub online_users: Arc<DashMap<i32, LiteUser>>,
+    pub online_users_by_username: Arc<DashMap<String, i32>>,
+    pub user_accounts: Arc<DashMap<String, UserAccount>>,
+    pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
+    pub rx_cmd: Receiver<TtCommand>,
+    pub tx_cmd_clone: Sender<TtCommand>,
+    pub db: Database,
+    pub rt: tokio::runtime::Handle,
+    pub bot_username: Option<String>,
+    pub tx_init: std::sync::mpsc::Sender<Result<(), String>>,
+}
+
+pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
+    let RunTeamtalkArgs {
+        config,
+        online_users,
+        online_users_by_username,
+        user_accounts,
+        tx_bridge,
+        rx_cmd,
+        tx_cmd_clone,
+        db,
+        rt,
+        bot_username,
+        tx_init,
+    } = args;
     let tt_config = &config.teamtalk;
     let _reconnect_interval = config.operational_parameters.tt_reconnect_retry_seconds;
 

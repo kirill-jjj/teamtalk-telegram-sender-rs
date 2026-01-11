@@ -78,8 +78,19 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     };
 
                     let token = Uuid::now_v7().to_string().replace('-', "");
+                    let expected_telegram_id = if username.is_empty() {
+                        None
+                    } else {
+                        db.get_telegram_id_by_tt_user(&username).await
+                    };
                     let res = db
-                        .create_deeplink(&token, "subscribe", payload, deeplink_ttl)
+                        .create_deeplink(
+                            &token,
+                            "subscribe",
+                            payload,
+                            expected_telegram_id,
+                            deeplink_ttl,
+                        )
                         .await;
 
                     match res {
@@ -107,8 +118,19 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/unsub" {
                 if let Some(bot_user) = &bot_username {
                     let token = Uuid::now_v7().to_string().replace('-', "");
+                    let expected_telegram_id = if username.is_empty() {
+                        None
+                    } else {
+                        db.get_telegram_id_by_tt_user(&username).await
+                    };
                     let res = db
-                        .create_deeplink(&token, "unsubscribe", None, deeplink_ttl)
+                        .create_deeplink(
+                            &token,
+                            "unsubscribe",
+                            None,
+                            expected_telegram_id,
+                            deeplink_ttl,
+                        )
                         .await;
 
                     match res {

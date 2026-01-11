@@ -85,6 +85,26 @@ impl Database {
         res.and_then(|lang| LanguageCode::try_from(lang.as_str()).ok())
     }
 
+    pub async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64> {
+        match sqlx::query_scalar!(
+            "SELECT telegram_id FROM user_settings WHERE teamtalk_username = ?",
+            tt_username
+        )
+        .fetch_optional(&self.pool)
+        .await
+        {
+            Ok(res) => res.flatten(),
+            Err(e) => {
+                tracing::error!(
+                    "Failed to get telegram_id for tt_user '{}': {}",
+                    tt_username,
+                    e
+                );
+                None
+            }
+        }
+    }
+
     pub async fn update_notification_setting(
         &self,
         telegram_id: i64,

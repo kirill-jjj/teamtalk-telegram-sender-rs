@@ -16,11 +16,9 @@ pub struct GeneralConfig {
     #[serde(default = "default_lang")]
     pub default_lang: String,
 
-    #[allow(dead_code)]
     pub admin_username: Option<String>,
 
     #[serde(default = "default_gender")]
-    #[allow(dead_code)]
     pub gender: String,
 }
 
@@ -30,6 +28,10 @@ fn default_lang() -> String {
 
 fn default_gender() -> String {
     "None".to_string()
+}
+
+fn default_deeplink_cleanup_interval_seconds() -> u64 {
+    3600
 }
 
 #[derive(Deserialize, Clone)]
@@ -76,6 +78,8 @@ impl TeamTalkConfig {
 pub struct OperationalParameters {
     pub deeplink_ttl_seconds: i64,
     pub tt_reconnect_retry_seconds: u64,
+    #[serde(default = "default_deeplink_cleanup_interval_seconds")]
+    pub deeplink_cleanup_interval_seconds: u64,
     #[allow(dead_code)]
     pub tt_reconnect_check_interval_seconds: u64,
 }
@@ -85,6 +89,7 @@ impl Default for OperationalParameters {
         Self {
             deeplink_ttl_seconds: 300,
             tt_reconnect_retry_seconds: 10,
+            deeplink_cleanup_interval_seconds: 3600,
             tt_reconnect_check_interval_seconds: 30,
         }
     }

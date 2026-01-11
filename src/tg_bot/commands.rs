@@ -91,88 +91,80 @@ pub async fn answer_command(
         Command::Start(token) => {
             if !token.is_empty() {
                 match db.resolve_deeplink(&token).await {
-                    Ok(Some(deeplink)) => match deeplink.action.as_str() {
-                        "subscribe" => {
-                            let is_banned = match db.is_telegram_id_banned(telegram_id).await {
-                                Ok(val) => val,
-                                Err(e) => {
-                                    tracing::error!(
-                                        "DB error checking ban for {}: {}",
-                                        telegram_id,
-                                        e
-                                    );
-                                    notify_admin_error(
-                                        &bot,
-                                        config,
-                                        telegram_id,
-                                        "admin-error-context-command",
-                                        &e.to_string(),
-                                        lang,
-                                    )
-                                    .await;
-                                    false
-                                }
-                            };
-                            if is_banned {
-                                send_text_key(&bot, msg.chat.id, lang, "cmd-user-banned").await?;
-                                return Ok(());
-                            }
-
-                            if let Some(tt_nick) = &deeplink.payload {
-                                let is_tt_banned =
-                                    match db.is_teamtalk_username_banned(tt_nick).await {
-                                        Ok(val) => val,
-                                        Err(e) => {
-                                            tracing::error!(
-                                                "DB error checking TT ban for {}: {}",
-                                                tt_nick,
-                                                e
-                                            );
-                                            notify_admin_error(
-                                                &bot,
-                                                config,
-                                                telegram_id,
-                                                "admin-error-context-command",
-                                                &e.to_string(),
-                                                lang,
-                                            )
-                                            .await;
-                                            false
-                                        }
-                                    };
-                                if is_tt_banned {
-                                    let args = args!(name = tt_nick.clone());
-                                    bot.send_message(
-                                        msg.chat.id,
-                                        locales::get_text(
-                                            lang.as_str(),
-                                            "cmd-tt-banned",
-                                            args.as_ref(),
-                                        ),
-                                    )
-                                    .await?;
+                    Ok(Some(deeplink)) => {
+                        if let Some(expected_id) = deeplink.expected_telegram_id
+                            && expected_id != telegram_id
+                        {
+                            send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
+                            return Ok(());
+                        }
+                        match deeplink.action.as_str() {
+                            "subscribe" => {
+                                let is_banned = match db.is_telegram_id_banned(telegram_id).await {
+                                    Ok(val) => val,
+                                    Err(e) => {
+                                        tracing::error!(
+                                            "DB error checking ban for {}: {}",
+                                            telegram_id,
+                                            e
+                                        );
+                                        notify_admin_error(
+                                            &bot,
+                                            config,
+                                            telegram_id,
+                                            "admin-error-context-command",
+                                            &e.to_string(),
+                                            lang,
+                                        )
+                                        .await;
+                                        false
+                                    }
+                                };
+                                if is_banned {
+                                    send_text_key(&bot, msg.chat.id, lang, "cmd-user-banned")
+                                        .await?;
                                     return Ok(());
                                 }
-                            }
 
-                            if let Err(e) = db.add_subscriber(telegram_id).await {
-                                tracing::error!("DB error adding sub: {}", e);
-                                notify_admin_error(
-                                    &bot,
-                                    config,
-                                    telegram_id,
-                                    "admin-error-context-command",
-                                    &e.to_string(),
-                                    lang,
-                                )
-                                .await;
-                                send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
-                                return Ok(());
-                            }
+                                if let Some(tt_nick) = &deeplink.payload {
+                                    let is_tt_banned =
+                                        match db.is_teamtalk_username_banned(tt_nick).await {
+                                            Ok(val) => val,
+                                            Err(e) => {
+                                                tracing::error!(
+                                                    "DB error checking TT ban for {}: {}",
+                                                    tt_nick,
+                                                    e
+                                                );
+                                                notify_admin_error(
+                                                    &bot,
+                                                    config,
+                                                    telegram_id,
+                                                    "admin-error-context-command",
+                                                    &e.to_string(),
+                                                    lang,
+                                                )
+                                                .await;
+                                                false
+                                            }
+                                        };
+                                    if is_tt_banned {
+                                        let args = args!(name = tt_nick.clone());
+                                        bot.send_message(
+                                            msg.chat.id,
+                                            locales::get_text(
+                                                lang.as_str(),
+                                                "cmd-tt-banned",
+                                                args.as_ref(),
+                                            ),
+                                        )
+                                        .await?;
+                                        return Ok(());
+                                    }
+                                }
 
-                            if let Some(tt_nick) = deeplink.payload {
-                                if let Err(e) = db.link_tt_account(telegram_id, &tt_nick).await {
-                                    tracing::error!("DB error linking: {}", e);
+                                if let Err(e) = db.add_subscriber(telegram_id).await {
+                                    tracing::error!("DB error adding sub: {}", e);
                                     notify_admin_error(
                                         &bot,
                                         config,
@@ -185,39 +177,58 @@ pub async fn answer_command(
                                     send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
                                     return Ok(());
                                 }
-                                let msg_key = "cmd-success-sub";
-                                send_text_key(&bot, msg.chat.id, lang, msg_key).await?;
-                            } else {
-                                let msg_key = "cmd-success-sub-guest";
-                                bot.send_message(
-                                    msg.chat.id,
-                                    locales::get_text(lang.as_str(), msg_key, None),
-                                )
-                                .parse_mode(ParseMode::Html)
-                                .await?;
+
+                                if let Some(tt_nick) = deeplink.payload {
+                                    if let Err(e) = db.link_tt_account(telegram_id, &tt_nick).await
+                                    {
+                                        tracing::error!("DB error linking: {}", e);
+                                        notify_admin_error(
+                                            &bot,
+                                            config,
+                                            telegram_id,
+                                            "admin-error-context-command",
+                                            &e.to_string(),
+                                            lang,
+                                        )
+                                        .await;
+                                        send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
+                                        return Ok(());
+                                    }
+                                    let msg_key = "cmd-success-sub";
+                                    send_text_key(&bot, msg.chat.id, lang, msg_key).await?;
+                                } else {
+                                    let msg_key = "cmd-success-sub-guest";
+                                    bot.send_message(
+                                        msg.chat.id,
+                                        locales::get_text(lang.as_str(), msg_key, None),
+                                    )
+                                    .parse_mode(ParseMode::Html)
+                                    .await?;
+                                }
+                            }
+                            "unsubscribe" => {
+                                if let Err(e) = db.delete_user_profile(telegram_id).await {
+                                    tracing::error!("DB error unsubscribing: {}", e);
+                                    notify_admin_error(
+                                        &bot,
+                                        config,
+                                        telegram_id,
+                                        "admin-error-context-command",
+                                        &e.to_string(),
+                                        lang,
+                                    )
+                                    .await;
+                                    send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
+                                    return Ok(());
+                                }
+                                send_text_key(&bot, msg.chat.id, lang, "cmd-success-unsub").await?;
+                            }
+                            _ => {
+                                send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink")
+                                    .await?;
                             }
                         }
-                        "unsubscribe" => {
-                            if let Err(e) = db.delete_user_profile(telegram_id).await {
-                                tracing::error!("DB error unsubscribing: {}", e);
-                                notify_admin_error(
-                                    &bot,
-                                    config,
-                                    telegram_id,
-                                    "admin-error-context-command",
-                                    &e.to_string(),
-                                    lang,
-                                )
-                                .await;
-                                send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
-                                return Ok(());
-                            }
-                            send_text_key(&bot, msg.chat.id, lang, "cmd-success-unsub").await?;
-                        }
-                        _ => {
-                            send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
-                        }
-                    },
+                    }
                     Ok(None) => {
                         send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
                     }

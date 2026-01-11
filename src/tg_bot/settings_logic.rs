@@ -302,30 +302,41 @@ pub async fn send_mute_menu(
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-pub async fn render_mute_list(
-    bot: &Bot,
-    msg: &Message,
-    db: &Database,
-    telegram_id: i64,
-    lang: LanguageCode,
-    accounts: &[UserAccount],
-    page: usize,
-    title_key: &str,
-    guest_username: Option<&str>,
-) -> ResponseResult<()> {
-    let muted_users: Vec<String> = match db.get_muted_users_list(telegram_id).await {
+pub struct RenderMuteListArgs<'a> {
+    pub bot: &'a Bot,
+    pub msg: &'a Message,
+    pub db: &'a Database,
+    pub telegram_id: i64,
+    pub lang: LanguageCode,
+    pub accounts: &'a [UserAccount],
+    pub page: usize,
+    pub title_key: &'a str,
+    pub guest_username: Option<&'a str>,
+}
+
+pub struct RenderMuteListStringsArgs<'a> {
+    pub bot: &'a Bot,
+    pub msg: &'a Message,
+    pub lang: LanguageCode,
+    pub items: &'a [String],
+    pub page: usize,
+    pub title_key: &'a str,
+    pub guest_username: Option<&'a str>,
+}
+
+pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()> {
+    let muted_users: Vec<String> = match args.db.get_muted_users_list(args.telegram_id).await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
+            tracing::error!("Failed to load muted users for {}: {}", args.telegram_id, e);
             Vec::new()
         }
     };
     let muted_set: std::collections::HashSet<_> = muted_users.into_iter().collect();
 
     let keyboard = create_user_list_keyboard(
-        accounts,
-        page,
+        args.accounts,
+        args.page,
         |acc| {
             let is_muted = muted_set.contains(&acc.username);
             let icon_key = if is_muted {
@@ -334,100 +345,91 @@ pub async fn render_mute_list(
                 "item-status-unmuted"
             };
 
-            let display_name = if Some(acc.username.as_str()) == guest_username {
-                locales::get_text(lang.as_str(), "display-guest-account", None)
+            let display_name = if Some(acc.username.as_str()) == args.guest_username {
+                locales::get_text(args.lang.as_str(), "display-guest-account", None)
             } else {
                 acc.username.clone()
             };
 
-            let args = args!(name = display_name);
-            let display_text = locales::get_text(lang.as_str(), icon_key, args.as_ref());
+            let fmt_args = args!(name = display_name);
+            let display_text = locales::get_text(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::ServerToggle {
                     username: acc.username.clone(),
-                    page,
+                    page: args.page,
                 }),
             )
         },
         |p| CallbackAction::Mute(MuteAction::ServerList { page: p }),
         Some(back_btn(
-            lang,
+            args.lang,
             "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         )),
-        lang,
+        args.lang,
     );
 
-    let text = locales::get_text(lang.as_str(), title_key, None);
-    bot.edit_message_text(msg.chat.id, msg.id, text)
+    let text = locales::get_text(args.lang.as_str(), args.title_key, None);
+    args.bot
+        .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
         .await?;
     Ok(())
 }
 
-#[allow(clippy::too_many_arguments)]
-pub async fn render_mute_list_strings(
-    bot: &Bot,
-    msg: &Message,
-    _telegram_id: i64,
-    lang: LanguageCode,
-    items: &[String],
-    page: usize,
-    _is_server_list: bool,
-    title_key: &str,
-    guest_username: Option<&str>,
-) -> ResponseResult<()> {
-    if items.is_empty() {
-        let text = locales::get_text(lang.as_str(), "list-mute-empty", None);
+pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> ResponseResult<()> {
+    if args.items.is_empty() {
+        let text = locales::get_text(args.lang.as_str(), "list-mute-empty", None);
         let keyboard = back_button_keyboard(
-            lang,
+            args.lang,
             "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         );
-        bot.edit_message_text(msg.chat.id, msg.id, text)
+        args.bot
+            .edit_message_text(args.msg.chat.id, args.msg.id, text)
             .reply_markup(keyboard)
             .await?;
         return Ok(());
     }
 
-    let mut sorted_items = items.to_vec();
+    let mut sorted_items = args.items.to_vec();
     sorted_items.sort_by_key(|a| a.to_lowercase());
 
     let keyboard = create_user_list_keyboard(
         &sorted_items,
-        page,
+        args.page,
         |username| {
-            let display_name = if Some(username.as_str()) == guest_username {
-                locales::get_text(lang.as_str(), "display-guest-account", None)
+            let display_name = if Some(username.as_str()) == args.guest_username {
+                locales::get_text(args.lang.as_str(), "display-guest-account", None)
             } else {
                 username.clone()
             };
 
-            let args = args!(name = display_name);
-            let display_text = locales::get_text(lang.as_str(), "item-status-muted", args.as_ref());
+            let fmt_args = args!(name = display_name);
+            let display_text =
+                locales::get_text(args.lang.as_str(), "item-status-muted", fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {
                     username: username.clone(),
-                    page,
+                    page: args.page,
                 }),
             )
         },
         |p| CallbackAction::Mute(MuteAction::List { page: p }),
         Some(back_btn(
-            lang,
+            args.lang,
             "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         )),
-        lang,
+        args.lang,
     );
 
-    let user_name = format!("{}", _telegram_id);
-    let args = args!(name = user_name);
-    let text = locales::get_text(lang.as_str(), title_key, args.as_ref());
+    let text = locales::get_text(args.lang.as_str(), args.title_key, None);
 
-    bot.edit_message_text(msg.chat.id, msg.id, text)
+    args.bot
+        .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
         .await?;
     Ok(())
