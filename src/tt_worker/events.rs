@@ -3,6 +3,7 @@ use crate::tt_worker::{WorkerContext, resolve_server_name};
 use crate::types::{BridgeEvent, LiteUser, NotificationType};
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
+use teamtalk::types::{UserGender, UserStatus};
 use teamtalk::{Client, Event, Message};
 
 pub(super) fn handle_sdk_event(
@@ -39,7 +40,12 @@ pub(super) fn handle_sdk_event(
             );
         }
         Event::MySelfLoggedIn => {
-            client.set_status_message(&tt_config.status_text);
+            let gender = parse_gender(&ctx.config.general.gender);
+            let status = UserStatus {
+                gender,
+                ..UserStatus::default()
+            };
+            client.set_status(status, &tt_config.status_text);
             let chan_id = client.get_channel_id_from_path(&tt_config.channel);
             if chan_id.0 > 0 {
                 let cmd_id = client
@@ -210,5 +216,14 @@ pub(super) fn handle_sdk_event(
         }
 
         _ => {}
+    }
+}
+
+fn parse_gender(raw: &str) -> UserGender {
+    match raw.trim().to_lowercase().as_str() {
+        "male" => UserGender::Male,
+        "female" => UserGender::Female,
+        "neutral" | "none" => UserGender::Neutral,
+        _ => UserGender::Neutral,
     }
 }
