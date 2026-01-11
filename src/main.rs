@@ -1,3 +1,5 @@
+use self_update::cargo_crate_version;
+
 mod bridge;
 mod config;
 mod db;
@@ -15,8 +17,36 @@ use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
 
+fn update_bot() -> Result<(), Box<dyn std::error::Error>> {
+    let target = if cfg!(windows) { "windows" } else { "linux" };
+
+    let status = self_update::backends::github::Update::configure()
+        .repo_owner("kirill-jjj")
+        .repo_name("teamtalk-telegram-sender-rs")
+        .bin_name("teamtalk-telegram-sender-rs")
+        .target(target)
+        .show_download_progress(true)
+        .current_version(cargo_crate_version!())
+        .build()?
+        .update()?;
+
+    println!("Update status: `{}`!", status.version());
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args: Vec<String> = std::env::args().collect();
+    if args.contains(&"--update".to_string()) {
+        println!("Checking for updates...");
+        if let Err(e) = update_bot() {
+            eprintln!("Update failed: {}", e);
+            std::process::exit(1);
+        }
+        println!("Update completed successfully! Please restart the bot.");
+        std::process::exit(0);
+    }
+
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
     log::info!("🚀 Starting Application...");
