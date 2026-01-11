@@ -5,6 +5,7 @@ use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscr
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction};
 use crate::tg_bot::keyboards::create_user_list_keyboard;
 use crate::tg_bot::state::AppState;
+use crate::tg_bot::utils::check_db_err;
 use crate::types::{LiteUser, TtCommand};
 use teloxide::prelude::*;
 
@@ -106,7 +107,13 @@ pub async fn handle_admin(
                     .await
                 {
                     tracing::error!("Failed to add ban: {}", e);
+                    bot.answer_callback_query(q.id)
+                        .text("DB Error")
+                        .show_alert(true)
+                        .await?;
+                    return Ok(());
                 }
+
                 if let Ok(Some(tg_id)) = sqlx::query_scalar::<_, i64>(
                     "SELECT telegram_id FROM user_settings WHERE teamtalk_username = ?",
                 )
@@ -114,14 +121,19 @@ pub async fn handle_admin(
                 .fetch_optional(&db.pool)
                 .await
                 {
-                    db.delete_user_profile(tg_id).await.ok();
-                    db.add_ban(
-                        Some(tg_id),
-                        Some(u.username.clone()),
-                        Some("TG+TT Ban".to_string()),
-                    )
-                    .await
-                    .ok();
+                    if let Err(e) = db.delete_user_profile(tg_id).await {
+                        tracing::error!("Failed to delete user profile during ban: {}", e);
+                    }
+                    if let Err(e) = db
+                        .add_ban(
+                            Some(tg_id),
+                            Some(u.username.clone()),
+                            Some("TG+TT Ban".to_string()),
+                        )
+                        .await
+                    {
+                        tracing::error!("Failed to add second ban record: {}", e);
+                    }
                 }
                 state.tx_tt.send(TtCommand::BanUser { user_id }).ok();
                 bot.answer_callback_query(q.id)
@@ -143,7 +155,9 @@ pub async fn handle_admin(
             bot.answer_callback_query(q.id).await?;
         }
         AdminAction::UnbanPerform { ban_db_id, page } => {
-            db.remove_ban_by_id(ban_db_id).await.ok();
+            if check_db_err(&bot, &q.id.0, db.remove_ban_by_id(ban_db_id).await, lang).await? {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(lang, "toast-user-unbanned", None))
                 .await?;

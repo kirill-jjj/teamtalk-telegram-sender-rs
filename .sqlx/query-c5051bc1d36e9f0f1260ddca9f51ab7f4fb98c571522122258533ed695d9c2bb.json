@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO user_settings (telegram_id, language_code) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "c5051bc1d36e9f0f1260ddca9f51ab7f4fb98c571522122258533ed695d9c2bb"
+}

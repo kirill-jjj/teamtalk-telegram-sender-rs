@@ -3,6 +3,7 @@ use crate::locales;
 use crate::tg_bot::callbacks_types::MuteAction;
 use crate::tg_bot::settings_logic::{render_mute_list, render_mute_list_strings, send_mute_menu};
 use crate::tg_bot::state::AppState;
+use crate::tg_bot::utils::check_db_err;
 use crate::types::{MuteListMode, TtCommand};
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -24,9 +25,16 @@ pub async fn handle_mute(
     match action {
         MuteAction::ModeSet { mode } => {
             let new_mode = MuteListMode::from(mode.as_str());
-            db.update_mute_mode(telegram_id, new_mode.clone())
-                .await
-                .ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.update_mute_mode(telegram_id, new_mode.clone()).await,
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,
@@ -59,7 +67,10 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::Toggle { username, page } => {
-            toggle_mute(db, telegram_id, &username).await;
+            if let Err(e) = toggle_mute(db, telegram_id, &username).await {
+                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                return Ok(());
+            }
 
             let args = args!(user = username.clone(), action = "toggled");
             bot.answer_callback_query(q.id)
@@ -106,7 +117,10 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::ServerToggle { username, page } => {
-            toggle_mute(db, telegram_id, &username).await;
+            if let Err(e) = toggle_mute(db, telegram_id, &username).await {
+                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                return Ok(());
+            }
 
             let args = args!(user = username.clone(), action = "toggled");
             bot.answer_callback_query(q.id)
@@ -137,18 +151,27 @@ pub async fn handle_mute(
     Ok(())
 }
 
-async fn toggle_mute(db: &crate::db::Database, telegram_id: i64, username: &str) {
-    let is_muted = sqlx::query_scalar::<_, i32>("SELECT count(*) FROM muted_users WHERE user_settings_telegram_id = ? AND muted_teamtalk_username = ?")
-        .bind(telegram_id).bind(username).fetch_one(&db.pool).await.unwrap_or(0) > 0;
+async fn toggle_mute(
+    db: &crate::db::Database,
+    telegram_id: i64,
+    username: &str,
+) -> anyhow::Result<()> {
+    let count: i32 = sqlx::query_scalar("SELECT count(*) FROM muted_users WHERE user_settings_telegram_id = ? AND muted_teamtalk_username = ?")
+        .bind(telegram_id).bind(username).fetch_one(&db.pool).await?;
+
+    let is_muted = count > 0;
 
     let query = if is_muted {
         "DELETE FROM muted_users WHERE user_settings_telegram_id = ? AND muted_teamtalk_username = ?"
     } else {
         "INSERT INTO muted_users (user_settings_telegram_id, muted_teamtalk_username) VALUES (?, ?)"
     };
-    let _ = sqlx::query(query)
+
+    sqlx::query(query)
         .bind(telegram_id)
         .bind(username)
         .execute(&db.pool)
-        .await;
+        .await?;
+
+    Ok(())
 }

@@ -32,22 +32,33 @@ impl Database {
             Ok(u)
         } else {
             sqlx::query!(
-                "INSERT INTO user_settings (telegram_id, language_code) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO user_settings (telegram_id, language_code) VALUES (?, ?)",
                 telegram_id,
                 default_lang
             )
             .execute(&self.pool)
             .await?;
 
-            Ok(UserSettings {
-                telegram_id,
-                language_code: default_lang.to_string(),
-                notification_settings: "all".to_string(),
-                mute_list_mode: "blacklist".to_string(),
-                teamtalk_username: None,
-                not_on_online_enabled: false,
-                not_on_online_confirmed: false,
-            })
+            let user = sqlx::query_as!(
+                UserSettings,
+                r#"
+                SELECT
+                    telegram_id as "telegram_id!",
+                    language_code as "language_code!",
+                    notification_settings as "notification_settings!",
+                    mute_list_mode as "mute_list_mode!",
+                    teamtalk_username,
+                    not_on_online_enabled as "not_on_online_enabled!",
+                    not_on_online_confirmed as "not_on_online_confirmed!"
+                FROM user_settings
+                WHERE telegram_id = ?
+                "#,
+                telegram_id
+            )
+            .fetch_one(&self.pool)
+            .await?;
+
+            Ok(user)
         }
     }
 

@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT\n                    telegram_id as \"telegram_id!\",\n                    language_code as \"language_code!\",\n                    notification_settings as \"notification_settings!\",\n                    mute_list_mode as \"mute_list_mode!\",\n                    teamtalk_username,\n                    not_on_online_enabled as \"not_on_online_enabled!\",\n                    not_on_online_confirmed as \"not_on_online_confirmed!\"\n                FROM user_settings\n                WHERE telegram_id = ?\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "language_code!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notification_settings!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "mute_list_mode!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "teamtalk_username",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "not_on_online_enabled!",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "not_on_online_confirmed!",
+        "ordinal": 6,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "4d06165b3b8085249299f4a9de4277ef81e8a1fde87dfb7058fa097a985e8f07"
+}

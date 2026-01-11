@@ -5,6 +5,7 @@ use crate::tg_bot::admin_logic::subscriber_settings::{
 use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscriber_details};
 use crate::tg_bot::callbacks_types::SubAction;
 use crate::tg_bot::state::AppState;
+use crate::tg_bot::utils::check_db_err;
 use crate::types::{MuteListMode, NotificationSetting, TtCommand};
 use crate::{args, locales};
 use teloxide::prelude::*;
@@ -30,7 +31,9 @@ pub async fn handle_subscriber_actions(
             bot.answer_callback_query(q.id).await?;
         }
         SubAction::Delete { sub_id, page } => {
-            db.delete_user_profile(sub_id).await.ok();
+            if check_db_err(&bot, &q.id.0, db.delete_user_profile(sub_id).await, lang).await? {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(lang, "toast-subscriber-deleted", None))
                 .show_alert(true)
@@ -38,18 +41,32 @@ pub async fn handle_subscriber_actions(
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
         }
         SubAction::Ban { sub_id, page } => {
-            let tt_user = sqlx::query_scalar::<_, String>(
+            let tt_user_res = sqlx::query_scalar::<_, String>(
                 "SELECT teamtalk_username FROM user_settings WHERE telegram_id = ?",
             )
             .bind(sub_id)
             .fetch_optional(&db.pool)
-            .await
-            .unwrap_or(None);
+            .await;
 
-            db.add_ban(Some(sub_id), tt_user, Some("Admin Ban".to_string()))
+            let tt_user = match tt_user_res {
+                Ok(u) => u,
+                Err(e) => {
+                    check_db_err(&bot, &q.id.0, Err(e.into()), lang).await?;
+                    return Ok(());
+                }
+            };
+
+            if let Err(e) = db
+                .add_ban(Some(sub_id), tt_user, Some("Admin Ban".to_string()))
                 .await
-                .ok();
-            db.delete_user_profile(sub_id).await.ok();
+            {
+                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                return Ok(());
+            }
+
+            if let Err(e) = db.delete_user_profile(sub_id).await {
+                tracing::error!("Partial failure during ban: {}", e);
+            }
 
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(lang, "toast-user-banned", None))
@@ -61,7 +78,9 @@ pub async fn handle_subscriber_actions(
             send_sub_manage_tt_menu(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::Unlink { sub_id, page } => {
-            db.unlink_tt_account(sub_id).await.ok();
+            if check_db_err(&bot, &q.id.0, db.unlink_tt_account(sub_id).await, lang).await? {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,
@@ -86,7 +105,16 @@ pub async fn handle_subscriber_actions(
             page,
             username,
         } => {
-            db.link_tt_account(sub_id, &username).await.ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.link_tt_account(sub_id, &username).await,
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,
@@ -105,7 +133,16 @@ pub async fn handle_subscriber_actions(
             page,
             lang: new_lang,
         } => {
-            db.update_language(sub_id, &new_lang).await.ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.update_language(sub_id, &new_lang).await,
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,
@@ -119,9 +156,17 @@ pub async fn handle_subscriber_actions(
             send_sub_notif_menu(&bot, &msg, lang, sub_id, page).await?;
         }
         SubAction::NotifSet { sub_id, page, val } => {
-            db.update_notification_setting(sub_id, NotificationSetting::from(val.as_str()))
-                .await
-                .ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.update_notification_setting(sub_id, NotificationSetting::from(val.as_str()))
+                    .await,
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,
@@ -132,7 +177,16 @@ pub async fn handle_subscriber_actions(
             send_subscriber_details(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::NoonToggle { sub_id, page } => {
-            db.toggle_noon(sub_id).await.ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.toggle_noon(sub_id).await.map(|_| ()),
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             let status = "toggled";
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
@@ -147,9 +201,17 @@ pub async fn handle_subscriber_actions(
             send_sub_mute_mode_menu(&bot, &msg, lang, sub_id, page).await?;
         }
         SubAction::ModeSet { sub_id, page, mode } => {
-            db.update_mute_mode(sub_id, MuteListMode::from(mode.as_str()))
-                .await
-                .ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.update_mute_mode(sub_id, MuteListMode::from(mode.as_str()))
+                    .await,
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(
                     lang,

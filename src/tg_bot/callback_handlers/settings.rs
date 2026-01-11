@@ -5,6 +5,7 @@ use crate::tg_bot::settings_logic::{
     send_main_settings_edit, send_mute_menu, send_notif_settings, send_sub_settings,
 };
 use crate::tg_bot::state::AppState;
+use crate::tg_bot::utils::check_db_err;
 use crate::types::NotificationSetting;
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
@@ -58,7 +59,16 @@ pub async fn handle_settings(
             .await?;
         }
         SettingsAction::LangSet { lang: new_lang } => {
-            db.update_language(telegram_id, &new_lang).await.ok();
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.update_language(telegram_id, &new_lang).await,
+                lang,
+            )
+            .await?
+            {
+                return Ok(());
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(&new_lang, "toast-lang-updated", None))
                 .await?;
@@ -69,9 +79,12 @@ pub async fn handle_settings(
         }
         SettingsAction::SubSet { setting } => {
             let new_setting = NotificationSetting::from(setting.as_str());
-            db.update_notification_setting(telegram_id, new_setting.clone())
-                .await
-                .ok();
+            let res = db
+                .update_notification_setting(telegram_id, new_setting.clone())
+                .await;
+            if check_db_err(&bot, &q.id.0, res, lang).await? {
+                return Ok(());
+            }
 
             let text_key = match new_setting {
                 NotificationSetting::All => "btn-sub-all",
@@ -93,53 +106,62 @@ pub async fn handle_settings(
             send_notif_settings(&bot, &msg, db, telegram_id, lang).await?;
         }
         SettingsAction::NoonToggle => {
-            let user_settings = db.get_or_create_user(telegram_id, "en").await.ok();
-            if let Some(u) = user_settings {
-                if u.teamtalk_username.is_none() {
+            let user_settings = match db.get_or_create_user(telegram_id, "en").await {
+                Ok(u) => u,
+                Err(e) => {
+                    tracing::error!("DB Error getting user: {}", e);
                     bot.answer_callback_query(q.id)
-                        .text(locales::get_text(lang, "cmd-fail-noon-guest", None))
+                        .text("DB Error")
                         .show_alert(true)
                         .await?;
                     return Ok(());
                 }
-                match db.toggle_noon(telegram_id).await {
-                    Ok(new_val) => {
-                        let status = if new_val {
-                            locales::get_text(lang, "status-enabled", None)
-                        } else {
-                            locales::get_text(lang, "status-disabled", None)
-                        };
+            };
 
-                        let _ = bot
-                            .answer_callback_query(q.id)
-                            .text(locales::get_text(
-                                lang,
-                                "resp-noon-updated",
-                                args!(status = status).as_ref(),
-                            ))
-                            .await;
+            if user_settings.teamtalk_username.is_none() {
+                bot.answer_callback_query(q.id)
+                    .text(locales::get_text(lang, "cmd-fail-noon-guest", None))
+                    .show_alert(true)
+                    .await?;
+                return Ok(());
+            }
 
-                        if let Err(e) = send_notif_settings(&bot, &msg, db, telegram_id, lang).await
-                            && !e.to_string().contains("message is not modified")
-                        {
-                            return Err(e);
-                        }
+            match db.toggle_noon(telegram_id).await {
+                Ok(new_val) => {
+                    let status = if new_val {
+                        locales::get_text(lang, "status-enabled", None)
+                    } else {
+                        locales::get_text(lang, "status-disabled", None)
+                    };
+
+                    let _ = bot
+                        .answer_callback_query(q.id)
+                        .text(locales::get_text(
+                            lang,
+                            "resp-noon-updated",
+                            args!(status = status).as_ref(),
+                        ))
+                        .await;
+
+                    if let Err(e) = send_notif_settings(&bot, &msg, db, telegram_id, lang).await
+                        && !e.to_string().contains("message is not modified")
+                    {
+                        return Err(e);
                     }
-                    Err(e) => {
-                        tracing::error!("DB error in toggle_noon: {}", e);
-                        bot.answer_callback_query(q.id)
-                            .text(locales::get_text(lang, "cmd-error", None))
-                            .show_alert(true)
-                            .await?;
-                    }
+                }
+                Err(e) => {
+                    check_db_err(&bot, &q.id.0, Err(e), lang).await?;
                 }
             }
         }
-        SettingsAction::MuteManage => {
-            if let Ok(u) = db.get_or_create_user(telegram_id, "en").await {
+        SettingsAction::MuteManage => match db.get_or_create_user(telegram_id, "en").await {
+            Ok(u) => {
                 send_mute_menu(&bot, &msg, lang, &u.mute_list_mode).await?;
             }
-        }
+            Err(e) => {
+                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+            }
+        },
     }
     Ok(())
 }

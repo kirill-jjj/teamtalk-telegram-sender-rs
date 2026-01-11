@@ -106,10 +106,26 @@ pub async fn answer_command(
                                 return Ok(());
                             }
 
-                            db.add_subscriber(telegram_id).await.ok();
+                            if let Err(e) = db.add_subscriber(telegram_id).await {
+                                tracing::error!("DB error adding sub: {}", e);
+                                bot.send_message(
+                                    msg.chat.id,
+                                    locales::get_text(lang, "cmd-error", None),
+                                )
+                                .await?;
+                                return Ok(());
+                            }
 
                             if let Some(tt_nick) = deeplink.payload {
-                                db.link_tt_account(telegram_id, &tt_nick).await.ok();
+                                if let Err(e) = db.link_tt_account(telegram_id, &tt_nick).await {
+                                    tracing::error!("DB error linking: {}", e);
+                                    bot.send_message(
+                                        msg.chat.id,
+                                        "Error linking account. Try again.",
+                                    )
+                                    .await?;
+                                    return Ok(());
+                                }
                                 let msg_key = "cmd-success-sub";
                                 bot.send_message(
                                     msg.chat.id,
@@ -127,7 +143,15 @@ pub async fn answer_command(
                             }
                         }
                         "unsubscribe" => {
-                            db.delete_user_profile(telegram_id).await.ok();
+                            if let Err(e) = db.delete_user_profile(telegram_id).await {
+                                tracing::error!("DB error unsubscribing: {}", e);
+                                bot.send_message(
+                                    msg.chat.id,
+                                    locales::get_text(lang, "cmd-error", None),
+                                )
+                                .await?;
+                                return Ok(());
+                            }
                             bot.send_message(
                                 msg.chat.id,
                                 locales::get_text(lang, "cmd-success-unsub", None),
