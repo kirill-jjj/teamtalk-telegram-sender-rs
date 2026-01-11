@@ -42,7 +42,7 @@ Before building, ensure you have the following installed:
     *See the [Configuration](#-configuration) section below for details.*
 
 3.  **Build the project:**
-    Since this project uses `sqlx`, it supports offline building using cached query data (`sqlx-data.json`).
+    `sqlx` macros require either a live `DATABASE_URL` at build time or prepared query data (`sqlx-data.json` or `.sqlx/`).
     ```bash
     cargo build --release
     ```
@@ -62,13 +62,25 @@ password = "bot_password"
 nick_name = "Telegram Bot"
 # Channel path to join (e.g., "/" for root)
 channel = "/"
+# Optional channel password
+channel_password = ""
+# Enable encrypted connection
+encrypted = false
+# TeamTalk client name
+client_name = "telegrambot"
+# Optional override for display name
+server_name = ""
 # Optional: Text displayed in the bot's status field
 status_text = "I bridge events to Telegram"
+# Skip notifications for these usernames
+global_ignore_usernames = ["admin_bot"]
+# Optional guest username for filtering
+guest_username = ""
 
 [telegram]
-# Token for the main interaction bot
+# Token for the main interaction bot (optional, disables TG interactions if missing)
 event_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
-# Token for sending admin alerts (can be the same as event_token)
+# Token for sending admin alerts (optional)
 message_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
 # The Telegram Chat ID of the main administrator
 admin_chat_id = 123456789
@@ -76,6 +88,11 @@ admin_chat_id = 123456789
 [general]
 admin_username = "MainAdminTTAccount"
 default_lang = "en" # 'en' or 'ru'
+
+[operational_parameters]
+deeplink_ttl_seconds = 300
+tt_reconnect_retry_seconds = 10
+tt_reconnect_check_interval_seconds = 30
 
 [database]
 db_file = "bot_data.db"

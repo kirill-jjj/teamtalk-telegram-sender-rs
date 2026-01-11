@@ -34,7 +34,7 @@
 ## Security & Configuration Tips
 - Do not log secrets (tokens, chat IDs, DB URLs).
 - Config is read from a local file (default `config.toml`); keep real credentials out of the repo.
-- If missing, copy `config.toml.example` to `config.toml` and fill in `[teamtalk]`, `[telegram]`, and `[database]`.
+- Start from `config.toml.example`; required sections are `[teamtalk]`, `[telegram]`, `[database]`, plus `[general]` for defaults and optional `[operational_parameters]` overrides.
 
 ## Architecture Overview
 - The TeamTalk client runs in a dedicated OS thread (via `tt_worker`) and communicates over channels to avoid blocking the Tokio runtime.
