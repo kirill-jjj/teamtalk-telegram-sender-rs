@@ -3173,7 +3173,6 @@ dependencies = [
  "dashmap",
  "env_logger",
  "fluent-templates",
- "futures-util",
  "log",
  "self_update",
  "serde",

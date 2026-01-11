@@ -25,5 +25,4 @@ uuid = { version = "1.7", features = ["v4", "fast-rng"] }
 teamtalk = "1.0"
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
-futures-util = { version = "0.3", default-features = false, features = ["alloc"] }
 self_update = { version = "0.42", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }

@@ -6,12 +6,12 @@ use crate::{
     types::{self, BridgeEvent},
 };
 use dashmap::DashMap;
-use futures_util::{StreamExt, stream};
 use std::collections::HashMap;
 use std::sync::Arc;
 use teloxide::ApiError;
 use teloxide::RequestError;
 use teloxide::{prelude::*, utils::html};
+use tokio::task::JoinSet;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn run_bridge(
@@ -58,10 +58,9 @@ pub async fn run_bridge(
                 };
 
                 let mut rendered_text_cache: HashMap<String, String> = HashMap::new();
+                let mut set = JoinSet::new();
 
-                let concurrency_limit = recipients.len() + 1;
-
-                let futures = recipients.into_iter().map(|sub| {
+                for sub in recipients {
                     let bot = bot.clone();
                     let online_users_by_username = online_users_by_username.clone();
 
@@ -77,7 +76,8 @@ pub async fn run_bridge(
                         .clone();
 
                     let db_for_closure = db_clone.clone();
-                    async move {
+
+                    set.spawn(async move {
                         let mut send_silent = false;
 
                         if sub.not_on_online_enabled
@@ -114,13 +114,14 @@ pub async fn run_bridge(
                                 }
                             }
                         }
-                    }
-                });
+                    });
+                }
 
-                stream::iter(futures)
-                    .buffer_unordered(concurrency_limit)
-                    .collect::<Vec<()>>()
-                    .await;
+                while let Some(res) = set.join_next().await {
+                    if let Err(e) = res {
+                        log::error!("[BRIDGE] A notification task failed after joining: {:?}", e);
+                    }
+                }
             }
             types::BridgeEvent::ToAdmin {
                 user_id,
