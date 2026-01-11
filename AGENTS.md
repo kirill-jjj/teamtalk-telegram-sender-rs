@@ -25,7 +25,7 @@
 - Prefer `Result` with contextual errors over `unwrap` in non-test code.
 - Keep modules focused; avoid widening `pub` visibility unless needed.
 - Completely avoid adding code comments unless explicitly requested.
-- Do not commit `Cargo.lock` or `TEAMTALK_DLL/`.
+- Do not commit `Cargo.lock` or `TEAMTALK_DLL/` unless explicitly requested.
 
 ## Testing Guidelines
 - Use `cargo test` to run unit and integration tests.
