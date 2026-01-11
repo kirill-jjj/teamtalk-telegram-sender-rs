@@ -6,7 +6,7 @@ use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction, UnsubAction};
 use crate::tg_bot::keyboards::{create_main_menu_keyboard, create_user_list_keyboard};
 use crate::tg_bot::settings_logic::send_main_settings;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::ensure_subscribed;
+use crate::tg_bot::utils::{ensure_subscribed, notify_admin_error};
 use crate::types::{LiteUser, TtCommand};
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
@@ -64,25 +64,59 @@ pub async fn answer_command(
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
-            bot.send_message(msg.chat.id, "Database error. Please try again later.")
-                .await?;
+            notify_admin_error(
+                &bot,
+                config,
+                telegram_id,
+                "admin-error-context-command",
+                &e.to_string(),
+                &config.general.default_lang,
+            )
+            .await;
+            bot.send_message(
+                msg.chat.id,
+                locales::get_text(&config.general.default_lang, "cmd-error", None),
+            )
+            .await?;
             return Ok(());
         }
     };
     let lang = &settings.language_code;
-    let is_admin = db
-        .get_all_admins()
-        .await
-        .unwrap_or_default()
-        .contains(&telegram_id);
+    let is_admin = match db.get_all_admins().await {
+        Ok(admins) => admins.contains(&telegram_id),
+        Err(e) => {
+            tracing::error!("Failed to load admin list: {}", e);
+            false
+        }
+    };
 
     match cmd {
         Command::Start(token) => {
             if !token.is_empty() {
-                if let Ok(Some(deeplink)) = db.resolve_deeplink(&token).await {
-                    match deeplink.action.as_str() {
+                match db.resolve_deeplink(&token).await {
+                    Ok(Some(deeplink)) => match deeplink.action.as_str() {
                         "subscribe" => {
-                            if db.is_telegram_id_banned(telegram_id).await.unwrap_or(false) {
+                            let is_banned = match db.is_telegram_id_banned(telegram_id).await {
+                                Ok(val) => val,
+                                Err(e) => {
+                                    tracing::error!(
+                                        "DB error checking ban for {}: {}",
+                                        telegram_id,
+                                        e
+                                    );
+                                    notify_admin_error(
+                                        &bot,
+                                        config,
+                                        telegram_id,
+                                        "admin-error-context-command",
+                                        &e.to_string(),
+                                        lang,
+                                    )
+                                    .await;
+                                    false
+                                }
+                            };
+                            if is_banned {
                                 bot.send_message(
                                     msg.chat.id,
                                     locales::get_text(lang, "cmd-user-banned", None),
@@ -91,23 +125,50 @@ pub async fn answer_command(
                                 return Ok(());
                             }
 
-                            if let Some(tt_nick) = &deeplink.payload
-                                && db
-                                    .is_teamtalk_username_banned(tt_nick)
-                                    .await
-                                    .unwrap_or(false)
-                            {
-                                let args = args!(name = tt_nick.clone());
-                                bot.send_message(
-                                    msg.chat.id,
-                                    locales::get_text(lang, "cmd-tt-banned", args.as_ref()),
-                                )
-                                .await?;
-                                return Ok(());
+                            if let Some(tt_nick) = &deeplink.payload {
+                                let is_tt_banned =
+                                    match db.is_teamtalk_username_banned(tt_nick).await {
+                                        Ok(val) => val,
+                                        Err(e) => {
+                                            tracing::error!(
+                                                "DB error checking TT ban for {}: {}",
+                                                tt_nick,
+                                                e
+                                            );
+                                            notify_admin_error(
+                                                &bot,
+                                                config,
+                                                telegram_id,
+                                                "admin-error-context-command",
+                                                &e.to_string(),
+                                                lang,
+                                            )
+                                            .await;
+                                            false
+                                        }
+                                    };
+                                if is_tt_banned {
+                                    let args = args!(name = tt_nick.clone());
+                                    bot.send_message(
+                                        msg.chat.id,
+                                        locales::get_text(lang, "cmd-tt-banned", args.as_ref()),
+                                    )
+                                    .await?;
+                                    return Ok(());
+                                }
                             }
 
                             if let Err(e) = db.add_subscriber(telegram_id).await {
                                 tracing::error!("DB error adding sub: {}", e);
+                                notify_admin_error(
+                                    &bot,
+                                    config,
+                                    telegram_id,
+                                    "admin-error-context-command",
+                                    &e.to_string(),
+                                    lang,
+                                )
+                                .await;
                                 bot.send_message(
                                     msg.chat.id,
                                     locales::get_text(lang, "cmd-error", None),
@@ -119,9 +180,18 @@ pub async fn answer_command(
                             if let Some(tt_nick) = deeplink.payload {
                                 if let Err(e) = db.link_tt_account(telegram_id, &tt_nick).await {
                                     tracing::error!("DB error linking: {}", e);
+                                    notify_admin_error(
+                                        &bot,
+                                        config,
+                                        telegram_id,
+                                        "admin-error-context-command",
+                                        &e.to_string(),
+                                        lang,
+                                    )
+                                    .await;
                                     bot.send_message(
                                         msg.chat.id,
-                                        "Error linking account. Try again.",
+                                        locales::get_text(lang, "cmd-error", None),
                                     )
                                     .await?;
                                     return Ok(());
@@ -145,6 +215,15 @@ pub async fn answer_command(
                         "unsubscribe" => {
                             if let Err(e) = db.delete_user_profile(telegram_id).await {
                                 tracing::error!("DB error unsubscribing: {}", e);
+                                notify_admin_error(
+                                    &bot,
+                                    config,
+                                    telegram_id,
+                                    "admin-error-context-command",
+                                    &e.to_string(),
+                                    lang,
+                                )
+                                .await;
                                 bot.send_message(
                                     msg.chat.id,
                                     locales::get_text(lang, "cmd-error", None),
@@ -165,13 +244,28 @@ pub async fn answer_command(
                             )
                             .await?;
                         }
+                    },
+                    Ok(None) => {
+                        bot.send_message(
+                            msg.chat.id,
+                            locales::get_text(lang, "cmd-invalid-deeplink", None),
+                        )
+                        .await?;
                     }
-                } else {
-                    bot.send_message(
-                        msg.chat.id,
-                        locales::get_text(lang, "cmd-invalid-deeplink", None),
-                    )
-                    .await?;
+                    Err(e) => {
+                        tracing::error!("DB error resolving deeplink: {}", e);
+                        notify_admin_error(
+                            &bot,
+                            config,
+                            telegram_id,
+                            "admin-error-context-command",
+                            &e.to_string(),
+                            lang,
+                        )
+                        .await;
+                        bot.send_message(msg.chat.id, locales::get_text(lang, "cmd-error", None))
+                            .await?;
+                    }
                 }
             } else {
                 bot.send_message(msg.chat.id, locales::get_text(lang, "hello-start", None))
@@ -179,7 +273,7 @@ pub async fn answer_command(
             }
         }
         Command::Menu => {
-            if !ensure_subscribed(&bot, &msg, db, lang).await {
+            if !ensure_subscribed(&bot, &msg, db, config, lang).await {
                 return Ok(());
             }
             let keyboard = create_main_menu_keyboard(lang, is_admin);
@@ -189,7 +283,7 @@ pub async fn answer_command(
                 .await?;
         }
         Command::Help => {
-            if !ensure_subscribed(&bot, &msg, db, lang).await {
+            if !ensure_subscribed(&bot, &msg, db, config, lang).await {
                 return Ok(());
             }
             bot.send_message(msg.chat.id, locales::get_text(lang, "help-text", None))
@@ -197,22 +291,33 @@ pub async fn answer_command(
                 .await?;
         }
         Command::Who => {
-            if !ensure_subscribed(&bot, &msg, db, lang).await {
+            if !ensure_subscribed(&bot, &msg, db, config, lang).await {
                 return Ok(());
             }
-            let _ = tx_tt.send(TtCommand::Who {
+            if let Err(e) = tx_tt.send(TtCommand::Who {
                 chat_id: msg.chat.id.0,
                 lang: lang.clone(),
-            });
+            }) {
+                tracing::error!("Failed to send TT who command: {}", e);
+                notify_admin_error(
+                    &bot,
+                    config,
+                    telegram_id,
+                    "admin-error-context-tt-command",
+                    &e.to_string(),
+                    lang,
+                )
+                .await;
+            }
         }
         Command::Settings => {
-            if !ensure_subscribed(&bot, &msg, db, lang).await {
+            if !ensure_subscribed(&bot, &msg, db, config, lang).await {
                 return Ok(());
             }
             send_main_settings(&bot, msg.chat.id, lang).await?;
         }
         Command::Unsub => {
-            if !ensure_subscribed(&bot, &msg, db, lang).await {
+            if !ensure_subscribed(&bot, &msg, db, config, lang).await {
                 return Ok(());
             }
             let text = locales::get_text(lang, "unsub-confirm-text", None);

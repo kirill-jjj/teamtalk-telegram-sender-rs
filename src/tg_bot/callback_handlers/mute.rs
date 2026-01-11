@@ -3,7 +3,7 @@ use crate::locales;
 use crate::tg_bot::callbacks_types::MuteAction;
 use crate::tg_bot::settings_logic::{render_mute_list, render_mute_list_strings, send_mute_menu};
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::check_db_err;
+use crate::tg_bot::utils::{check_db_err, notify_admin_error};
 use crate::types::{MuteListMode, TtCommand};
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -21,6 +21,7 @@ pub async fn handle_mute(
     };
     let telegram_id = q.from.id.0 as i64;
     let db = &state.db;
+    let config = &state.config;
 
     match action {
         MuteAction::ModeSet { mode } => {
@@ -29,6 +30,9 @@ pub async fn handle_mute(
                 &bot,
                 &q.id.0,
                 db.update_mute_mode(telegram_id, new_mode.clone()).await,
+                config,
+                telegram_id,
+                "admin-error-context-callback",
                 lang,
             )
             .await?
@@ -48,10 +52,13 @@ pub async fn handle_mute(
             send_mute_menu(&bot, msg, lang, &mode).await?;
         }
         MuteAction::List { page } => {
-            let muted = db
-                .get_muted_users_list(telegram_id)
-                .await
-                .unwrap_or_default();
+            let muted = match db.get_muted_users_list(telegram_id).await {
+                Ok(list) => list,
+                Err(e) => {
+                    tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
+                    Vec::new()
+                }
+            };
             let guest_username = state.config.teamtalk.guest_username.as_deref();
             render_mute_list_strings(
                 &bot,
@@ -68,7 +75,16 @@ pub async fn handle_mute(
         }
         MuteAction::Toggle { username, page } => {
             if let Err(e) = toggle_mute(db, telegram_id, &username).await {
-                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                check_db_err(
+                    &bot,
+                    &q.id.0,
+                    Err(e),
+                    config,
+                    telegram_id,
+                    "admin-error-context-callback",
+                    lang,
+                )
+                .await?;
                 return Ok(());
             }
 
@@ -80,7 +96,10 @@ pub async fn handle_mute(
             let muted = db
                 .get_muted_users_list(telegram_id)
                 .await
-                .unwrap_or_default();
+                .unwrap_or_else(|e| {
+                    tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
+                    Vec::new()
+                });
             let guest_username = state.config.teamtalk.guest_username.as_deref();
             render_mute_list_strings(
                 &bot,
@@ -96,7 +115,18 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::ServerList { page } => {
-            state.tx_tt.send(TtCommand::LoadAccounts).ok();
+            if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts) {
+                tracing::error!("Failed to request TT accounts: {}", e);
+                notify_admin_error(
+                    &bot,
+                    config,
+                    telegram_id,
+                    "admin-error-context-tt-command",
+                    &e.to_string(),
+                    lang,
+                )
+                .await;
+            }
             let user_accounts = &state.user_accounts;
             let mut accounts: Vec<UserAccount> =
                 user_accounts.iter().map(|kv| kv.value().clone()).collect();
@@ -118,7 +148,16 @@ pub async fn handle_mute(
         }
         MuteAction::ServerToggle { username, page } => {
             if let Err(e) = toggle_mute(db, telegram_id, &username).await {
-                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                check_db_err(
+                    &bot,
+                    &q.id.0,
+                    Err(e),
+                    config,
+                    telegram_id,
+                    "admin-error-context-callback",
+                    lang,
+                )
+                .await?;
                 return Ok(());
             }
 

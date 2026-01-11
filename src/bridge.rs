@@ -46,7 +46,15 @@ pub async fn run_bridge(
                     .await
                 {
                     Ok(r) if !r.is_empty() => r,
-                    _ => continue,
+                    Ok(_) => continue,
+                    Err(e) => {
+                        tracing::error!(
+                            "Failed to load recipients for {:?} event: {}",
+                            event_type,
+                            e
+                        );
+                        continue;
+                    }
                 };
 
                 let escaped_nick = teloxide::utils::html::escape(&nickname);
@@ -176,22 +184,28 @@ pub async fn run_bridge(
                     };
                     let reply_text = locales::get_text(&reply_lang, key_reply, None);
 
-                    tx_tt_cmd
-                        .send(types::TtCommand::ReplyToUser {
+                    if let Err(e) = tx_tt_cmd.send(types::TtCommand::ReplyToUser {
+                        user_id,
+                        text: reply_text,
+                    }) {
+                        tracing::error!(
+                            "Failed to send TT reply command for user {}: {}",
                             user_id,
-                            text: reply_text,
-                        })
-                        .ok();
+                            e
+                        );
+                    }
                 } else {
                     tracing::debug!("Skipping Admin Alert: 'message_token' is not configured.");
                 }
             }
             types::BridgeEvent::WhoReport { chat_id, text } => {
-                if let Some(bot) = &event_bot {
-                    let _ = bot
+                if let Some(bot) = &event_bot
+                    && let Err(e) = bot
                         .send_message(teloxide::types::ChatId(chat_id), &text)
                         .parse_mode(teloxide::types::ParseMode::Html)
-                        .await;
+                        .await
+                {
+                    tracing::error!("Failed to send who report to {}: {}", chat_id, e);
                 }
             }
         }

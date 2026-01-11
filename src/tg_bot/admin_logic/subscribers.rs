@@ -20,7 +20,13 @@ pub async fn send_subscribers_list(
     lang: &str,
     page: usize,
 ) -> ResponseResult<()> {
-    let subs = db.get_subscribers().await.unwrap_or_default();
+    let subs = match db.get_subscribers().await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load subscribers: {}", e);
+            Vec::new()
+        }
+    };
 
     if subs.is_empty() {
         bot.send_message(chat_id, locales::get_text(lang, "list-subs-empty", None))
@@ -68,7 +74,13 @@ pub async fn edit_subscribers_list(
     lang: &str,
     page: usize,
 ) -> ResponseResult<()> {
-    let subs = db.get_subscribers().await.unwrap_or_default();
+    let subs = match db.get_subscribers().await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load subscribers: {}", e);
+            Vec::new()
+        }
+    };
 
     if subs.is_empty() {
         bot.edit_message_text(
@@ -125,7 +137,10 @@ async fn prepare_display_list(
     for sub in subs {
         let display_name = match bot.get_chat(teloxide::types::ChatId(sub.telegram_id)).await {
             Ok(chat) => format_tg_user(&chat),
-            Err(_) => sub.telegram_id.to_string(),
+            Err(e) => {
+                tracing::error!("Failed to load Telegram user {}: {}", sub.telegram_id, e);
+                sub.telegram_id.to_string()
+            }
         };
         display_list.push(SubDisplayInfo {
             telegram_id: sub.telegram_id,
@@ -152,14 +167,17 @@ pub async fn send_subscriber_details(
     let settings = db
         .get_or_create_user(sub_id, "en")
         .await
-        .unwrap_or_else(|_| crate::db::types::UserSettings {
-            telegram_id: sub_id,
-            language_code: "en".to_string(),
-            notification_settings: "all".to_string(),
-            mute_list_mode: "blacklist".to_string(),
-            teamtalk_username: None,
-            not_on_online_enabled: false,
-            not_on_online_confirmed: false,
+        .unwrap_or_else(|e| {
+            tracing::error!("Failed to load subscriber settings for {}: {}", sub_id, e);
+            crate::db::types::UserSettings {
+                telegram_id: sub_id,
+                language_code: "en".to_string(),
+                notification_settings: "all".to_string(),
+                mute_list_mode: "blacklist".to_string(),
+                teamtalk_username: None,
+                not_on_online_enabled: false,
+                not_on_online_confirmed: false,
+            }
         });
 
     let display_name = match bot.get_chat(teloxide::types::ChatId(sub_id)).await {

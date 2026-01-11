@@ -1,6 +1,7 @@
 use crate::locales;
 use crate::tg_bot::callbacks_types::{CallbackAction, MenuAction, UnsubAction};
 use crate::tg_bot::state::AppState;
+use crate::tg_bot::utils::notify_admin_error;
 use crate::types::TtCommand;
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, ParseMode};
@@ -20,13 +21,21 @@ pub async fn handle_menu(
 
     match action {
         MenuAction::Who => {
-            state
-                .tx_tt
-                .send(TtCommand::Who {
-                    chat_id: chat_id.0,
-                    lang: lang.to_string(),
-                })
-                .ok();
+            if let Err(e) = state.tx_tt.send(TtCommand::Who {
+                chat_id: chat_id.0,
+                lang: lang.to_string(),
+            }) {
+                tracing::error!("Failed to send TT who command: {}", e);
+                notify_admin_error(
+                    &bot,
+                    &state.config,
+                    q.from.id.0 as i64,
+                    "admin-error-context-tt-command",
+                    &e.to_string(),
+                    lang,
+                )
+                .await;
+            }
             bot.answer_callback_query(q.id).await?;
         }
         MenuAction::Help => {

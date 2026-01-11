@@ -24,6 +24,7 @@ pub async fn handle_settings(
     let chat_id = msg.chat.id;
     let telegram_id = q.from.id.0 as i64;
     let db = &state.db;
+    let config = &state.config;
 
     match action {
         SettingsAction::Main => {
@@ -63,6 +64,9 @@ pub async fn handle_settings(
                 &bot,
                 &q.id.0,
                 db.update_language(telegram_id, &new_lang).await,
+                config,
+                telegram_id,
+                "admin-error-context-callback",
                 lang,
             )
             .await?
@@ -82,7 +86,17 @@ pub async fn handle_settings(
             let res = db
                 .update_notification_setting(telegram_id, new_setting.clone())
                 .await;
-            if check_db_err(&bot, &q.id.0, res, lang).await? {
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                res,
+                config,
+                telegram_id,
+                "admin-error-context-callback",
+                lang,
+            )
+            .await?
+            {
                 return Ok(());
             }
 
@@ -109,11 +123,16 @@ pub async fn handle_settings(
             let user_settings = match db.get_or_create_user(telegram_id, "en").await {
                 Ok(u) => u,
                 Err(e) => {
-                    tracing::error!("DB Error getting user: {}", e);
-                    bot.answer_callback_query(q.id)
-                        .text("DB Error")
-                        .show_alert(true)
-                        .await?;
+                    check_db_err(
+                        &bot,
+                        &q.id.0,
+                        Err(e),
+                        config,
+                        telegram_id,
+                        "admin-error-context-callback",
+                        lang,
+                    )
+                    .await?;
                     return Ok(());
                 }
             };
@@ -134,14 +153,17 @@ pub async fn handle_settings(
                         locales::get_text(lang, "status-disabled", None)
                     };
 
-                    let _ = bot
+                    if let Err(e) = bot
                         .answer_callback_query(q.id)
                         .text(locales::get_text(
                             lang,
                             "resp-noon-updated",
                             args!(status = status).as_ref(),
                         ))
-                        .await;
+                        .await
+                    {
+                        tracing::error!("Failed to send noon update callback: {}", e);
+                    }
 
                     if let Err(e) = send_notif_settings(&bot, &msg, db, telegram_id, lang).await
                         && !e.to_string().contains("message is not modified")
@@ -150,7 +172,16 @@ pub async fn handle_settings(
                     }
                 }
                 Err(e) => {
-                    check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                    check_db_err(
+                        &bot,
+                        &q.id.0,
+                        Err(e),
+                        config,
+                        telegram_id,
+                        "admin-error-context-callback",
+                        lang,
+                    )
+                    .await?;
                 }
             }
         }
@@ -159,7 +190,16 @@ pub async fn handle_settings(
                 send_mute_menu(&bot, &msg, lang, &u.mute_list_mode).await?;
             }
             Err(e) => {
-                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                check_db_err(
+                    &bot,
+                    &q.id.0,
+                    Err(e),
+                    config,
+                    telegram_id,
+                    "admin-error-context-callback",
+                    lang,
+                )
+                .await?;
             }
         },
     }

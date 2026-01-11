@@ -11,6 +11,7 @@ pub mod utils;
 use crate::config::Config;
 use crate::db::Database;
 use crate::locales;
+use crate::tg_bot::utils::notify_admin_error;
 use crate::types::{LiteUser, TtCommand};
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -52,17 +53,34 @@ pub async fn run_tg_bot(
         )
         .branch(Update::filter_callback_query().endpoint(callbacks::answer_callback));
 
+    let admin_bot = event_bot.clone();
+    let admin_config = config.clone();
     Dispatcher::builder(event_bot, handler)
         .dependencies(dptree::deps![state])
         .enable_ctrlc_handler()
-        .error_handler(std::sync::Arc::new(
-            |err: teloxide::errors::RequestError| async move {
-                let err_str = err.to_string();
-                if !err_str.contains("TerminatedByOtherGetUpdates") {
-                    tracing::error!("❌ [TELEGRAM] Update listener error: {}", err);
+        .error_handler(std::sync::Arc::new({
+            let admin_bot = admin_bot.clone();
+            let admin_config = admin_config.clone();
+            move |err: teloxide::errors::RequestError| {
+                let admin_bot = admin_bot.clone();
+                let admin_config = admin_config.clone();
+                async move {
+                    let err_str = err.to_string();
+                    if !err_str.contains("TerminatedByOtherGetUpdates") {
+                        tracing::error!("[TELEGRAM] Update listener error: {}", err);
+                        notify_admin_error(
+                            &admin_bot,
+                            &admin_config,
+                            0,
+                            "admin-error-context-update-listener",
+                            &err_str,
+                            &admin_config.general.default_lang,
+                        )
+                        .await;
+                    }
                 }
-            },
-        ))
+            }
+        }))
         .build()
         .dispatch()
         .await;
@@ -92,19 +110,28 @@ async fn set_bot_commands(
             .await?;
     }
 
-    let admin_ids = db.get_all_admins().await.unwrap_or_default();
+    let admin_ids = match db.get_all_admins().await {
+        Ok(ids) => ids,
+        Err(e) => {
+            tracing::error!("Failed to load admin list: {}", e);
+            Vec::new()
+        }
+    };
     for admin_id in admin_ids {
         let user_settings = db
             .get_or_create_user(admin_id, default_lang)
             .await
-            .unwrap_or_else(|_| crate::db::types::UserSettings {
-                telegram_id: admin_id,
-                language_code: default_lang.clone(),
-                notification_settings: "all".to_string(),
-                mute_list_mode: "blacklist".to_string(),
-                teamtalk_username: None,
-                not_on_online_enabled: false,
-                not_on_online_confirmed: false,
+            .unwrap_or_else(|e| {
+                tracing::error!("Failed to load admin settings for {}: {}", admin_id, e);
+                crate::db::types::UserSettings {
+                    telegram_id: admin_id,
+                    language_code: default_lang.clone(),
+                    notification_settings: "all".to_string(),
+                    mute_list_mode: "blacklist".to_string(),
+                    teamtalk_username: None,
+                    not_on_online_enabled: false,
+                    not_on_online_confirmed: false,
+                }
             });
 
         let admin_cmds = get_admin_commands(&user_settings.language_code);
@@ -114,7 +141,10 @@ async fn set_bot_commands(
                 chat_id: Recipient::Id(teloxide::types::ChatId(admin_id)),
             })
             .await
-            .ok();
+            .unwrap_or_else(|e| {
+                tracing::error!("Failed to set admin commands for {}: {}", admin_id, e);
+                teloxide::types::True
+            });
     }
 
     Ok(())

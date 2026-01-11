@@ -5,7 +5,7 @@ use crate::tg_bot::admin_logic::subscriber_settings::{
 use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscriber_details};
 use crate::tg_bot::callbacks_types::SubAction;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::check_db_err;
+use crate::tg_bot::utils::{check_db_err, notify_admin_error};
 use crate::types::{MuteListMode, NotificationSetting, TtCommand};
 use crate::{args, locales};
 use teloxide::prelude::*;
@@ -24,6 +24,7 @@ pub async fn handle_subscriber_actions(
     let db = &state.db;
     let user_accounts = &state.user_accounts;
     let tx_tt = &state.tx_tt;
+    let config = &state.config;
 
     match action {
         SubAction::Details { sub_id, page } => {
@@ -31,7 +32,17 @@ pub async fn handle_subscriber_actions(
             bot.answer_callback_query(q.id).await?;
         }
         SubAction::Delete { sub_id, page } => {
-            if check_db_err(&bot, &q.id.0, db.delete_user_profile(sub_id).await, lang).await? {
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.delete_user_profile(sub_id).await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
+                lang,
+            )
+            .await?
+            {
                 return Ok(());
             }
             bot.answer_callback_query(q.id)
@@ -51,7 +62,16 @@ pub async fn handle_subscriber_actions(
             let tt_user = match tt_user_res {
                 Ok(u) => u,
                 Err(e) => {
-                    check_db_err(&bot, &q.id.0, Err(e.into()), lang).await?;
+                    check_db_err(
+                        &bot,
+                        &q.id.0,
+                        Err(e.into()),
+                        config,
+                        q.from.id.0 as i64,
+                        "admin-error-context-callback",
+                        lang,
+                    )
+                    .await?;
                     return Ok(());
                 }
             };
@@ -60,7 +80,16 @@ pub async fn handle_subscriber_actions(
                 .add_ban(Some(sub_id), tt_user, Some("Admin Ban".to_string()))
                 .await
             {
-                check_db_err(&bot, &q.id.0, Err(e), lang).await?;
+                check_db_err(
+                    &bot,
+                    &q.id.0,
+                    Err(e),
+                    config,
+                    q.from.id.0 as i64,
+                    "admin-error-context-callback",
+                    lang,
+                )
+                .await?;
                 return Ok(());
             }
 
@@ -78,7 +107,17 @@ pub async fn handle_subscriber_actions(
             send_sub_manage_tt_menu(&bot, &msg, db, lang, sub_id, page).await?;
         }
         SubAction::Unlink { sub_id, page } => {
-            if check_db_err(&bot, &q.id.0, db.unlink_tt_account(sub_id).await, lang).await? {
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.unlink_tt_account(sub_id).await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
+                lang,
+            )
+            .await?
+            {
                 return Ok(());
             }
             bot.answer_callback_query(q.id)
@@ -96,7 +135,18 @@ pub async fn handle_subscriber_actions(
             page,
             list_page,
         } => {
-            tx_tt.send(TtCommand::LoadAccounts).ok();
+            if let Err(e) = tx_tt.send(TtCommand::LoadAccounts) {
+                tracing::error!("Failed to request TT accounts: {}", e);
+                notify_admin_error(
+                    &bot,
+                    config,
+                    q.from.id.0 as i64,
+                    "admin-error-context-tt-command",
+                    &e.to_string(),
+                    lang,
+                )
+                .await;
+            }
             send_sub_link_account_list(&bot, &msg, user_accounts, lang, sub_id, page, list_page)
                 .await?;
         }
@@ -109,6 +159,9 @@ pub async fn handle_subscriber_actions(
                 &bot,
                 &q.id.0,
                 db.link_tt_account(sub_id, &username).await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
                 lang,
             )
             .await?
@@ -137,6 +190,9 @@ pub async fn handle_subscriber_actions(
                 &bot,
                 &q.id.0,
                 db.update_language(sub_id, &new_lang).await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
                 lang,
             )
             .await?
@@ -161,6 +217,9 @@ pub async fn handle_subscriber_actions(
                 &q.id.0,
                 db.update_notification_setting(sub_id, NotificationSetting::from(val.as_str()))
                     .await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
                 lang,
             )
             .await?
@@ -181,6 +240,9 @@ pub async fn handle_subscriber_actions(
                 &bot,
                 &q.id.0,
                 db.toggle_noon(sub_id).await.map(|_| ()),
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
                 lang,
             )
             .await?
@@ -206,6 +268,9 @@ pub async fn handle_subscriber_actions(
                 &q.id.0,
                 db.update_mute_mode(sub_id, MuteListMode::from(mode.as_str()))
                     .await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
                 lang,
             )
             .await?

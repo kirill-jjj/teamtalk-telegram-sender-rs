@@ -11,7 +11,13 @@ pub async fn send_unban_list(
     lang: &str,
     page: usize,
 ) -> ResponseResult<()> {
-    let entries = db.get_banned_users().await.unwrap_or_default();
+    let entries = match db.get_banned_users().await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load banned users: {}", e);
+            Vec::new()
+        }
+    };
 
     if entries.is_empty() {
         bot.send_message(chat_id, locales::get_text(lang, "list-ban-empty", None))
@@ -59,7 +65,13 @@ pub async fn edit_unban_list(
     lang: &str,
     page: usize,
 ) -> ResponseResult<()> {
-    let entries = db.get_banned_users().await.unwrap_or_default();
+    let entries = match db.get_banned_users().await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load banned users: {}", e);
+            Vec::new()
+        }
+    };
 
     if entries.is_empty() {
         bot.edit_message_text(

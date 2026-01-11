@@ -56,13 +56,17 @@ pub fn run_teamtalk_thread(
 
     let client = match Client::new() {
         Ok(c) => {
-            let _ = tx_init.send(Ok(()));
+            if let Err(e) = tx_init.send(Ok(())) {
+                tracing::error!("Failed to signal TT init success: {}", e);
+            }
             c
         }
         Err(e) => {
             let err_msg = format!("Failed to initialize TeamTalk SDK: {}", e);
             tracing::error!("{}", err_msg);
-            let _ = tx_init.send(Err(err_msg));
+            if let Err(send_err) = tx_init.send(Err(err_msg)) {
+                tracing::error!("Failed to signal TT init failure: {}", send_err);
+            }
             return;
         }
     };
@@ -90,12 +94,20 @@ pub fn run_teamtalk_thread(
         tt_config.encrypted
     );
 
-    let _ = client.connect(
+    if let Err(e) = client.connect(
         connect_params.host,
         connect_params.tcp,
         connect_params.udp,
         connect_params.encrypted,
-    );
+    ) {
+        tracing::error!(
+            "TT connect failed to {}:{} (encrypted={}): {}",
+            connect_params.host,
+            connect_params.tcp,
+            connect_params.encrypted,
+            e
+        );
+    }
 
     loop {
         if !is_connected {

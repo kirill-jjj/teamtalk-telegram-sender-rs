@@ -262,7 +262,13 @@ pub async fn send_sub_mute_list(
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
-    let muted: Vec<String> = db.get_muted_users_list(target_id).await.unwrap_or_default();
+    let muted: Vec<String> = match db.get_muted_users_list(target_id).await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load muted users for {}: {}", target_id, e);
+            Vec::new()
+        }
+    };
 
     let user_name = format!("{}", target_id);
     let args = args!(name = user_name);

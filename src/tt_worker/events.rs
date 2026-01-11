@@ -42,7 +42,15 @@ pub(super) fn handle_sdk_event(
             client.set_status_message(&tt_config.status_text);
             let chan_id = client.get_channel_id_from_path(&tt_config.channel);
             if chan_id.0 > 0 {
-                client.join_channel(chan_id, tt_config.channel_password.as_deref().unwrap_or(""));
+                let cmd_id = client
+                    .join_channel(chan_id, tt_config.channel_password.as_deref().unwrap_or(""));
+                if cmd_id <= 0 {
+                    tracing::error!(
+                        "[TT_WORKER] Failed to join channel '{}' (id={})",
+                        tt_config.channel,
+                        chan_id.0
+                    );
+                }
             }
             *ready_time = Some(std::time::Instant::now());
             ctx.user_accounts.clear();
@@ -125,12 +133,14 @@ pub(super) fn handle_sdk_event(
                         .unwrap_or(&tt_config.host_name)
                         .to_string();
 
-                    let _ = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
+                    if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
                         event_type: NotificationType::Join,
                         nickname,
                         server_name,
                         related_tt_username: user.username.clone(),
-                    });
+                    }) {
+                        tracing::error!("Failed to send join broadcast: {}", e);
+                    }
                 }
             }
         }
@@ -179,12 +189,14 @@ pub(super) fn handle_sdk_event(
                             .unwrap_or(&tt_config.host_name)
                             .to_string();
 
-                        let _ = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
+                        if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
                             event_type: NotificationType::Leave,
                             nickname: u.nickname.clone(),
                             server_name,
                             related_tt_username: u.username.clone(),
-                        });
+                        }) {
+                            tracing::error!("Failed to send leave broadcast: {}", e);
+                        }
                     }
                 }
             }

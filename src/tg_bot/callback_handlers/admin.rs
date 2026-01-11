@@ -5,7 +5,7 @@ use crate::tg_bot::admin_logic::subscribers::{edit_subscribers_list, send_subscr
 use crate::tg_bot::callbacks_types::{AdminAction, CallbackAction};
 use crate::tg_bot::keyboards::create_user_list_keyboard;
 use crate::tg_bot::state::AppState;
-use crate::tg_bot::utils::check_db_err;
+use crate::tg_bot::utils::{check_db_err, notify_admin_error};
 use crate::types::{LiteUser, TtCommand};
 use teloxide::prelude::*;
 
@@ -91,7 +91,18 @@ pub async fn handle_admin(
             bot.answer_callback_query(q.id).await?;
         }
         AdminAction::KickPerform { user_id } => {
-            state.tx_tt.send(TtCommand::KickUser { user_id }).ok();
+            if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }) {
+                tracing::error!("Failed to send kick command for {}: {}", user_id, e);
+                notify_admin_error(
+                    &bot,
+                    config,
+                    q.from.id.0 as i64,
+                    "admin-error-context-tt-command",
+                    &e.to_string(),
+                    lang,
+                )
+                .await;
+            }
             bot.answer_callback_query(q.id)
                 .text(locales::get_text(lang, "toast-command-sent", None))
                 .await?;
@@ -107,8 +118,17 @@ pub async fn handle_admin(
                     .await
                 {
                     tracing::error!("Failed to add ban: {}", e);
+                    notify_admin_error(
+                        &bot,
+                        config,
+                        q.from.id.0 as i64,
+                        "admin-error-context-callback",
+                        &e.to_string(),
+                        lang,
+                    )
+                    .await;
                     bot.answer_callback_query(q.id)
-                        .text("DB Error")
+                        .text(locales::get_text(lang, "cmd-error", None))
                         .show_alert(true)
                         .await?;
                     return Ok(());
@@ -135,7 +155,18 @@ pub async fn handle_admin(
                         tracing::error!("Failed to add second ban record: {}", e);
                     }
                 }
-                state.tx_tt.send(TtCommand::BanUser { user_id }).ok();
+                if let Err(e) = state.tx_tt.send(TtCommand::BanUser { user_id }) {
+                    tracing::error!("Failed to send ban command for {}: {}", user_id, e);
+                    notify_admin_error(
+                        &bot,
+                        config,
+                        q.from.id.0 as i64,
+                        "admin-error-context-tt-command",
+                        &e.to_string(),
+                        lang,
+                    )
+                    .await;
+                }
                 bot.answer_callback_query(q.id)
                     .text(locales::get_text(lang, "toast-command-sent", None))
                     .await?;
@@ -155,7 +186,17 @@ pub async fn handle_admin(
             bot.answer_callback_query(q.id).await?;
         }
         AdminAction::UnbanPerform { ban_db_id, page } => {
-            if check_db_err(&bot, &q.id.0, db.remove_ban_by_id(ban_db_id).await, lang).await? {
+            if check_db_err(
+                &bot,
+                &q.id.0,
+                db.remove_ban_by_id(ban_db_id).await,
+                config,
+                q.from.id.0 as i64,
+                "admin-error-context-callback",
+                lang,
+            )
+            .await?
+            {
                 return Ok(());
             }
             bot.answer_callback_query(q.id)

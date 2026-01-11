@@ -50,7 +50,9 @@ pub(super) fn handle_who_command(client: &Client, ctx: &WorkerContext, chat_id: 
     let header = locales::get_text(&lang, "tt-report-header", header_args.as_ref());
 
     let mut report = String::with_capacity(1024);
-    writeln!(report, "{}\n", header).unwrap();
+    if let Err(e) = writeln!(report, "{}\n", header) {
+        tracing::error!("Failed to write who report header: {}", e);
+    }
 
     for (chan_name, mut nicks) in channels_data {
         nicks.sort_by_key(|a| a.to_lowercase());
@@ -66,15 +68,21 @@ pub(super) fn handle_who_command(client: &Client, ctx: &WorkerContext, chat_id: 
         let row_args = args!(users = user_list, channel = location);
         let row_text = locales::get_text(&lang, "tt-report-row", row_args.as_ref());
 
-        writeln!(report, "{}", row_text).unwrap();
+        if let Err(e) = writeln!(report, "{}", row_text) {
+            tracing::error!("Failed to write who report row: {}", e);
+        }
     }
     if !unauth_users.is_empty() {
         let unauth_label = locales::get_text(&lang, "tt-report-unauth", None);
-        writeln!(report, "{} {}", unauth_users.join(", "), unauth_label).unwrap();
+        if let Err(e) = writeln!(report, "{} {}", unauth_users.join(", "), unauth_label) {
+            tracing::error!("Failed to write who report unauth row: {}", e);
+        }
     }
 
-    let _ = ctx.tx_bridge.blocking_send(BridgeEvent::WhoReport {
+    if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::WhoReport {
         chat_id,
         text: report.trim_end().to_string(),
-    });
+    }) {
+        tracing::error!("Failed to send who report to bridge for {}: {}", chat_id, e);
+    }
 }

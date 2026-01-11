@@ -53,10 +53,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let cmd = parts[0].to_lowercase();
 
             let send_reply = |text: String| {
-                let _ = tx_tt_cmd.send(TtCommand::ReplyToUser {
+                if let Err(e) = tx_tt_cmd.send(TtCommand::ReplyToUser {
                     user_id: from_uid,
                     text,
-                });
+                }) {
+                    tracing::error!("Failed to send TT reply command for {}: {}", from_uid, e);
+                }
             };
 
             if cmd == "/sub" {
@@ -160,7 +162,13 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = db.add_admin(tg_id).await.unwrap_or(false);
+                        let success = match db.add_admin(tg_id).await {
+                            Ok(val) => val,
+                            Err(e) => {
+                                tracing::error!("DB error adding admin {}: {}", tg_id, e);
+                                false
+                            }
+                        };
                         if success {
                             added_count += 1;
                         }
@@ -197,7 +205,13 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = db.remove_admin(tg_id).await.unwrap_or(false);
+                        let success = match db.remove_admin(tg_id).await {
+                            Ok(val) => val,
+                            Err(e) => {
+                                tracing::error!("DB error removing admin {}: {}", tg_id, e);
+                                false
+                            }
+                        };
                         if success {
                             removed_count += 1;
                         } else {
@@ -227,7 +241,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(&tt_config.host_name)
                     .to_string();
 
-                let _ = tx_bridge
+                if let Err(e) = tx_bridge
                     .send(crate::types::BridgeEvent::ToAdmin {
                         user_id: from_uid,
                         nick,
@@ -235,7 +249,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         msg_content: content.to_string(),
                         server_name,
                     })
-                    .await;
+                    .await
+                {
+                    tracing::error!("Failed to send admin bridge event: {}", e);
+                }
             }
         }
     });

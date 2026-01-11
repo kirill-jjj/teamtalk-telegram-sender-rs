@@ -314,10 +314,13 @@ pub async fn render_mute_list(
     title_key: &str,
     guest_username: Option<&str>,
 ) -> ResponseResult<()> {
-    let muted_users: Vec<String> = db
-        .get_muted_users_list(telegram_id)
-        .await
-        .unwrap_or_default();
+    let muted_users: Vec<String> = match db.get_muted_users_list(telegram_id).await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
+            Vec::new()
+        }
+    };
     let muted_set: std::collections::HashSet<_> = muted_users.into_iter().collect();
 
     let keyboard = create_user_list_keyboard(

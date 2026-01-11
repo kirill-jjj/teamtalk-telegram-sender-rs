@@ -183,8 +183,8 @@ async fn main() -> Result<()> {
             shared_config,
         )
         .await;
-    } else {
-        let _ = bridge_handle.await;
+    } else if let Err(e) = bridge_handle.await {
+        tracing::error!("Bridge task failed: {}", e);
     }
 
     Ok(())

@@ -2,6 +2,7 @@ use crate::locales;
 use crate::tg_bot::callback_handlers::{admin, menu, mute, settings, subscriber, unsub};
 use crate::tg_bot::callbacks_types::CallbackAction;
 use crate::tg_bot::state::AppState;
+use crate::tg_bot::utils::notify_admin_error;
 use std::str::FromStr;
 use teloxide::prelude::*;
 use teloxide::types::MaybeInaccessibleMessage;
@@ -30,8 +31,21 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
                 telegram_id,
                 e
             );
+            notify_admin_error(
+                &bot,
+                config,
+                telegram_id,
+                "admin-error-context-callback",
+                &e.to_string(),
+                &config.general.default_lang,
+            )
+            .await;
             bot.answer_callback_query(q.id)
-                .text("Database error.")
+                .text(locales::get_text(
+                    &config.general.default_lang,
+                    "cmd-error",
+                    None,
+                ))
                 .show_alert(true)
                 .await?;
             return Ok(());
@@ -39,12 +53,32 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
     };
     let lang = &user_settings.language_code;
 
-    if let Ok(false) = db.is_subscribed(telegram_id).await {
-        bot.answer_callback_query(query_id)
-            .text(locales::get_text(lang, "cmd-not-subscribed", None))
-            .show_alert(true)
-            .await?;
-        return Ok(());
+    match db.is_subscribed(telegram_id).await {
+        Ok(true) => {}
+        Ok(false) => {
+            bot.answer_callback_query(query_id)
+                .text(locales::get_text(lang, "cmd-not-subscribed", None))
+                .show_alert(true)
+                .await?;
+            return Ok(());
+        }
+        Err(e) => {
+            tracing::error!("Failed to check subscription for {}: {}", telegram_id, e);
+            notify_admin_error(
+                &bot,
+                config,
+                telegram_id,
+                "admin-error-context-subscription",
+                &e.to_string(),
+                lang,
+            )
+            .await;
+            bot.answer_callback_query(query_id)
+                .text(locales::get_text(lang, "cmd-error", None))
+                .show_alert(true)
+                .await?;
+            return Ok(());
+        }
     }
 
     let action = match CallbackAction::from_str(&callback_data_str) {
