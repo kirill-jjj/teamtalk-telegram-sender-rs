@@ -17,6 +17,7 @@ pub struct BridgeContext {
     pub config: Arc<Config>,
     pub event_bot: Option<Bot>,
     pub msg_bot: Option<Bot>,
+    pub message_token_present: bool,
     pub tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
 }
 
@@ -30,6 +31,7 @@ pub async fn run_bridge(
         config,
         event_bot,
         msg_bot,
+        message_token_present,
         tx_tt_cmd,
     } = ctx;
     let default_lang =
@@ -156,7 +158,14 @@ pub async fn run_bridge(
                 msg_content,
                 server_name,
             } => {
-                if let Some(bot) = &msg_bot {
+                let bot = if let Some(bot) = msg_bot.as_ref() {
+                    Some(bot)
+                } else if message_token_present {
+                    event_bot.as_ref()
+                } else {
+                    None
+                };
+                if let Some(bot) = bot {
                     let admin_settings =
                         db_clone.get_or_create_user(admin_id.0, default_lang).await;
                     let admin_lang = match admin_settings {
@@ -182,6 +191,7 @@ pub async fn run_bridge(
                         .send_message(admin_id, &text_admin)
                         .parse_mode(teloxide::types::ParseMode::Html)
                         .await;
+                    let res = res;
                     if let Ok(msg) = &res
                         && let Err(e) = db_clone.add_pending_reply(msg.id.0 as i64, user_id).await
                     {
@@ -215,7 +225,7 @@ pub async fn run_bridge(
                         );
                     }
                 } else {
-                    tracing::debug!("Skipping Admin Alert: 'message_token' is not configured.");
+                    tracing::debug!("Skipping Admin Alert: message_token is not configured.");
                 }
             }
             types::BridgeEvent::ToAdminChannel {
@@ -224,7 +234,14 @@ pub async fn run_bridge(
                 server_name,
                 msg_content,
             } => {
-                if let Some(bot) = &msg_bot {
+                let bot = if let Some(bot) = msg_bot.as_ref() {
+                    Some(bot)
+                } else if message_token_present {
+                    event_bot.as_ref()
+                } else {
+                    None
+                };
+                if let Some(bot) = bot {
                     let admin_settings =
                         db_clone.get_or_create_user(admin_id.0, default_lang).await;
                     let admin_lang = match admin_settings {
@@ -253,6 +270,7 @@ pub async fn run_bridge(
                         .send_message(admin_id, &text_admin)
                         .parse_mode(teloxide::types::ParseMode::Html)
                         .await;
+                    let res = res;
                     if let Ok(msg) = &res
                         && let Err(e) = db_clone
                             .add_pending_channel_reply(
@@ -271,7 +289,7 @@ pub async fn run_bridge(
                         );
                     }
                 } else {
-                    tracing::debug!("Skipping Admin Alert: 'message_token' is not configured.");
+                    tracing::debug!("Skipping Admin Alert: message_token is not configured.");
                 }
             }
             types::BridgeEvent::WhoReport { chat_id, text } => {

@@ -222,6 +222,7 @@ async fn main() -> Result<()> {
     let msg_bot_clone = message_bot.clone();
     let db_clone = db.clone();
     let online_users_clone = online_users.clone();
+    let message_token_present = message_token.is_some();
 
     let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
         adapters::bridge::BridgeContext {
@@ -230,6 +231,7 @@ async fn main() -> Result<()> {
             config: shared_config.clone(),
             event_bot: event_bot_clone,
             msg_bot: msg_bot_clone,
+            message_token_present,
             tx_tt_cmd: tx_tt_cmd.clone(),
         },
         rx_bridge,
