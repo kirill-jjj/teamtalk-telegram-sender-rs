@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2]
+### Fixed
+- Route admin messages based on token presence and equality.
+
 ## [0.4.1]
 ### Fixed
 - Replies now work when message and event bots use different tokens.
