@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.4.1]
+## [0.4.1]
 ### Fixed
 - Replies now work when message and event bots use different tokens.
 
