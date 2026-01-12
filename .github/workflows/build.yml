@@ -76,7 +76,9 @@ jobs:
           else
             cp target/release/${{ matrix.bin_name }} payload/${{ matrix.bin_name }}
           fi
-          cp config.toml.example payload/config.toml.example
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            cp config.toml.example payload/config.toml.example
+          fi
 
       - name: Create Archive
         if: startsWith(github.ref, 'refs/tags/')
