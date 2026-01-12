@@ -3,6 +3,7 @@ use crate::tt_worker::{WorkerContext, resolve_server_name};
 use crate::types::{BridgeEvent, LiteUser, NotificationType};
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
+use teamtalk::client::ffi;
 use teamtalk::types::{UserGender, UserStatus};
 use teamtalk::{Client, Event, Message};
 
@@ -99,6 +100,42 @@ pub(super) fn handle_sdk_event(
                         user.nickname
                     );
                     existing_lite_user.nickname = user.nickname.clone();
+                }
+            }
+        }
+        Event::StreamMediaFile => {
+            let raw = msg.raw();
+            let info =
+                unsafe { teamtalk::types::MediaFileInfo::from(raw.__bindgen_anon_1.mediafileinfo) };
+            let gender = parse_gender(&ctx.config.general.gender);
+            match info.status {
+                ffi::MediaFileStatus::MFS_STARTED | ffi::MediaFileStatus::MFS_PLAYING => {
+                    let status = UserStatus {
+                        gender,
+                        streaming: true,
+                        ..UserStatus::default()
+                    };
+                    client.set_status(status, &ctx.config.teamtalk.status_text);
+                }
+                ffi::MediaFileStatus::MFS_CLOSED
+                | ffi::MediaFileStatus::MFS_ERROR
+                | ffi::MediaFileStatus::MFS_FINISHED
+                | ffi::MediaFileStatus::MFS_ABORTED => {
+                    let status = UserStatus {
+                        gender,
+                        streaming: false,
+                        ..UserStatus::default()
+                    };
+                    client.set_status(status, &ctx.config.teamtalk.status_text);
+                }
+                ffi::MediaFileStatus::MFS_PAUSED => {
+                    let status = UserStatus {
+                        gender,
+                        streaming: true,
+                        media_paused: true,
+                        ..UserStatus::default()
+                    };
+                    client.set_status(status, &ctx.config.teamtalk.status_text);
                 }
             }
         }

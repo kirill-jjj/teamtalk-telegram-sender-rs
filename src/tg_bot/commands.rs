@@ -10,9 +10,13 @@ use crate::tg_bot::settings_logic::send_main_settings;
 use crate::tg_bot::state::AppState;
 use crate::tg_bot::utils::{ensure_subscribed, notify_admin_error, send_text_key};
 use crate::types::{LanguageCode, LiteUser, TtCommand};
+use std::time::{SystemTime, UNIX_EPOCH};
+use teloxide::net::Download;
 use teloxide::prelude::*;
-use teloxide::types::ParseMode;
+use teloxide::sugar::request::RequestReplyExt;
+use teloxide::types::{ParseMode, Voice};
 use teloxide::utils::command::BotCommands;
+use tokio::fs::File;
 
 #[derive(BotCommands, Clone, Debug)]
 #[command(rename_rule = "lowercase", description = "Available Commands:")]
@@ -395,5 +399,234 @@ pub async fn answer_command(
             std::process::exit(0);
         }
     }
+    Ok(())
+}
+
+pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> ResponseResult<()> {
+    let user = if let Some(user) = &msg.from {
+        user
+    } else {
+        return Ok(());
+    };
+    let telegram_id = user.id.0 as i64;
+    let config = &state.config;
+    let db = &state.db;
+
+    let is_admin = if telegram_id == config.telegram.admin_chat_id {
+        true
+    } else {
+        match db.get_all_admins().await {
+            Ok(admins) => admins.contains(&telegram_id),
+            Err(e) => {
+                tracing::error!("Failed to load admin list: {}", e);
+                false
+            }
+        }
+    };
+    if !is_admin {
+        return Ok(());
+    }
+
+    let default_lang =
+        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
+    let admin_lang = db
+        .get_or_create_user(telegram_id, default_lang)
+        .await
+        .map(|u| LanguageCode::from_str_or_default(&u.language_code, default_lang))
+        .unwrap_or(default_lang);
+
+    let reply_to = msg.reply_to_message();
+    let text = msg.text();
+    let voice = msg.voice();
+
+    if reply_to.is_none() {
+        if let Some(voice) = voice {
+            let reply_key = match stream_voice(&bot, &state, None, voice).await {
+                Ok(_) => "tg-reply-sent",
+                Err(e) => {
+                    notify_admin_error(
+                        &bot,
+                        config,
+                        telegram_id,
+                        "admin-error-context-command",
+                        &e.to_string(),
+                        admin_lang,
+                    )
+                    .await;
+                    "tg-reply-failed"
+                }
+            };
+            let reply_text = locales::get_text(admin_lang.as_str(), reply_key, None);
+            let _ = bot
+                .send_message(msg.chat.id, reply_text)
+                .reply_to(msg.id)
+                .await;
+        }
+        return Ok(());
+    }
+
+    let reply_to = reply_to.unwrap();
+    let reply_id = reply_to.id.0 as i64;
+
+    if let Ok(Some((channel_id, _channel_name, _server_name, original_text))) =
+        db.get_pending_channel_reply(reply_id).await
+    {
+        let mut reply_key = "tg-reply-sent";
+        if let Some(voice) = voice {
+            let duration = format_duration(voice.duration.seconds());
+            let args = args!(msg = original_text.clone(), duration = duration);
+            let announce_text =
+                locales::get_text(admin_lang.as_str(), "tt-channel-reply", args.as_ref());
+            if let Err(e) =
+                stream_voice(&bot, &state, Some((channel_id, announce_text)), voice).await
+            {
+                notify_admin_error(
+                    &bot,
+                    config,
+                    telegram_id,
+                    "admin-error-context-command",
+                    &e.to_string(),
+                    admin_lang,
+                )
+                .await;
+                reply_key = "tg-reply-failed";
+            }
+        } else if let Some(text) = text {
+            let args = args!(msg = original_text.clone(), reply = text.to_string());
+            let channel_text =
+                locales::get_text(admin_lang.as_str(), "tt-channel-reply-text", args.as_ref());
+            if let Err(e) = state.tx_tt.send(TtCommand::SendToChannel {
+                channel_id,
+                text: channel_text,
+            }) {
+                tracing::error!("Failed to send TT channel reply to {}: {}", channel_id, e);
+                notify_admin_error(
+                    &bot,
+                    config,
+                    telegram_id,
+                    "admin-error-context-command",
+                    &e.to_string(),
+                    admin_lang,
+                )
+                .await;
+                reply_key = "tg-reply-failed";
+            }
+        } else {
+            return Ok(());
+        }
+
+        let reply_text = locales::get_text(admin_lang.as_str(), reply_key, None);
+        let _ = bot
+            .send_message(msg.chat.id, reply_text)
+            .reply_to(msg.id)
+            .await;
+
+        if let Err(e) = db.touch_pending_channel_reply(reply_id).await {
+            tracing::error!("Failed to update pending channel reply {}: {}", reply_id, e);
+        }
+
+        return Ok(());
+    }
+
+    let text = if let Some(text) = text {
+        text
+    } else {
+        return Ok(());
+    };
+
+    let tt_user_id = match db.get_pending_reply_user_id(reply_id).await {
+        Ok(Some(id)) => id,
+        Ok(None) => return Ok(()),
+        Err(e) => {
+            tracing::error!("Failed to load pending reply {}: {}", reply_id, e);
+            notify_admin_error(
+                &bot,
+                config,
+                telegram_id,
+                "admin-error-context-command",
+                &e.to_string(),
+                LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En),
+            )
+            .await;
+            return Ok(());
+        }
+    };
+
+    let reply_key = if !state.online_users.contains_key(&tt_user_id) {
+        "tg-reply-offline"
+    } else {
+        let send_res = state.tx_tt.send(TtCommand::ReplyToUser {
+            user_id: tt_user_id,
+            text: text.to_string(),
+        });
+        if let Err(e) = send_res {
+            tracing::error!("Failed to send TT reply command for {}: {}", tt_user_id, e);
+            notify_admin_error(
+                &bot,
+                config,
+                telegram_id,
+                "admin-error-context-command",
+                &e.to_string(),
+                admin_lang,
+            )
+            .await;
+            "tg-reply-failed"
+        } else {
+            "tg-reply-sent"
+        }
+    };
+    let reply_text = locales::get_text(admin_lang.as_str(), reply_key, None);
+    let _ = bot
+        .send_message(msg.chat.id, reply_text)
+        .reply_to(msg.id)
+        .await;
+
+    if let Err(e) = db.touch_pending_reply(reply_id).await {
+        tracing::error!("Failed to update pending reply {}: {}", reply_id, e);
+    }
+
+    Ok(())
+}
+
+fn format_duration(duration_secs: u32) -> String {
+    let minutes = duration_secs / 60;
+    let seconds = duration_secs % 60;
+    format!("{:02}:{:02}", minutes, seconds)
+}
+
+async fn stream_voice(
+    bot: &Bot,
+    state: &AppState,
+    announce: Option<(i32, String)>,
+    voice: &Voice,
+) -> Result<(), String> {
+    let file_info = bot
+        .get_file(voice.file.id.clone())
+        .await
+        .map_err(|e| e.to_string())?;
+    let mut temp_path = std::env::temp_dir();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    temp_path.push(format!("tg-voice-{}-{}.ogg", voice.file.id, now));
+    let mut dst = File::create(&temp_path).await.map_err(|e| e.to_string())?;
+    bot.download_file(&file_info.path, &mut dst)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let duration_ms = voice.duration.seconds().saturating_mul(1000);
+    let (channel_id, announce_text) = announce
+        .map(|(id, text)| (id, Some(text)))
+        .unwrap_or((0, None));
+    state
+        .tx_tt
+        .send(TtCommand::EnqueueStream {
+            channel_id,
+            file_path: temp_path.to_string_lossy().to_string(),
+            duration_ms,
+            announce_text,
+        })
+        .map_err(|e| e.to_string())?;
     Ok(())
 }

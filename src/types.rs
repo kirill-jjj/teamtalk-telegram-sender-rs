@@ -113,6 +113,12 @@ pub enum BridgeEvent {
         msg_content: String,
         server_name: String,
     },
+    ToAdminChannel {
+        channel_id: i32,
+        channel_name: String,
+        server_name: String,
+        msg_content: String,
+    },
     WhoReport {
         chat_id: i64,
         text: String,
@@ -127,10 +133,34 @@ pub enum NotificationType {
 
 #[derive(Debug)]
 pub enum TtCommand {
-    ReplyToUser { user_id: i32, text: String },
-    KickUser { user_id: i32 },
-    BanUser { user_id: i32 },
-    Who { chat_id: i64, lang: LanguageCode },
+    ReplyToUser {
+        user_id: i32,
+        text: String,
+    },
+    SendToChannel {
+        channel_id: i32,
+        text: String,
+    },
+    EnqueueStream {
+        channel_id: i32,
+        file_path: String,
+        duration_ms: u32,
+        announce_text: Option<String>,
+    },
+    StopStreamingIf {
+        stream_id: u64,
+    },
+    SkipStream,
+    KickUser {
+        user_id: i32,
+    },
+    BanUser {
+        user_id: i32,
+    },
+    Who {
+        chat_id: i64,
+        lang: LanguageCode,
+    },
     LoadAccounts,
 }
 

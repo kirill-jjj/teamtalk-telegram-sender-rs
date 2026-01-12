@@ -6,11 +6,14 @@ use crate::config::Config;
 use crate::db::Database;
 use crate::types::{BridgeEvent, LiteUser, TtCommand};
 use dashmap::DashMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender};
 use std::time::Duration;
 use teamtalk::Client;
+use teamtalk::client::media::MediaPlayback;
 use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
+use teamtalk::types::{AudioPreprocessor, ChannelId};
 use teamtalk::types::{UserAccount, UserId};
 
 pub(super) fn resolve_server_name(
@@ -52,6 +55,14 @@ pub struct RunTeamtalkArgs {
     pub tx_init: std::sync::mpsc::Sender<Result<(), String>>,
 }
 
+struct StreamItem {
+    stream_id: u64,
+    channel_id: i32,
+    file_path: String,
+    duration_ms: u32,
+    announce_text: Option<String>,
+}
+
 pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     let RunTeamtalkArgs {
         config,
@@ -75,7 +86,7 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         online_users_by_username,
         user_accounts,
         tx_bridge,
-        tx_tt_cmd: tx_cmd_clone,
+        tx_tt_cmd: tx_cmd_clone.clone(),
         db,
         rt,
         bot_username,
@@ -99,6 +110,9 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     };
     let mut ready_time: Option<std::time::Instant> = None;
     let mut is_connected = false;
+    let mut stream_queue: VecDeque<StreamItem> = VecDeque::new();
+    let mut current_stream: Option<StreamItem> = None;
+    let mut stream_seq: u64 = 0;
 
     let mut reconnect_handler = ReconnectHandler::new(ReconnectConfig {
         min_delay: Duration::from_millis(200),
@@ -136,6 +150,68 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         );
     }
 
+    let start_next = |client: &Client,
+                      queue: &mut VecDeque<StreamItem>,
+                      current: &mut Option<StreamItem>,
+                      tx_cmd: &Sender<TtCommand>| {
+        if current.is_some() {
+            return;
+        }
+        while let Some(mut item) = queue.pop_front() {
+            let channel_id = if item.channel_id == 0 {
+                client.my_channel_id().0
+            } else {
+                item.channel_id
+            };
+            if let Some(text) = item.announce_text.take() {
+                client.send_to_channel(ChannelId(channel_id), &text);
+            }
+            let playback = MediaPlayback {
+                offset_ms: 0,
+                paused: false,
+                preprocessor: AudioPreprocessor::None,
+            };
+            let started = client.start_streaming_ex(&item.file_path, &playback, None);
+            if !started {
+                tracing::error!("Failed to start streaming: {}", item.file_path);
+                let delete_path = item.file_path.clone();
+                std::thread::spawn(move || {
+                    let _ = std::fs::remove_file(&delete_path);
+                });
+                continue;
+            }
+            let stream_id = item.stream_id;
+            let delete_path = item.file_path.clone();
+            let duration_ms = item.duration_ms;
+            let tx_cmd_for_stop = tx_cmd.clone();
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(duration_ms as u64));
+                let _ = tx_cmd_for_stop.send(TtCommand::StopStreamingIf { stream_id });
+                std::thread::sleep(Duration::from_millis(10_000));
+                let mut attempts = 0;
+                loop {
+                    match std::fs::remove_file(&delete_path) {
+                        Ok(_) => break,
+                        Err(e) => {
+                            attempts += 1;
+                            if attempts >= 10 {
+                                tracing::error!(
+                                    "Failed to delete streamed file {}: {}",
+                                    delete_path,
+                                    e
+                                );
+                                break;
+                            }
+                            std::thread::sleep(Duration::from_secs(30));
+                        }
+                    }
+                }
+            });
+            *current = Some(item);
+            break;
+        }
+    };
+
     loop {
         if !is_connected {
             client.handle_reconnect(&connect_params, &mut reconnect_handler);
@@ -145,6 +221,58 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
             match cmd {
                 TtCommand::ReplyToUser { user_id, text } => {
                     client.send_to_user(UserId(user_id), &text);
+                }
+                TtCommand::SendToChannel { channel_id, text } => {
+                    client.send_to_channel(ChannelId(channel_id), &text);
+                }
+                TtCommand::EnqueueStream {
+                    channel_id,
+                    file_path,
+                    duration_ms,
+                    announce_text,
+                } => {
+                    stream_seq = stream_seq.wrapping_add(1);
+                    stream_queue.push_back(StreamItem {
+                        stream_id: stream_seq,
+                        channel_id,
+                        file_path,
+                        duration_ms,
+                        announce_text,
+                    });
+                    start_next(
+                        &client,
+                        &mut stream_queue,
+                        &mut current_stream,
+                        &tx_cmd_clone,
+                    );
+                }
+                TtCommand::StopStreamingIf { stream_id } => {
+                    if current_stream
+                        .as_ref()
+                        .map(|s| s.stream_id == stream_id)
+                        .unwrap_or(false)
+                    {
+                        client.stop_streaming();
+                        current_stream = None;
+                        start_next(
+                            &client,
+                            &mut stream_queue,
+                            &mut current_stream,
+                            &tx_cmd_clone,
+                        );
+                    }
+                }
+                TtCommand::SkipStream => {
+                    if current_stream.is_some() {
+                        client.stop_streaming();
+                        current_stream = None;
+                    }
+                    start_next(
+                        &client,
+                        &mut stream_queue,
+                        &mut current_stream,
+                        &tx_cmd_clone,
+                    );
                 }
                 TtCommand::KickUser { user_id } => {
                     client.kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
@@ -162,7 +290,35 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
             }
         }
 
-        while let Some((event, msg)) = client.poll(100) {
+        let mut events_processed = 0usize;
+        while let Some((event, msg)) = client.poll(0) {
+            if current_stream.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing) {
+                events_processed += 1;
+                if events_processed >= 50 {
+                    break;
+                }
+                continue;
+            }
+            events::handle_sdk_event(
+                &client,
+                &ctx,
+                event,
+                msg,
+                &mut is_connected,
+                &mut reconnect_handler,
+                &mut ready_time,
+            );
+            events_processed += 1;
+            if events_processed >= 50 {
+                break;
+            }
+        }
+        if events_processed == 0
+            && let Some((event, msg)) = client.poll(100)
+        {
+            if current_stream.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing) {
+                continue;
+            }
             events::handle_sdk_event(
                 &client,
                 &ctx,

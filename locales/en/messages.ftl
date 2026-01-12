@@ -139,8 +139,20 @@ admin-alert =
     From <b>{ $nick }</b>:
 
     { $msg }
+admin-channel-pm =
+    Message from server <b>{ $server }</b>, channel <b>{ $channel }</b>:
+
+    { $msg }
+tg-reply-sent = Message sent.
+tg-reply-failed = Failed to send message.
+tg-reply-offline = User is offline.
 tt-msg-sent = Message sent to Telegram.
 tt-msg-failed = Failed to send message to Telegram.
+tt-channel-reply = Reply to: { $msg } (duration { $duration })
+tt-channel-reply-text =
+    Reply to: { $msg }
+    { $reply }
+tt-skip-sent = Skip command sent.
 
 # TT Commands & Responses
 tt-admin-added = Successfully added { $count } admins.
@@ -154,6 +166,7 @@ tt-admin-help-header =
 tt-admin-help-cmds =
     /add_admin <Telegram ID> [<Telegram ID>...] - Add bot admin.
     /remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin.
+    /skip - Skip media playback.
 
 tt-report-header = There are { $count } users on the server { $server }:
 tt-report-unauth = (not in a channel)

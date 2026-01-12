@@ -26,6 +26,86 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
     let bot_username = ctx.bot_username.clone();
     let tx_bridge = ctx.tx_bridge.clone();
 
+    if msg.msg_type == teamtalk::client::ffi::TextMsgType::MSGTYPE_CHANNEL {
+        let content = msg.text.trim();
+        let cmd = content
+            .split_whitespace()
+            .next()
+            .unwrap_or("")
+            .to_lowercase();
+        if cmd == "/skip" {
+            let from_uid = msg.from_id.0;
+            let channel_id = msg.channel_id.0;
+            let db = db.clone();
+            let online_users = online_users.clone();
+            let tx_tt_cmd = tx_tt_cmd.clone();
+            ctx.rt.spawn(async move {
+                let username = online_users
+                    .get(&from_uid)
+                    .map(|u| u.username.clone())
+                    .unwrap_or_default();
+                let reply_lang = if !username.is_empty() {
+                    db.get_user_lang_by_tt_user(&username)
+                        .await
+                        .unwrap_or(default_lang)
+                } else {
+                    default_lang
+                };
+                let is_admin = if username.is_empty() {
+                    false
+                } else if admin_username
+                    .as_ref()
+                    .map(|u| u == &username)
+                    .unwrap_or(false)
+                {
+                    true
+                } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
+                    db.get_all_admins()
+                        .await
+                        .map(|admins| admins.contains(&tg_id))
+                        .unwrap_or(false)
+                } else {
+                    false
+                };
+                let text_key = if is_admin {
+                    if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream) {
+                        tracing::error!("Failed to send TT skip command: {}", e);
+                        "tt-error-generic"
+                    } else {
+                        "tt-skip-sent"
+                    }
+                } else {
+                    "cmd-unauth"
+                };
+                let text = locales::get_text(reply_lang.as_str(), text_key, None);
+                if let Err(e) = tx_tt_cmd.send(TtCommand::SendToChannel { channel_id, text }) {
+                    tracing::error!("Failed to send TT channel reply: {}", e);
+                }
+            });
+            return;
+        }
+        if let Some(rest) = content.strip_prefix("/pm ") {
+            let pm_text = rest.trim();
+            if pm_text.is_empty() {
+                return;
+            }
+            let channel_name = client
+                .get_channel(msg.channel_id)
+                .map(|c| c.name)
+                .unwrap_or_else(|| "Unknown".to_string());
+            let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());
+            if let Err(e) = tx_bridge.blocking_send(crate::types::BridgeEvent::ToAdminChannel {
+                channel_id: msg.channel_id.0,
+                channel_name,
+                server_name,
+                msg_content: pm_text.to_string(),
+            }) {
+                tracing::error!("Failed to send channel pm event: {}", e);
+            }
+        }
+        return;
+    }
+
     ctx.rt.spawn(async move {
         if msg.msg_type == teamtalk::client::ffi::TextMsgType::MSGTYPE_USER {
             let content = msg.text.trim();
@@ -169,6 +249,36 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     help_msg.push_str(&cmds);
                 }
                 send_reply(help_msg);
+            } else if cmd == "/skip" {
+                let is_admin = if username.is_empty() {
+                    false
+                } else if admin_username
+                    .as_ref()
+                    .map(|u| u == &username)
+                    .unwrap_or(false)
+                {
+                    true
+                } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
+                    db.get_all_admins()
+                        .await
+                        .map(|admins| admins.contains(&tg_id))
+                        .unwrap_or(false)
+                } else {
+                    false
+                };
+                if !is_admin {
+                    let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                    send_reply(text);
+                    return;
+                }
+                if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream) {
+                    tracing::error!("Failed to send TT skip command: {}", e);
+                    let text = locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
+                    send_reply(text);
+                    return;
+                }
+                let text = locales::get_text(reply_lang.as_str(), "tt-skip-sent", None);
+                send_reply(text);
             } else if cmd == "/add_admin" {
                 let is_main_admin = admin_username
                     .as_ref()

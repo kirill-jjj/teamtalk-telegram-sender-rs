@@ -139,8 +139,20 @@ admin-alert =
     От <b>{ $nick }</b>:
 
     { $msg }
+admin-channel-pm =
+    Сообщение с сервера <b>{ $server }</b>, канал <b>{ $channel }</b>:
+
+    { $msg }
+tg-reply-sent = Сообщение отправлено.
+tg-reply-failed = Ошибка отправки сообщения.
+tg-reply-offline = Пользователь не в сети.
 tt-msg-sent = Сообщение успешно отправлено в Telegram.
 tt-msg-failed = Не удалось доставить сообщение в Telegram.
+tt-channel-reply = Ответ на: { $msg } (длительность { $duration })
+tt-channel-reply-text =
+    Ответ на: { $msg }
+    { $reply }
+tt-skip-sent = Команда пропуска отправлена.
 
 # TeamTalk Admin Commands
 tt-admin-added = Успешно добавлено { $count } администраторов.
@@ -154,6 +166,7 @@ tt-admin-help-header =
 tt-admin-help-cmds =
     /add_admin <Telegram ID> [<Telegram ID>...] - Добавить админа бота.
     /remove_admin <Telegram ID> [<Telegram ID>...] - Удалить админа бота.
+    /skip - Пропустить медиа.
 
 tt-report-header = На сервере { $server } сейчас { $count } пользователей:
 tt-report-unauth = (не в канале)

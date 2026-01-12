@@ -108,6 +108,41 @@ async fn main() -> Result<()> {
         }
     });
 
+    let pending_cleanup_interval_seconds = 3600u64;
+    let pending_ttl_seconds = 3600i64;
+    let db_for_pending_cleanup = db.clone();
+    tokio::spawn(async move {
+        let mut interval =
+            tokio::time::interval(Duration::from_secs(pending_cleanup_interval_seconds));
+        loop {
+            interval.tick().await;
+            match db_for_pending_cleanup
+                .cleanup_pending_replies(pending_ttl_seconds)
+                .await
+            {
+                Ok(count) if count > 0 => {
+                    tracing::info!("🧹 Cleaned up {} pending replies.", count);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("Failed to clean up pending replies: {}", e);
+                }
+            }
+            match db_for_pending_cleanup
+                .cleanup_pending_channel_replies(pending_ttl_seconds)
+                .await
+            {
+                Ok(count) if count > 0 => {
+                    tracing::info!("🧹 Cleaned up {} pending channel replies.", count);
+                }
+                Ok(_) => {}
+                Err(e) => {
+                    tracing::error!("Failed to clean up pending channel replies: {}", e);
+                }
+            }
+        }
+    });
+
     let online_users: Arc<DashMap<i32, types::LiteUser>> = Arc::new(DashMap::new());
     let online_users_by_username: Arc<DashMap<String, i32>> = Arc::new(DashMap::new());
     let all_user_accounts: Arc<DashMap<String, UserAccount>> = Arc::new(DashMap::new());

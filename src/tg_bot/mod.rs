@@ -51,6 +51,7 @@ pub async fn run_tg_bot(
                 .filter_command::<Command>()
                 .endpoint(commands::answer_command),
         )
+        .branch(Update::filter_message().endpoint(commands::answer_message))
         .branch(Update::filter_callback_query().endpoint(callbacks::answer_callback));
 
     let admin_bot = event_bot.clone();

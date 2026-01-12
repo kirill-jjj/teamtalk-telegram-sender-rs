@@ -2,6 +2,8 @@ pub mod admins;
 pub mod bans;
 pub mod deeplinks;
 pub mod mutes;
+pub mod pending_channel_replies;
+pub mod pending_replies;
 pub mod subscriptions;
 pub mod types;
 pub mod user_settings;

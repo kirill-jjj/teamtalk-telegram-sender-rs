@@ -180,6 +180,11 @@ pub async fn run_bridge(
                         .send_message(admin_id, &text_admin)
                         .parse_mode(teloxide::types::ParseMode::Html)
                         .await;
+                    if let Ok(msg) = &res
+                        && let Err(e) = db_clone.add_pending_reply(msg.id.0 as i64, user_id).await
+                    {
+                        tracing::error!("Failed to save pending reply for {}: {}", msg.id.0, e);
+                    }
 
                     let reply_lang = if !tt_username.is_empty() {
                         db_clone
@@ -204,6 +209,62 @@ pub async fn run_bridge(
                         tracing::error!(
                             "Failed to send TT reply command for user {}: {}",
                             user_id,
+                            e
+                        );
+                    }
+                } else {
+                    tracing::debug!("Skipping Admin Alert: 'message_token' is not configured.");
+                }
+            }
+            types::BridgeEvent::ToAdminChannel {
+                channel_id,
+                channel_name,
+                server_name,
+                msg_content,
+            } => {
+                if let Some(bot) = &msg_bot {
+                    let admin_settings =
+                        db_clone.get_or_create_user(admin_id.0, default_lang).await;
+                    let admin_lang = match admin_settings {
+                        Ok(u) => LanguageCode::from_str_or_default(&u.language_code, default_lang),
+                        Err(e) => {
+                            tracing::error!(
+                                "Failed to get admin settings: {}. Defaulting to 'en'.",
+                                e
+                            );
+                            LanguageCode::En
+                        }
+                    };
+
+                    let args_admin = args!(
+                        server = html::escape(&server_name),
+                        channel = html::escape(&channel_name),
+                        msg = html::escape(&msg_content)
+                    );
+                    let text_admin = locales::get_text(
+                        admin_lang.as_str(),
+                        "admin-channel-pm",
+                        args_admin.as_ref(),
+                    );
+
+                    let res = bot
+                        .send_message(admin_id, &text_admin)
+                        .parse_mode(teloxide::types::ParseMode::Html)
+                        .await;
+                    if let Ok(msg) = &res
+                        && let Err(e) = db_clone
+                            .add_pending_channel_reply(
+                                msg.id.0 as i64,
+                                channel_id,
+                                &channel_name,
+                                &server_name,
+                                &msg_content,
+                            )
+                            .await
+                    {
+                        tracing::error!(
+                            "Failed to save pending channel reply for {}: {}",
+                            msg.id.0,
                             e
                         );
                     }
