@@ -77,14 +77,20 @@ pub async fn send_sub_manage_tt_menu(
 pub async fn send_sub_link_account_list(
     bot: &Bot,
     msg: &Message,
-    user_accounts: &std::sync::Arc<dashmap::DashMap<String, UserAccount>>,
+    user_accounts: &std::sync::Arc<
+        std::sync::RwLock<std::collections::HashMap<String, UserAccount>>,
+    >,
     lang: LanguageCode,
     target_id: i64,
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
-    let mut accounts: Vec<UserAccount> =
-        user_accounts.iter().map(|kv| kv.value().clone()).collect();
+    let mut accounts: Vec<UserAccount> = user_accounts
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .values()
+        .cloned()
+        .collect();
     accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
 
     let keyboard = create_user_list_keyboard(

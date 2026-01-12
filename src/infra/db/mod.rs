@@ -35,4 +35,8 @@ impl Database {
 
         Ok(Self { pool })
     }
+
+    pub async fn close(&self) {
+        self.pool.close().await;
+    }
 }

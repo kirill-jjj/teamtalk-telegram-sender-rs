@@ -1,5 +1,5 @@
 use crate::adapters::tt::commands;
-use crate::adapters::tt::{WorkerContext, resolve_server_name};
+use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
 use crate::core::types::{BridgeEvent, LiteUser, NotificationType};
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
@@ -33,7 +33,9 @@ pub(super) fn handle_sdk_event(
         e if e.is_reconnect_needed_with(&[Event::MySelfKicked]) => {
             *is_connected = false;
             reconnect_handler.mark_disconnected();
-            ctx.online_users.clear();
+            if let Ok(mut users) = ctx.online_users.write() {
+                users.clear();
+            }
             *ready_time = None;
             tracing::warn!(
                 "❌ [TT_WORKER] Disconnection event ({:?}). Reconnect pending...",
@@ -60,34 +62,40 @@ pub(super) fn handle_sdk_event(
                 }
             }
             *ready_time = Some(std::time::Instant::now());
-            ctx.user_accounts.clear();
+            if let Ok(mut accounts) = ctx.user_accounts.write() {
+                accounts.clear();
+            }
             client.list_user_accounts(0, 1000);
         }
 
         Event::UserAccount => {
             if let Some(account) = msg.account()
                 && !account.username.is_empty()
+                && let Ok(mut accounts) = ctx.user_accounts.write()
             {
-                ctx.user_accounts.insert(account.username.clone(), account);
+                accounts.insert(account.username.clone(), account);
             }
         }
         Event::UserAccountCreated | Event::UserAccountRemoved => {
-            ctx.user_accounts.clear();
+            if let Ok(mut accounts) = ctx.user_accounts.write() {
+                accounts.clear();
+            }
             client.list_user_accounts(0, 1000);
         }
 
         Event::UserUpdate => {
             if let Some(user) = msg.user()
-                && let Some(mut existing_lite_user) = ctx.online_users.get_mut(&user.id.0)
+                && let Ok(mut users) = ctx.online_users.write()
+                && let Some(existing_lite_user) = users.get_mut(&user.id.0)
             {
                 if existing_lite_user.username != user.username {
-                    if !existing_lite_user.username.is_empty() {
-                        ctx.online_users_by_username
-                            .remove(&existing_lite_user.username);
-                    }
-                    if !user.username.is_empty() {
-                        ctx.online_users_by_username
-                            .insert(user.username.clone(), user.id.0);
+                    if let Ok(mut by_username) = ctx.online_users_by_username.write() {
+                        if !existing_lite_user.username.is_empty() {
+                            by_username.remove(&existing_lite_user.username);
+                        }
+                        if !user.username.is_empty() {
+                            by_username.insert(user.username.clone(), user.id.0);
+                        }
                     }
                     existing_lite_user.username = user.username.clone();
                 }
@@ -152,10 +160,7 @@ pub(super) fn handle_sdk_event(
             {
                 let nickname = user.nickname.clone();
 
-                let channel_name = client
-                    .get_channel(user.channel_id)
-                    .map(|c| c.name)
-                    .unwrap_or_else(|| "Unknown".to_string());
+                let channel_name = resolve_channel_name(client, user.channel_id);
 
                 let lite_user = LiteUser {
                     id: user.id.0,
@@ -163,11 +168,14 @@ pub(super) fn handle_sdk_event(
                     username: user.username.clone(),
                     channel_name,
                 };
-                if !lite_user.username.is_empty() {
-                    ctx.online_users_by_username
-                        .insert(lite_user.username.clone(), lite_user.id);
+                if let Ok(mut by_username) = ctx.online_users_by_username.write()
+                    && !lite_user.username.is_empty()
+                {
+                    by_username.insert(lite_user.username.clone(), lite_user.id);
                 }
-                ctx.online_users.insert(user.id.0, lite_user.clone());
+                if let Ok(mut users) = ctx.online_users.write() {
+                    users.insert(user.id.0, lite_user.clone());
+                }
 
                 let is_ready = ready_time
                     .map(|t| t.elapsed() >= Duration::from_secs(2))
@@ -193,10 +201,7 @@ pub(super) fn handle_sdk_event(
                 && user.id != client.my_id()
             {
                 let nickname = user.nickname.clone();
-                let channel_name = client
-                    .get_channel(user.channel_id)
-                    .map(|c| c.name)
-                    .unwrap_or_else(|| "Unknown".to_string());
+                let channel_name = resolve_channel_name(client, user.channel_id);
 
                 let lite_user = LiteUser {
                     id: user.id.0,
@@ -204,36 +209,46 @@ pub(super) fn handle_sdk_event(
                     username: user.username.clone(),
                     channel_name,
                 };
-                if !lite_user.username.is_empty() {
-                    ctx.online_users_by_username
-                        .insert(lite_user.username.clone(), lite_user.id);
+                if let Ok(mut by_username) = ctx.online_users_by_username.write()
+                    && !lite_user.username.is_empty()
+                {
+                    by_username.insert(lite_user.username.clone(), lite_user.id);
                 }
-                ctx.online_users.insert(user.id.0, lite_user);
+                if let Ok(mut users) = ctx.online_users.write() {
+                    users.insert(user.id.0, lite_user);
+                }
             }
         }
 
         Event::UserLoggedOut => {
-            if let Some(user) = msg.user()
-                && let Some((_, u)) = ctx.online_users.remove(&user.id.0)
-            {
-                if !u.username.is_empty() {
-                    ctx.online_users_by_username.remove(&u.username);
-                }
-                if user.id != client.my_id() {
-                    let is_ready = ready_time
-                        .map(|t| t.elapsed() >= Duration::from_secs(2))
-                        .unwrap_or(false);
-                    if is_ready && !tt_config.global_ignore_usernames.contains(&u.username) {
-                        let real_name = client.get_server_properties().map(|p| p.name);
-                        let server_name = resolve_server_name(tt_config, real_name.as_deref());
+            if let Some(user) = msg.user() {
+                let removed = if let Ok(mut users) = ctx.online_users.write() {
+                    users.remove(&user.id.0)
+                } else {
+                    None
+                };
+                if let Some(u) = removed {
+                    if let Ok(mut by_username) = ctx.online_users_by_username.write()
+                        && !u.username.is_empty()
+                    {
+                        by_username.remove(&u.username);
+                    }
+                    if user.id != client.my_id() {
+                        let is_ready = ready_time
+                            .map(|t| t.elapsed() >= Duration::from_secs(2))
+                            .unwrap_or(false);
+                        if is_ready && !tt_config.global_ignore_usernames.contains(&u.username) {
+                            let real_name = client.get_server_properties().map(|p| p.name);
+                            let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
-                        if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
-                            event_type: NotificationType::Leave,
-                            nickname: u.nickname.clone(),
-                            server_name,
-                            related_tt_username: u.username.clone(),
-                        }) {
-                            tracing::error!("Failed to send leave broadcast: {}", e);
+                            if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
+                                event_type: NotificationType::Leave,
+                                nickname: u.nickname.clone(),
+                                server_name,
+                                related_tt_username: u.username.clone(),
+                            }) {
+                                tracing::error!("Failed to send leave broadcast: {}", e);
+                            }
                         }
                     }
                 }
@@ -241,13 +256,11 @@ pub(super) fn handle_sdk_event(
         }
         Event::UserLeft => {
             if let Some(user) = msg.user() {
-                let chan = client.get_channel(user.channel_id);
-                let channel_name = chan
-                    .as_ref()
-                    .map(|c| c.name.clone())
-                    .unwrap_or_else(|| "Unknown".to_string());
+                let channel_name = resolve_channel_name(client, user.channel_id);
 
-                if let Some(mut u) = ctx.online_users.get_mut(&user.id.0) {
+                if let Ok(mut users) = ctx.online_users.write()
+                    && let Some(u) = users.get_mut(&user.id.0)
+                {
                     u.channel_name = channel_name;
                 }
             }

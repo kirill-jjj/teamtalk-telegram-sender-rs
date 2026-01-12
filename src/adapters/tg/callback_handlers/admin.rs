@@ -31,7 +31,12 @@ pub async fn handle_admin(
 
     match action {
         AdminAction::KickList { page } => {
-            let mut users: Vec<LiteUser> = online_users.iter().map(|u| u.value().clone()).collect();
+            let mut users: Vec<LiteUser> = online_users
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .values()
+                .cloned()
+                .collect();
             users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
 
             let args = args!(server = config.teamtalk.display_name().to_string());
@@ -63,7 +68,12 @@ pub async fn handle_admin(
             answer_callback_empty(&bot, &q.id).await?;
         }
         AdminAction::BanList { page } => {
-            let mut users: Vec<LiteUser> = online_users.iter().map(|u| u.value().clone()).collect();
+            let mut users: Vec<LiteUser> = online_users
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .values()
+                .cloned()
+                .collect();
             users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
 
             let args = args!(server = config.teamtalk.display_name().to_string());
@@ -116,7 +126,12 @@ pub async fn handle_admin(
             .await?;
         }
         AdminAction::BanPerform { user_id } => {
-            if let Some(u) = online_users.get(&user_id) {
+            let user = online_users
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .get(&user_id)
+                .cloned();
+            if let Some(u) = user {
                 if let Err(e) = db
                     .add_ban(
                         None,

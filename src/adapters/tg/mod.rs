@@ -14,8 +14,9 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
 use crate::infra::db::Database;
 use crate::infra::locales;
-use dashmap::DashMap;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::RwLock;
 use std::sync::mpsc::Sender;
 use teamtalk::types::UserAccount;
 use teloxide::{
@@ -26,21 +27,37 @@ use teloxide::{
 use self::commands::Command;
 use self::state::AppState;
 
-pub async fn run_tg_bot(
-    event_bot: Bot,
-    message_bot: Option<Bot>,
-    db: Database,
-    online_users: Arc<DashMap<i32, LiteUser>>,
-    user_accounts: Arc<DashMap<String, UserAccount>>,
-    tx_tt_cmd: Sender<TtCommand>,
-    config: Arc<Config>,
-) {
+pub struct TgRunArgs {
+    pub event_bot: Bot,
+    pub message_bot: Option<Bot>,
+    pub db: Database,
+    pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    pub tx_tt_cmd: Sender<TtCommand>,
+    pub config: Arc<Config>,
+    pub shutdown: tokio::sync::watch::Receiver<bool>,
+    pub shutdown_tx: tokio::sync::watch::Sender<bool>,
+}
+
+pub async fn run_tg_bot(args: TgRunArgs) {
+    let TgRunArgs {
+        event_bot,
+        message_bot,
+        db,
+        online_users,
+        user_accounts,
+        tx_tt_cmd,
+        config,
+        shutdown,
+        shutdown_tx,
+    } = args;
     let state = AppState {
         db: db.clone(),
         online_users,
         user_accounts,
         tx_tt: tx_tt_cmd,
         config: config.clone(),
+        shutdown_tx,
     };
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
@@ -62,12 +79,12 @@ pub async fn run_tg_bot(
     let msg_handle = message_bot.map(|msg_bot| {
         let admin_bot = msg_bot.clone();
         let admin_config = config.clone();
+        let mut shutdown = shutdown.clone();
         tokio::spawn(async move {
             let msg_handler =
                 dptree::entry().branch(Update::filter_message().endpoint(commands::answer_message));
-            Dispatcher::builder(msg_bot, msg_handler)
+            let mut dispatcher = Dispatcher::builder(msg_bot, msg_handler)
                 .dependencies(dptree::deps![msg_state])
-                .enable_ctrlc_handler()
                 .error_handler(std::sync::Arc::new({
                     let admin_bot = admin_bot.clone();
                     let admin_config = admin_config.clone();
@@ -95,15 +112,22 @@ pub async fn run_tg_bot(
                         }
                     }
                 }))
-                .build()
-                .dispatch()
-                .await;
+                .build();
+            let shutdown_token = dispatcher.shutdown_token();
+            let shutdown_task = tokio::spawn(async move {
+                if shutdown.changed().await.is_ok()
+                    && let Ok(fut) = shutdown_token.shutdown()
+                {
+                    fut.await;
+                }
+            });
+            dispatcher.dispatch().await;
+            shutdown_task.abort();
         })
     });
 
-    Dispatcher::builder(event_bot, handler)
+    let mut dispatcher = Dispatcher::builder(event_bot, handler)
         .dependencies(dptree::deps![state])
-        .enable_ctrlc_handler()
         .error_handler(std::sync::Arc::new({
             let admin_bot = admin_bot.clone();
             let admin_config = admin_config.clone();
@@ -131,9 +155,18 @@ pub async fn run_tg_bot(
                 }
             }
         }))
-        .build()
-        .dispatch()
-        .await;
+        .build();
+    let shutdown_token = dispatcher.shutdown_token();
+    let mut shutdown = shutdown.clone();
+    let shutdown_task = tokio::spawn(async move {
+        if shutdown.changed().await.is_ok()
+            && let Ok(fut) = shutdown_token.shutdown()
+        {
+            fut.await;
+        }
+    });
+    dispatcher.dispatch().await;
+    shutdown_task.abort();
 
     if let Some(handle) = msg_handle {
         handle.abort();

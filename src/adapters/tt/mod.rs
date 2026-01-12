@@ -5,10 +5,9 @@ pub mod reports;
 use crate::bootstrap::config::Config;
 use crate::core::types::{BridgeEvent, LiteUser, TtCommand};
 use crate::infra::db::Database;
-use dashmap::DashMap;
-use std::collections::VecDeque;
-use std::sync::Arc;
+use std::collections::{HashMap, VecDeque};
 use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use teamtalk::Client;
 use teamtalk::client::media::MediaPlayback;
@@ -29,11 +28,22 @@ pub(super) fn resolve_server_name(
         .to_string()
 }
 
+pub(super) fn resolve_channel_name(client: &Client, channel_id: ChannelId) -> String {
+    if channel_id.0 == 0 {
+        return "/".to_string();
+    }
+    match client.get_channel(channel_id) {
+        Some(channel) if !channel.name.is_empty() => channel.name,
+        Some(_) => "/".to_string(),
+        None => "Unknown".to_string(),
+    }
+}
+
 pub struct WorkerContext {
     pub config: Arc<Config>,
-    pub online_users: Arc<DashMap<i32, LiteUser>>,
-    pub online_users_by_username: Arc<DashMap<String, i32>>,
-    pub user_accounts: Arc<DashMap<String, UserAccount>>,
+    pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
+    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub db: Database,
@@ -44,9 +54,9 @@ pub struct WorkerContext {
 
 pub struct RunTeamtalkArgs {
     pub config: Arc<Config>,
-    pub online_users: Arc<DashMap<i32, LiteUser>>,
-    pub online_users_by_username: Arc<DashMap<String, i32>>,
-    pub user_accounts: Arc<DashMap<String, UserAccount>>,
+    pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
+    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
     pub rx_cmd: Receiver<TtCommand>,
     pub tx_cmd_clone: Sender<TtCommand>,
@@ -230,6 +240,7 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         }
     };
 
+    let mut shutdown = false;
     loop {
         if !is_connected {
             client.handle_reconnect(&connect_params, &mut reconnect_handler);
@@ -237,6 +248,10 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
 
         while let Ok(cmd) = rx_cmd.try_recv() {
             match cmd {
+                TtCommand::Shutdown => {
+                    shutdown = true;
+                    break;
+                }
                 TtCommand::ReplyToUser { user_id, text } => {
                     client.send_to_user(UserId(user_id), &text);
                 }
@@ -331,6 +346,16 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                 }
             }
         }
+        if shutdown {
+            tracing::info!("[TT_WORKER] Shutdown requested.");
+            if current_stream.is_some() {
+                tracing::info!("[TT_WORKER] Stopping active stream...");
+                client.stop_streaming();
+            }
+            tracing::info!("[TT_WORKER] Logging out...");
+            client.logout();
+            break;
+        }
 
         let mut events_processed = 0usize;
         while let Some((event, msg)) = client.poll(0) {
@@ -372,4 +397,6 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
             );
         }
     }
+    tracing::info!("[TT_WORKER] Disconnecting...");
+    let _ = client.disconnect();
 }

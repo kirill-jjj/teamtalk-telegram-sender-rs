@@ -275,7 +275,12 @@ pub async fn answer_command(
                 return Ok(());
             }
 
-            let mut users: Vec<LiteUser> = online_users.iter().map(|u| u.value().clone()).collect();
+            let mut users: Vec<LiteUser> = online_users
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .values()
+                .cloned()
+                .collect();
             users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
 
             let is_kick = matches!(cmd, Command::Kick);
@@ -339,8 +344,7 @@ pub async fn answer_command(
                 locales::get_text(lang.as_str(), "cmd-shutting-down", None),
             )
             .await?;
-            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-            std::process::exit(0);
+            crate::core::shutdown::request_shutdown(&state.shutdown_tx, &state.tx_tt);
         }
     }
     Ok(())
@@ -498,7 +502,12 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         }
     };
 
-    let reply_key = if !state.online_users.contains_key(&tt_user_id) {
+    let is_online = state
+        .online_users
+        .read()
+        .unwrap_or_else(|e| e.into_inner())
+        .contains_key(&tt_user_id);
+    let reply_key = if !is_online {
         "tg-reply-offline"
     } else {
         let send_res = state.tx_tt.send(TtCommand::ReplyToUser {

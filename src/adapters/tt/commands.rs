@@ -1,4 +1,4 @@
-use crate::adapters::tt::{WorkerContext, resolve_server_name};
+use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
 use crate::app::services::admin as admin_service;
 use crate::app::services::messages as messages_service;
 use crate::args;
@@ -42,10 +42,14 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let online_users = online_users.clone();
             let tx_tt_cmd = tx_tt_cmd.clone();
             ctx.rt.spawn(async move {
-                let username = online_users
-                    .get(&from_uid)
-                    .map(|u| u.username.clone())
-                    .unwrap_or_default();
+                let username = if let Ok(users) = online_users.read() {
+                    users
+                        .get(&from_uid)
+                        .map(|u| u.username.clone())
+                        .unwrap_or_default()
+                } else {
+                    String::new()
+                };
                 let reply_lang = if !username.is_empty() {
                     messages_service::get_user_lang_by_tt_user(&db, &username)
                         .await
@@ -93,10 +97,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             if pm_text.is_empty() {
                 return;
             }
-            let channel_name = client
-                .get_channel(msg.channel_id)
-                .map(|c| c.name)
-                .unwrap_or_else(|| "Unknown".to_string());
+            let channel_name = resolve_channel_name(client, msg.channel_id);
             let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());
             if let Err(e) =
                 tx_bridge.blocking_send(crate::core::types::BridgeEvent::ToAdminChannel {
@@ -117,8 +118,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let content = msg.text.trim();
             let from_uid = msg.from_id.0;
 
-            let (nick, username): (String, String) = if let Some(u) = online_users.get(&from_uid) {
-                (u.nickname.clone(), u.username.clone())
+            let (nick, username): (String, String) = if let Ok(users) = online_users.read() {
+                users
+                    .get(&from_uid)
+                    .map(|u| (u.nickname.clone(), u.username.clone()))
+                    .unwrap_or(("Unknown".to_string(), "".to_string()))
             } else {
                 ("Unknown".to_string(), "".to_string())
             };

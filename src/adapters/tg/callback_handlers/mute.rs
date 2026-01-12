@@ -134,8 +134,12 @@ pub async fn handle_mute(
                 .await;
             }
             let user_accounts = &state.user_accounts;
-            let mut accounts: Vec<UserAccount> =
-                user_accounts.iter().map(|kv| kv.value().clone()).collect();
+            let mut accounts: Vec<UserAccount> = user_accounts
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .values()
+                .cloned()
+                .collect();
             accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
 
             let guest_username = state.config.teamtalk.guest_username.as_deref();
@@ -177,8 +181,12 @@ pub async fn handle_mute(
             .await?;
 
             let user_accounts = &state.user_accounts;
-            let mut accounts: Vec<UserAccount> =
-                user_accounts.iter().map(|kv| kv.value().clone()).collect();
+            let mut accounts: Vec<UserAccount> = user_accounts
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .values()
+                .cloned()
+                .collect();
             accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
             let guest_username = state.config.teamtalk.guest_username.as_deref();
 

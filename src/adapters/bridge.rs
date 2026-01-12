@@ -3,9 +3,9 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser};
 use crate::infra::db::Database;
 use crate::infra::locales;
-use dashmap::DashMap;
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::sync::RwLock;
 use teloxide::ApiError;
 use teloxide::RequestError;
 use teloxide::{prelude::*, utils::html};
@@ -13,12 +13,13 @@ use tokio::task::JoinSet;
 
 pub struct BridgeContext {
     pub db: Database,
-    pub online_users: Arc<DashMap<i32, LiteUser>>,
+    pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
     pub config: Arc<Config>,
     pub event_bot: Option<Bot>,
     pub msg_bot: Option<Bot>,
     pub message_token_present: bool,
     pub tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
+    pub shutdown: tokio::sync::watch::Receiver<bool>,
 }
 
 pub async fn run_bridge(
@@ -33,13 +34,26 @@ pub async fn run_bridge(
         msg_bot,
         message_token_present,
         tx_tt_cmd,
+        mut shutdown,
     } = ctx;
     let default_lang =
         LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
 
     tracing::info!("🌉 [BRIDGE] Bridge task started.");
-    while let Some(event) = rx_bridge.recv().await {
+    loop {
+        let event = tokio::select! {
+            _ = shutdown.changed() => {
+                break;
+            }
+            maybe_event = rx_bridge.recv() => {
+                match maybe_event {
+                    Some(event) => event,
+                    None => break,
+                }
+            }
+        };
+
         match event {
             types::BridgeEvent::Broadcast {
                 event_type,
@@ -105,9 +119,11 @@ pub async fn run_bridge(
                             && sub.not_on_online_confirmed
                             && let Some(linked_tt) = &sub.teamtalk_username
                         {
-                            let is_online = online_users
-                                .iter()
-                                .any(|entry| entry.value().username == *linked_tt);
+                            let guard =
+                                online_users.read().unwrap_or_else(|e| e.into_inner());
+                            let is_online = guard
+                                .values()
+                                .any(|entry| entry.username == *linked_tt);
                             if is_online {
                                 send_silent = true;
                             }

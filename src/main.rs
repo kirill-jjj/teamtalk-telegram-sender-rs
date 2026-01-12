@@ -7,13 +7,14 @@ mod core;
 mod infra;
 
 use anyhow::{Result, anyhow};
-use dashmap::DashMap;
+use std::collections::HashMap;
 use std::path::Path;
-use std::sync::Arc;
 use std::sync::mpsc as std_mpsc;
+use std::sync::{Arc, RwLock};
 use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
+use tokio::sync::watch;
 use tokio::time::Duration;
 use tracing_subscriber::EnvFilter;
 
@@ -32,6 +33,39 @@ fn update_bot() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Update status: `{}`!", status.version());
     Ok(())
+}
+
+async fn wait_for_shutdown_signal(
+    shutdown_tx: watch::Sender<bool>,
+    tx_tt_cmd: std_mpsc::Sender<crate::core::types::TtCommand>,
+) {
+    wait_for_termination_signal().await;
+    crate::core::shutdown::request_shutdown(&shutdown_tx, &tx_tt_cmd);
+}
+
+#[cfg(unix)]
+async fn wait_for_termination_signal() {
+    use tokio::signal::unix::{SignalKind, signal};
+
+    let mut sigterm = match signal(SignalKind::terminate()) {
+        Ok(sigterm) => sigterm,
+        Err(e) => {
+            tracing::error!("Failed to register SIGTERM handler: {}", e);
+            tokio::signal::ctrl_c().await.ok();
+            return;
+        }
+    };
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {}
+        _ = sigterm.recv() => {}
+    }
+}
+
+#[cfg(not(unix))]
+async fn wait_for_termination_signal() {
+    if let Err(e) = tokio::signal::ctrl_c().await {
+        tracing::error!("Failed to listen for Ctrl+C: {}", e);
+    }
 }
 
 #[tokio::main]
@@ -86,64 +120,80 @@ async fn main() -> Result<()> {
     let shared_config = Arc::new(config);
 
     let db = infra::db::Database::new(&db_path_str).await?;
+    let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let db_for_cleanup = db.clone();
     let cleanup_interval = shared_config
         .operational_parameters
         .deeplink_cleanup_interval_seconds;
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(cleanup_interval));
-        loop {
-            interval.tick().await;
-            match db_for_cleanup.cleanup_expired_deeplinks().await {
-                Ok(count) if count > 0 => {
-                    tracing::info!("🧹 Cleaned up {} expired deeplinks.", count);
+    {
+        let mut shutdown = shutdown_rx.clone();
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(cleanup_interval));
+            loop {
+                tokio::select! {
+                    _ = shutdown.changed() => break,
+                    _ = interval.tick() => {}
                 }
-                Ok(_) => {}
-                Err(e) => {
-                    tracing::error!("Failed to clean up expired deeplinks: {}", e);
+                match db_for_cleanup.cleanup_expired_deeplinks().await {
+                    Ok(count) if count > 0 => {
+                        tracing::info!("🧹 Cleaned up {} expired deeplinks.", count);
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::error!("Failed to clean up expired deeplinks: {}", e);
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 
     let pending_cleanup_interval_seconds = 3600u64;
     let pending_ttl_seconds = 3600i64;
     let db_for_pending_cleanup = db.clone();
-    tokio::spawn(async move {
-        let mut interval =
-            tokio::time::interval(Duration::from_secs(pending_cleanup_interval_seconds));
-        loop {
-            interval.tick().await;
-            match db_for_pending_cleanup
-                .cleanup_pending_replies(pending_ttl_seconds)
-                .await
-            {
-                Ok(count) if count > 0 => {
-                    tracing::info!("🧹 Cleaned up {} pending replies.", count);
+    {
+        let mut shutdown = shutdown_rx.clone();
+        tokio::spawn(async move {
+            let mut interval =
+                tokio::time::interval(Duration::from_secs(pending_cleanup_interval_seconds));
+            loop {
+                tokio::select! {
+                    _ = shutdown.changed() => break,
+                    _ = interval.tick() => {}
                 }
-                Ok(_) => {}
-                Err(e) => {
-                    tracing::error!("Failed to clean up pending replies: {}", e);
+                match db_for_pending_cleanup
+                    .cleanup_pending_replies(pending_ttl_seconds)
+                    .await
+                {
+                    Ok(count) if count > 0 => {
+                        tracing::info!("🧹 Cleaned up {} pending replies.", count);
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::error!("Failed to clean up pending replies: {}", e);
+                    }
+                }
+                match db_for_pending_cleanup
+                    .cleanup_pending_channel_replies(pending_ttl_seconds)
+                    .await
+                {
+                    Ok(count) if count > 0 => {
+                        tracing::info!("🧹 Cleaned up {} pending channel replies.", count);
+                    }
+                    Ok(_) => {}
+                    Err(e) => {
+                        tracing::error!("Failed to clean up pending channel replies: {}", e);
+                    }
                 }
             }
-            match db_for_pending_cleanup
-                .cleanup_pending_channel_replies(pending_ttl_seconds)
-                .await
-            {
-                Ok(count) if count > 0 => {
-                    tracing::info!("🧹 Cleaned up {} pending channel replies.", count);
-                }
-                Ok(_) => {}
-                Err(e) => {
-                    tracing::error!("Failed to clean up pending channel replies: {}", e);
-                }
-            }
-        }
-    });
+        });
+    }
 
-    let online_users: Arc<DashMap<i32, core::types::LiteUser>> = Arc::new(DashMap::new());
-    let online_users_by_username: Arc<DashMap<String, i32>> = Arc::new(DashMap::new());
-    let all_user_accounts: Arc<DashMap<String, UserAccount>> = Arc::new(DashMap::new());
+    let online_users: Arc<RwLock<HashMap<i32, core::types::LiteUser>>> =
+        Arc::new(RwLock::new(HashMap::new()));
+    let online_users_by_username: Arc<RwLock<HashMap<String, i32>>> =
+        Arc::new(RwLock::new(HashMap::new()));
+    let all_user_accounts: Arc<RwLock<HashMap<String, UserAccount>>> =
+        Arc::new(RwLock::new(HashMap::new()));
 
     let (tx_bridge, rx_bridge) = tokio_mpsc::channel::<crate::core::types::BridgeEvent>(100);
     let (tx_tt_cmd, rx_tt_cmd) = std_mpsc::channel::<crate::core::types::TtCommand>();
@@ -196,7 +246,7 @@ async fn main() -> Result<()> {
 
     let (tx_init, rx_init) = std::sync::mpsc::channel();
 
-    std::thread::spawn(move || {
+    let tt_handle = std::thread::spawn(move || {
         adapters::tt::run_teamtalk_thread(adapters::tt::RunTeamtalkArgs {
             config: config_for_worker,
             online_users: tt_users,
@@ -223,6 +273,7 @@ async fn main() -> Result<()> {
     let db_clone = db.clone();
     let online_users_clone = online_users.clone();
     let message_token_present = message_token.is_some();
+    let shutdown_for_bridge = shutdown_rx.clone();
 
     let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
         adapters::bridge::BridgeContext {
@@ -233,24 +284,40 @@ async fn main() -> Result<()> {
             msg_bot: msg_bot_clone,
             message_token_present,
             tx_tt_cmd: tx_tt_cmd.clone(),
+            shutdown: shutdown_for_bridge,
         },
         rx_bridge,
     ));
 
+    let shutdown_signal = shutdown_tx.clone();
+    let tx_tt_cmd_for_shutdown = tx_tt_cmd.clone();
+    tokio::spawn(async move {
+        wait_for_shutdown_signal(shutdown_signal, tx_tt_cmd_for_shutdown).await;
+    });
+
     if let Some(bot) = event_bot {
-        adapters::tg::run_tg_bot(
-            bot,
+        adapters::tg::run_tg_bot(adapters::tg::TgRunArgs {
+            event_bot: bot,
             message_bot,
-            db,
+            db: db.clone(),
             online_users,
-            all_user_accounts,
+            user_accounts: all_user_accounts,
             tx_tt_cmd,
-            shared_config,
-        )
+            config: shared_config,
+            shutdown: shutdown_rx.clone(),
+            shutdown_tx: shutdown_tx.clone(),
+        })
         .await;
+        let _ = bridge_handle.await;
+        let _ = tt_handle.join();
     } else if let Err(e) = bridge_handle.await {
         tracing::error!("Bridge task failed: {}", e);
+        let _ = tt_handle.join();
     }
+
+    tracing::info!("[SHUTDOWN] Closing database pool...");
+    db.close().await;
+    tracing::info!("[SHUTDOWN] Database pool closed.");
 
     Ok(())
 }
