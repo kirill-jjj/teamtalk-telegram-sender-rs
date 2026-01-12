@@ -1,12 +1,10 @@
 use self_update::cargo_crate_version;
 
-mod bridge;
-mod config;
-mod db;
-mod locales;
-mod tg_bot;
-mod tt_worker;
-mod types;
+mod adapters;
+mod app;
+mod bootstrap;
+mod core;
+mod infra;
 
 use anyhow::{Result, anyhow};
 use dashmap::DashMap;
@@ -66,7 +64,7 @@ async fn main() -> Result<()> {
     tracing::info!("📂 Loading config from: {}", config_path);
 
     let config_content = std::fs::read_to_string(&config_path)?;
-    let mut config: config::Config = toml::from_str(&config_content)?;
+    let mut config: bootstrap::config::Config = toml::from_str(&config_content)?;
 
     let config_path_obj = Path::new(&config_path);
     let config_dir = config_path_obj.parent().unwrap_or_else(|| Path::new("."));
@@ -87,7 +85,7 @@ async fn main() -> Result<()> {
 
     let shared_config = Arc::new(config);
 
-    let db = db::Database::new(&db_path_str).await?;
+    let db = infra::db::Database::new(&db_path_str).await?;
     let db_for_cleanup = db.clone();
     let cleanup_interval = shared_config
         .operational_parameters
@@ -143,12 +141,12 @@ async fn main() -> Result<()> {
         }
     });
 
-    let online_users: Arc<DashMap<i32, types::LiteUser>> = Arc::new(DashMap::new());
+    let online_users: Arc<DashMap<i32, core::types::LiteUser>> = Arc::new(DashMap::new());
     let online_users_by_username: Arc<DashMap<String, i32>> = Arc::new(DashMap::new());
     let all_user_accounts: Arc<DashMap<String, UserAccount>> = Arc::new(DashMap::new());
 
-    let (tx_bridge, rx_bridge) = tokio_mpsc::channel::<crate::types::BridgeEvent>(100);
-    let (tx_tt_cmd, rx_tt_cmd) = std_mpsc::channel::<crate::types::TtCommand>();
+    let (tx_bridge, rx_bridge) = tokio_mpsc::channel::<crate::core::types::BridgeEvent>(100);
+    let (tx_tt_cmd, rx_tt_cmd) = std_mpsc::channel::<crate::core::types::TtCommand>();
 
     let event_bot = if let Some(token) = &shared_config.telegram.event_token {
         Some(Bot::new(token))
@@ -192,7 +190,7 @@ async fn main() -> Result<()> {
     let (tx_init, rx_init) = std::sync::mpsc::channel();
 
     std::thread::spawn(move || {
-        tt_worker::run_teamtalk_thread(tt_worker::RunTeamtalkArgs {
+        adapters::tt::run_teamtalk_thread(adapters::tt::RunTeamtalkArgs {
             config: config_for_worker,
             online_users: tt_users,
             online_users_by_username: tt_users_by_username,
@@ -218,8 +216,8 @@ async fn main() -> Result<()> {
     let db_clone = db.clone();
     let users_by_username_clone = online_users_by_username.clone();
 
-    let bridge_handle = tokio::spawn(bridge::run_bridge(
-        bridge::BridgeContext {
+    let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
+        adapters::bridge::BridgeContext {
             db: db_clone,
             online_users_by_username: users_by_username_clone,
             config: shared_config.clone(),
@@ -231,7 +229,7 @@ async fn main() -> Result<()> {
     ));
 
     if let Some(bot) = event_bot {
-        tg_bot::run_tg_bot(
+        adapters::tg::run_tg_bot(
             bot,
             db,
             online_users,

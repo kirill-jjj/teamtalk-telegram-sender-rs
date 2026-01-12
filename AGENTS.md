@@ -1,7 +1,11 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- `src/` holds the Rust application source. Core areas include the Telegram bot (`src/tg_bot/`), TeamTalk worker (`src/tt_worker/`), database access (`src/db/`), and shared types/config (`src/types.rs`, `src/config.rs`).
+- `src/core/` contains domain types and callback models.
+- `src/app/` hosts application services (use-case orchestration).
+- `src/adapters/` contains presentation/transport: Telegram (`src/adapters/tg/`), TeamTalk (`src/adapters/tt/`), and the bridge (`src/adapters/bridge.rs`).
+- `src/infra/` contains infrastructure: SQLx DB (`src/infra/db/`) and localization (`src/infra/locales.rs`).
+- `src/bootstrap/` contains configuration types and startup wiring.
 - `migrations/` contains SQL schema migrations.
 - `locales/` stores Fluent `.ftl` localization files.
 - `README.md` covers high-level usage and setup.
