@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT teamtalk_username FROM user_settings WHERE telegram_id = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "teamtalk_username",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "422132509dd76f4f3c1cef8744758c3424b62191635ad0d259a8fc8699521746"
+}

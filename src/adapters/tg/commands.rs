@@ -408,7 +408,10 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         return Ok(());
     }
 
-    let reply_to = reply_to.unwrap();
+    let reply_to = match reply_to {
+        Some(reply_to) => reply_to,
+        None => return Ok(()),
+    };
     let reply_id = reply_to.id.0 as i64;
 
     if let Ok(Some((channel_id, _channel_name, _server_name, original_text))) =
