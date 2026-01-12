@@ -1,4 +1,5 @@
 # TeamTalk to Telegram Bridge (Rust)
+[![Build Binaries](https://github.com/kirill-jjj/teamtalk-telegram-sender-rs/actions/workflows/build.yml/badge.svg)](https://github.com/kirill-jjj/teamtalk-telegram-sender-rs/actions/workflows/build.yml)
 
 A robust, asynchronous bridge between a **TeamTalk 5** server and **Telegram**, written in Rust.
 
