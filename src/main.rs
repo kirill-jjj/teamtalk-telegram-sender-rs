@@ -214,12 +214,12 @@ async fn main() -> Result<()> {
     let event_bot_clone = event_bot.clone();
     let msg_bot_clone = message_bot.clone();
     let db_clone = db.clone();
-    let users_by_username_clone = online_users_by_username.clone();
+    let online_users_clone = online_users.clone();
 
     let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
         adapters::bridge::BridgeContext {
             db: db_clone,
-            online_users_by_username: users_by_username_clone,
+            online_users: online_users_clone,
             config: shared_config.clone(),
             event_bot: event_bot_clone,
             msg_bot: msg_bot_clone,
