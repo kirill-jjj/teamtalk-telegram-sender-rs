@@ -64,4 +64,4 @@
 ## Architecture Overview
 - The TeamTalk client runs in a dedicated OS thread (via `tt_worker`) and communicates over channels to avoid blocking the Tokio runtime.
 - The Telegram bot uses `teloxide` on Tokio async tasks; the `bridge` module formats events and routes messages/commands.
-- Database access is via `sqlx` with a single `Database` struct implemented across `src/db/*` modules.
+- Database access is via `sqlx` with a single `Database` struct implemented across `src/infra/db/*` modules.

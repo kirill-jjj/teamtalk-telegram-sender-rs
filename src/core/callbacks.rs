@@ -1,4 +1,4 @@
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use anyhow::{Result, anyhow};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
@@ -77,7 +77,7 @@ pub enum SubAction {
     LinkPerform {
         sub_id: i64,
         page: usize,
-        username: String,
+        username: TtUsername,
     },
     LangMenu {
         sub_id: i64,
@@ -122,9 +122,9 @@ pub enum MuteAction {
     ModeSet { mode: MuteListMode },
     Menu { mode: MuteListMode },
     List { page: usize },
-    Toggle { username: String, page: usize },
     ServerList { page: usize },
-    ServerToggle { username: String, page: usize },
+    Toggle { username: TtUsername, page: usize },
+    ServerToggle { username: TtUsername, page: usize },
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

@@ -5,9 +5,11 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
     answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
 };
+use crate::app::services::admin_cleanup as admin_cleanup_service;
+use crate::app::services::bans as bans_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
-use crate::core::types::{LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -99,7 +101,7 @@ pub async fn handle_admin(
                     &bot,
                     config,
                     q.from.id.0 as i64,
-                    "admin-error-context-tt-command",
+                    AdminErrorContext::TtCommand,
                     &e.to_string(),
                     lang,
                 )
@@ -128,7 +130,7 @@ pub async fn handle_admin(
                         &bot,
                         config,
                         q.from.id.0 as i64,
-                        "admin-error-context-callback",
+                        AdminErrorContext::Callback,
                         &e.to_string(),
                         lang,
                     )
@@ -143,23 +145,21 @@ pub async fn handle_admin(
                     return Ok(());
                 }
 
-                if let Ok(Some(tg_id)) = sqlx::query_scalar::<_, i64>(
-                    "SELECT telegram_id FROM user_settings WHERE teamtalk_username = ?",
-                )
-                .bind(&u.username)
-                .fetch_optional(&db.pool)
-                .await
+                if let Some(tg_id) =
+                    admin_cleanup_service::get_telegram_id_by_tt_user(db, &u.username).await
                 {
-                    if let Err(e) = db.delete_user_profile(tg_id).await {
+                    if let Err(e) =
+                        admin_cleanup_service::cleanup_deleted_banned_user(db, tg_id).await
+                    {
                         tracing::error!("Failed to delete user profile during ban: {}", e);
                     }
-                    if let Err(e) = db
-                        .add_ban(
-                            Some(tg_id),
-                            Some(u.username.clone()),
-                            Some("TG+TT Ban".to_string()),
-                        )
-                        .await
+                    if let Err(e) = bans_service::add_ban(
+                        db,
+                        Some(tg_id),
+                        Some(u.username.clone()),
+                        Some("TG+TT Ban".to_string()),
+                    )
+                    .await
                     {
                         tracing::error!("Failed to add second ban record: {}", e);
                     }
@@ -170,7 +170,7 @@ pub async fn handle_admin(
                         &bot,
                         config,
                         q.from.id.0 as i64,
-                        "admin-error-context-tt-command",
+                        AdminErrorContext::TtCommand,
                         &e.to_string(),
                         lang,
                     )
@@ -205,10 +205,10 @@ pub async fn handle_admin(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.remove_ban_by_id(ban_db_id).await,
+                bans_service::remove_ban(db, ban_db_id).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?

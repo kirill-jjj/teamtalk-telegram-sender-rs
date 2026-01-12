@@ -2,6 +2,8 @@ use crate::adapters::tg::admin_logic::utils::format_tg_user;
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, callback_button, create_user_list_keyboard,
 };
+use crate::app::services::subscribers as subscribers_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
@@ -23,7 +25,7 @@ pub async fn send_subscribers_list(
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
-    let subs = match db.get_subscribers().await {
+    let subs = match subscribers_service::list_subscribers(db).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load subscribers: {}", e);
@@ -84,7 +86,7 @@ pub async fn edit_subscribers_list(
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
-    let subs = match db.get_subscribers().await {
+    let subs = match subscribers_service::list_subscribers(db).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load subscribers: {}", e);
@@ -175,8 +177,7 @@ pub async fn send_subscriber_details(
     sub_id: i64,
     return_page: usize,
 ) -> ResponseResult<()> {
-    let settings = db
-        .get_or_create_user(sub_id, LanguageCode::En)
+    let settings = subscribers_service::get_user_settings(db, sub_id, LanguageCode::En)
         .await
         .unwrap_or_else(|e| {
             tracing::error!("Failed to load subscriber settings for {}: {}", sub_id, e);
@@ -196,8 +197,8 @@ pub async fn send_subscriber_details(
         Err(_) => sub_id.to_string(),
     };
 
-    let notif_setting = NotificationSetting::try_from(settings.notification_settings.as_str())
-        .unwrap_or(NotificationSetting::All);
+    let notif_setting =
+        user_settings_service::parse_notification_setting(&settings.notification_settings);
     let notif_text = match notif_setting {
         NotificationSetting::All => {
             locales::get_text(lang.as_str(), "btn-sub-all", args!(marker = "").as_ref())
@@ -213,8 +214,7 @@ pub async fn send_subscriber_details(
         }
     };
 
-    let mute_mode =
-        MuteListMode::try_from(settings.mute_list_mode.as_str()).unwrap_or(MuteListMode::Blacklist);
+    let mute_mode = user_settings_service::parse_mute_list_mode(&settings.mute_list_mode);
     let mode_text = match mute_mode {
         MuteListMode::Blacklist => locales::get_text(lang.as_str(), "mode-blacklist", None),
         MuteListMode::Whitelist => locales::get_text(lang.as_str(), "mode-whitelist", None),

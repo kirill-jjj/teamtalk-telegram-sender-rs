@@ -1,9 +1,11 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, callback_button, create_user_list_keyboard,
 };
+use crate::app::services::mute as mute_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
@@ -18,7 +20,7 @@ pub async fn send_sub_manage_tt_menu(
     sub_id: i64,
     return_page: usize,
 ) -> ResponseResult<()> {
-    let settings = match db.get_or_create_user(sub_id, LanguageCode::En).await {
+    let settings = match user_settings_service::get_or_create(db, sub_id, LanguageCode::En).await {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Failed to get or create user {}: {}", sub_id, e);
@@ -94,7 +96,7 @@ pub async fn send_sub_link_account_list(
                 CallbackAction::Subscriber(SubAction::LinkPerform {
                     sub_id: target_id,
                     page: sub_page,
-                    username: acc.username.clone(),
+                    username: TtUsername::new(acc.username.clone()),
                 }),
             )
         },
@@ -272,7 +274,7 @@ pub async fn send_sub_mute_list(
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
-    let muted: Vec<String> = match db.get_muted_users_list(target_id).await {
+    let muted: Vec<String> = match mute_service::list_muted_users(db, target_id).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load muted users for {}: {}", target_id, e);

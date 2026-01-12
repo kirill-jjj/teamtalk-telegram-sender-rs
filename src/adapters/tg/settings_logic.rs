@@ -1,9 +1,11 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, back_button_keyboard, callback_button, create_user_list_keyboard,
 };
+use crate::app::services::mute as mute_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, MuteAction, SettingsAction};
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
@@ -62,28 +64,29 @@ pub async fn send_sub_settings(
     telegram_id: i64,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let settings = match db.get_or_create_user(telegram_id, LanguageCode::En).await {
-        Ok(s) => {
-            tracing::debug!(
-                "[UI] Fetched settings for {}: enabled={}",
-                telegram_id,
-                s.not_on_online_enabled
-            );
-            s
-        }
-        Err(e) => {
-            tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
-            bot.edit_message_text(
-                msg.chat.id,
-                msg.id,
-                locales::get_text(lang.as_str(), "cmd-error", None),
-            )
-            .await?;
-            return Ok(());
-        }
-    };
-    let current_notif = NotificationSetting::try_from(settings.notification_settings.as_str())
-        .unwrap_or(NotificationSetting::All);
+    let settings =
+        match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
+            Ok(s) => {
+                tracing::debug!(
+                    "[UI] Fetched settings for {}: enabled={}",
+                    telegram_id,
+                    s.not_on_online_enabled
+                );
+                s
+            }
+            Err(e) => {
+                tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
+                bot.edit_message_text(
+                    msg.chat.id,
+                    msg.id,
+                    locales::get_text(lang.as_str(), "cmd-error", None),
+                )
+                .await?;
+                return Ok(());
+            }
+        };
+    let current_notif =
+        user_settings_service::parse_notification_setting(&settings.notification_settings);
 
     let check_icon = locales::get_text(lang.as_str(), "icon-check-simple", None);
     let mk = |ns: NotificationSetting| {
@@ -155,26 +158,27 @@ pub async fn send_notif_settings(
     telegram_id: i64,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let settings = match db.get_or_create_user(telegram_id, LanguageCode::En).await {
-        Ok(s) => {
-            tracing::debug!(
-                "[UI] Fetched settings for {}: enabled={}",
-                telegram_id,
-                s.not_on_online_enabled
-            );
-            s
-        }
-        Err(e) => {
-            tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
-            bot.edit_message_text(
-                msg.chat.id,
-                msg.id,
-                locales::get_text(lang.as_str(), "cmd-error", None),
-            )
-            .await?;
-            return Ok(());
-        }
-    };
+    let settings =
+        match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
+            Ok(s) => {
+                tracing::debug!(
+                    "[UI] Fetched settings for {}: enabled={}",
+                    telegram_id,
+                    s.not_on_online_enabled
+                );
+                s
+            }
+            Err(e) => {
+                tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
+                bot.edit_message_text(
+                    msg.chat.id,
+                    msg.id,
+                    locales::get_text(lang.as_str(), "cmd-error", None),
+                )
+                .await?;
+                return Ok(());
+            }
+        };
     let status_text = if settings.not_on_online_enabled {
         locales::get_text(lang.as_str(), "status-enabled", None)
     } else {
@@ -325,13 +329,14 @@ pub struct RenderMuteListStringsArgs<'a> {
 }
 
 pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()> {
-    let muted_users: Vec<String> = match args.db.get_muted_users_list(args.telegram_id).await {
-        Ok(list) => list,
-        Err(e) => {
-            tracing::error!("Failed to load muted users for {}: {}", args.telegram_id, e);
-            Vec::new()
-        }
-    };
+    let muted_users: Vec<String> =
+        match mute_service::list_muted_users(args.db, args.telegram_id).await {
+            Ok(list) => list,
+            Err(e) => {
+                tracing::error!("Failed to load muted users for {}: {}", args.telegram_id, e);
+                Vec::new()
+            }
+        };
     let muted_set: std::collections::HashSet<_> = muted_users.into_iter().collect();
 
     let keyboard = create_user_list_keyboard(
@@ -356,7 +361,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::ServerToggle {
-                    username: acc.username.clone(),
+                    username: TtUsername::new(acc.username.clone()),
                     page: args.page,
                 }),
             )
@@ -412,7 +417,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {
-                    username: username.clone(),
+                    username: TtUsername::new(username.clone()),
                     page: args.page,
                 }),
             )

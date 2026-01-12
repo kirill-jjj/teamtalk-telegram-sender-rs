@@ -46,6 +46,33 @@ pub enum NotificationSetting {
     None,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum DeeplinkAction {
+    Subscribe,
+    Unsubscribe,
+}
+
+impl fmt::Display for DeeplinkAction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DeeplinkAction::Subscribe => write!(f, "subscribe"),
+            DeeplinkAction::Unsubscribe => write!(f, "unsubscribe"),
+        }
+    }
+}
+
+impl TryFrom<&str> for DeeplinkAction {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_ascii_lowercase().as_str() {
+            "subscribe" => Ok(DeeplinkAction::Subscribe),
+            "unsubscribe" => Ok(DeeplinkAction::Unsubscribe),
+            _ => Err("unsupported deeplink action"),
+        }
+    }
+}
+
 impl fmt::Display for NotificationSetting {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -94,6 +121,65 @@ impl TryFrom<&str> for MuteListMode {
             "blacklist" => Ok(MuteListMode::Blacklist),
             "whitelist" => Ok(MuteListMode::Whitelist),
             _ => Err("unsupported mute list mode"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct TtUsername(String);
+
+impl TtUsername {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for TtUsername {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl AsRef<str> for TtUsername {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for TtUsername {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for TtUsername {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AdminErrorContext {
+    Command,
+    Callback,
+    Subscription,
+    TtCommand,
+    UpdateListener,
+}
+
+impl AdminErrorContext {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            AdminErrorContext::Command => "admin-error-context-command",
+            AdminErrorContext::Callback => "admin-error-context-callback",
+            AdminErrorContext::Subscription => "admin-error-context-subscription",
+            AdminErrorContext::TtCommand => "admin-error-context-tt-command",
+            AdminErrorContext::UpdateListener => "admin-error-context-update-listener",
         }
     }
 }

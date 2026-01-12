@@ -1,5 +1,6 @@
+use crate::app::services::subscription as subscriptions_service;
 use crate::bootstrap::config::Config;
-use crate::core::types::LanguageCode;
+use crate::core::types::{AdminErrorContext, LanguageCode};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -12,7 +13,7 @@ pub async fn ensure_subscribed(
     config: &Config,
     lang: LanguageCode,
 ) -> bool {
-    match db.is_subscribed(msg.chat.id.0).await {
+    match subscriptions_service::is_subscribed(db, msg.chat.id.0).await {
         Ok(true) => true,
         Ok(false) => {
             if let Err(e) = bot
@@ -37,7 +38,7 @@ pub async fn ensure_subscribed(
                 bot,
                 config,
                 msg.chat.id.0,
-                "admin-error-context-subscription",
+                AdminErrorContext::Subscription,
                 &e.to_string(),
                 lang,
             )
@@ -63,7 +64,7 @@ pub async fn check_db_err(
     result: anyhow::Result<()>,
     config: &Config,
     user_id: i64,
-    context: &str,
+    context: AdminErrorContext,
     lang: LanguageCode,
 ) -> ResponseResult<bool> {
     if let Err(e) = result {
@@ -85,12 +86,12 @@ pub async fn notify_admin_error(
     bot: &Bot,
     config: &Config,
     user_id: i64,
-    context: &str,
+    context: AdminErrorContext,
     error: &str,
     lang: LanguageCode,
 ) {
     let admin_chat_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
-    let context_text = locales::get_text(lang.as_str(), context, None);
+    let context_text = locales::get_text(lang.as_str(), context.as_str(), None);
     let args = crate::args!(
         user_id = user_id.to_string(),
         context = context_text,

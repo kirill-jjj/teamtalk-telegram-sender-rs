@@ -1,6 +1,8 @@
 use crate::adapters::tt::{WorkerContext, resolve_server_name};
+use crate::app::services::admin as admin_service;
+use crate::app::services::messages as messages_service;
 use crate::args;
-use crate::core::types::{LanguageCode, TtCommand};
+use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
@@ -45,7 +47,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .map(|u| u.username.clone())
                     .unwrap_or_default();
                 let reply_lang = if !username.is_empty() {
-                    db.get_user_lang_by_tt_user(&username)
+                    messages_service::get_user_lang_by_tt_user(&db, &username)
                         .await
                         .unwrap_or(default_lang)
                 } else {
@@ -59,8 +61,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false)
                 {
                     true
-                } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
-                    db.get_all_admins()
+                } else if let Some(tg_id) =
+                    messages_service::get_telegram_id_by_tt_user(&db, &username).await
+                {
+                    messages_service::list_admins(&db)
                         .await
                         .map(|admins| admins.contains(&tg_id))
                         .unwrap_or(false)
@@ -122,7 +126,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             tracing::info!("💬 [TT_WORKER] Msg from {}: {}", nick, content);
 
             let reply_lang = if !username.is_empty() {
-                db.get_user_lang_by_tt_user(&username)
+                messages_service::get_user_lang_by_tt_user(&db, &username)
                     .await
                     .unwrap_or(default_lang)
             } else {
@@ -163,12 +167,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     let expected_telegram_id = if username.is_empty() {
                         None
                     } else {
-                        db.get_telegram_id_by_tt_user(&username).await
+                        messages_service::get_telegram_id_by_tt_user(&db, &username).await
                     };
                     let res = db
                         .create_deeplink(
                             &token,
-                            "subscribe",
+                            DeeplinkAction::Subscribe,
                             payload,
                             expected_telegram_id,
                             deeplink_ttl,
@@ -203,12 +207,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     let expected_telegram_id = if username.is_empty() {
                         None
                     } else {
-                        db.get_telegram_id_by_tt_user(&username).await
+                        messages_service::get_telegram_id_by_tt_user(&db, &username).await
                     };
                     let res = db
                         .create_deeplink(
                             &token,
-                            "unsubscribe",
+                            DeeplinkAction::Unsubscribe,
                             None,
                             expected_telegram_id,
                             deeplink_ttl,
@@ -260,8 +264,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false)
                 {
                     true
-                } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
-                    db.get_all_admins()
+                } else if let Some(tg_id) =
+                    messages_service::get_telegram_id_by_tt_user(&db, &username).await
+                {
+                    messages_service::list_admins(&db)
                         .await
                         .map(|admins| admins.contains(&tg_id))
                         .unwrap_or(false)
@@ -300,7 +306,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = match db.add_admin(tg_id).await {
+                        let success = match admin_service::add_admin(&db, tg_id).await {
                             Ok(val) => val,
                             Err(e) => {
                                 tracing::error!("DB error adding admin {}: {}", tg_id, e);
@@ -345,7 +351,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = match db.remove_admin(tg_id).await {
+                        let success = match admin_service::remove_admin(&db, tg_id).await {
                             Ok(val) => val,
                             Err(e) => {
                                 tracing::error!("DB error removing admin {}: {}", tg_id, e);

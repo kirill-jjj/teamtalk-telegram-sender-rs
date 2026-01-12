@@ -9,9 +9,12 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
     answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
 };
+use crate::app::services::bans as bans_service;
+use crate::app::services::settings as settings_service;
+use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::args;
 use crate::core::callbacks::SubAction;
-use crate::core::types::{LanguageCode, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -40,10 +43,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.delete_user_profile(sub_id).await,
+                subscriber_actions_service::delete_user(db, sub_id).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -60,23 +63,17 @@ pub async fn handle_subscriber_actions(
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
         }
         SubAction::Ban { sub_id, page } => {
-            let tt_user_res = sqlx::query_scalar::<_, String>(
-                "SELECT teamtalk_username FROM user_settings WHERE telegram_id = ?",
-            )
-            .bind(sub_id)
-            .fetch_optional(&db.pool)
-            .await;
-
+            let tt_user_res = bans_service::get_tt_username_by_telegram_id(db, sub_id).await;
             let tt_user = match tt_user_res {
                 Ok(u) => u,
                 Err(e) => {
                     check_db_err(
                         &bot,
                         &q.id.0,
-                        Err(e.into()),
+                        Err(e),
                         config,
                         q.from.id.0 as i64,
-                        "admin-error-context-callback",
+                        AdminErrorContext::Callback,
                         lang,
                     )
                     .await?;
@@ -84,9 +81,9 @@ pub async fn handle_subscriber_actions(
                 }
             };
 
-            if let Err(e) = db
-                .add_ban(Some(sub_id), tt_user, Some("Admin Ban".to_string()))
-                .await
+            if let Err(e) =
+                bans_service::add_ban(db, Some(sub_id), tt_user, Some("Admin Ban".to_string()))
+                    .await
             {
                 check_db_err(
                     &bot,
@@ -94,14 +91,14 @@ pub async fn handle_subscriber_actions(
                     Err(e),
                     config,
                     q.from.id.0 as i64,
-                    "admin-error-context-callback",
+                    AdminErrorContext::Callback,
                     lang,
                 )
                 .await?;
                 return Ok(());
             }
 
-            if let Err(e) = db.delete_user_profile(sub_id).await {
+            if let Err(e) = subscriber_actions_service::delete_user(db, sub_id).await {
                 tracing::error!("Partial failure during ban: {}", e);
             }
 
@@ -121,10 +118,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.unlink_tt_account(sub_id).await,
+                subscriber_actions_service::unlink_tt(db, sub_id).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -155,7 +152,7 @@ pub async fn handle_subscriber_actions(
                     &bot,
                     config,
                     q.from.id.0 as i64,
-                    "admin-error-context-tt-command",
+                    AdminErrorContext::TtCommand,
                     &e.to_string(),
                     lang,
                 )
@@ -172,10 +169,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.link_tt_account(sub_id, &username).await,
+                subscriber_actions_service::link_tt(db, sub_id, username.as_str()).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -188,7 +185,7 @@ pub async fn handle_subscriber_actions(
                 locales::get_text(
                     lang.as_str(),
                     "toast-account-linked",
-                    args!(user = username).as_ref(),
+                    args!(user = username.to_string()).as_ref(),
                 ),
                 true,
             )
@@ -206,10 +203,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_language(sub_id, new_lang).await,
+                settings_service::update_language(db, sub_id, new_lang).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -236,10 +233,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_notification_setting(sub_id, val.clone()).await,
+                subscriber_actions_service::update_notifications(db, sub_id, val.clone()).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -263,10 +260,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.toggle_noon(sub_id).await.map(|_| ()),
+                settings_service::toggle_noon(db, sub_id).await.map(|_| ()),
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -294,10 +291,10 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_mute_mode(sub_id, mode.clone()).await,
+                subscriber_actions_service::update_mute_mode(db, sub_id, mode.clone()).await,
                 config,
                 q.from.id.0 as i64,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?

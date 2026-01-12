@@ -2,8 +2,7 @@ use crate::adapters::tg::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback_empty, notify_admin_error};
 use crate::core::callbacks::{CallbackAction, MenuAction, UnsubAction};
-use crate::core::types::LanguageCode;
-use crate::core::types::TtCommand;
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
 use teloxide::types::ParseMode;
@@ -32,7 +31,7 @@ pub async fn handle_menu(
                     &bot,
                     &state.config,
                     q.from.id.0 as i64,
-                    "admin-error-context-tt-command",
+                    AdminErrorContext::TtCommand,
                     &e.to_string(),
                     lang,
                 )

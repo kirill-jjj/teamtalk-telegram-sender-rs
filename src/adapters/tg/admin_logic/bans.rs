@@ -1,4 +1,5 @@
 use crate::adapters::tg::keyboards::{back_btn, create_user_list_keyboard};
+use crate::app::services::bans as bans_service;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction};
 use crate::core::types::LanguageCode;
 use crate::infra::db::Database;
@@ -12,7 +13,7 @@ pub async fn send_unban_list(
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
-    let entries = match db.get_banned_users().await {
+    let entries = match bans_service::list_bans(db).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load banned users: {}", e);
@@ -73,7 +74,7 @@ pub async fn edit_unban_list(
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
-    let entries = match db.get_banned_users().await {
+    let entries = match bans_service::list_bans(db).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load banned users: {}", e);

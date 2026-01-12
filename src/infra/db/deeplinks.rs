@@ -7,16 +7,17 @@ impl Database {
     pub async fn create_deeplink(
         &self,
         token: &str,
-        action: &str,
+        action: crate::core::types::DeeplinkAction,
         payload: Option<&str>,
         expected_telegram_id: Option<i64>,
         ttl_seconds: i64,
     ) -> Result<()> {
         let expiry = Utc::now() + Duration::seconds(ttl_seconds);
+        let action_str = action.to_string();
         sqlx::query!(
             "INSERT INTO deeplinks (token, action, payload, expected_telegram_id, expiry_time) VALUES (?, ?, ?, ?, ?)",
             token,
-            action,
+            action_str,
             payload,
             expected_telegram_id,
             expiry

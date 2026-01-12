@@ -7,9 +7,13 @@ use crate::adapters::tg::settings_logic::send_main_settings;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{ensure_subscribed, notify_admin_error, send_text_key};
 use crate::app::services::admin as admin_service;
+use crate::app::services::deeplink as deeplink_service;
+use crate::app::services::pending as pending_service;
+use crate::app::services::subscription as subscription_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, UnsubAction};
-use crate::core::types::{LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{AdminErrorContext, DeeplinkAction, LanguageCode, LiteUser, TtCommand};
 use crate::infra::locales;
 use std::time::{SystemTime, UNIX_EPOCH};
 use teloxide::net::Download;
@@ -66,7 +70,7 @@ pub async fn answer_command(
 
     let default_lang =
         LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
-    let settings = match db.get_or_create_user(telegram_id, default_lang).await {
+    let settings = match user_settings_service::get_or_create(db, telegram_id, default_lang).await {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
@@ -74,7 +78,7 @@ pub async fn answer_command(
                 &bot,
                 config,
                 telegram_id,
-                "admin-error-context-command",
+                AdminErrorContext::Command,
                 &e.to_string(),
                 default_lang,
             )
@@ -99,113 +103,41 @@ pub async fn answer_command(
     match cmd {
         Command::Start(token) => {
             if !token.is_empty() {
-                match db.resolve_deeplink(&token).await {
-                    Ok(Some(deeplink)) => {
-                        if let Some(expected_id) = deeplink.expected_telegram_id
-                            && expected_id != telegram_id
-                        {
-                            send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
-                            return Ok(());
-                        }
-                        match deeplink.action.as_str() {
-                            "subscribe" => {
-                                let is_banned = match db.is_telegram_id_banned(telegram_id).await {
-                                    Ok(val) => val,
-                                    Err(e) => {
-                                        tracing::error!(
-                                            "DB error checking ban for {}: {}",
-                                            telegram_id,
-                                            e
-                                        );
-                                        notify_admin_error(
-                                            &bot,
-                                            config,
-                                            telegram_id,
-                                            "admin-error-context-command",
-                                            &e.to_string(),
-                                            lang,
-                                        )
-                                        .await;
-                                        false
-                                    }
-                                };
-                                if is_banned {
+                match deeplink_service::resolve_for_user(db, &token, telegram_id).await {
+                    Ok(Some(deeplink)) => match deeplink.action {
+                        DeeplinkAction::Subscribe => {
+                            match subscription_service::subscribe_via_deeplink(
+                                db,
+                                telegram_id,
+                                deeplink.payload,
+                            )
+                            .await
+                            {
+                                Ok(subscription_service::SubscribeOutcome::BannedUser) => {
                                     send_text_key(&bot, msg.chat.id, lang, "cmd-user-banned")
                                         .await?;
                                     return Ok(());
                                 }
-
-                                if let Some(tt_nick) = &deeplink.payload {
-                                    let is_tt_banned =
-                                        match db.is_teamtalk_username_banned(tt_nick).await {
-                                            Ok(val) => val,
-                                            Err(e) => {
-                                                tracing::error!(
-                                                    "DB error checking TT ban for {}: {}",
-                                                    tt_nick,
-                                                    e
-                                                );
-                                                notify_admin_error(
-                                                    &bot,
-                                                    config,
-                                                    telegram_id,
-                                                    "admin-error-context-command",
-                                                    &e.to_string(),
-                                                    lang,
-                                                )
-                                                .await;
-                                                false
-                                            }
-                                        };
-                                    if is_tt_banned {
-                                        let args = args!(name = tt_nick.clone());
-                                        bot.send_message(
-                                            msg.chat.id,
-                                            locales::get_text(
-                                                lang.as_str(),
-                                                "cmd-tt-banned",
-                                                args.as_ref(),
-                                            ),
-                                        )
-                                        .await?;
-                                        return Ok(());
-                                    }
-                                }
-
-                                if let Err(e) = db.add_subscriber(telegram_id).await {
-                                    tracing::error!("DB error adding sub: {}", e);
-                                    notify_admin_error(
-                                        &bot,
-                                        config,
-                                        telegram_id,
-                                        "admin-error-context-command",
-                                        &e.to_string(),
-                                        lang,
+                                Ok(subscription_service::SubscribeOutcome::BannedTeamTalk {
+                                    username,
+                                }) => {
+                                    let args = args!(name = username);
+                                    bot.send_message(
+                                        msg.chat.id,
+                                        locales::get_text(
+                                            lang.as_str(),
+                                            "cmd-tt-banned",
+                                            args.as_ref(),
+                                        ),
                                     )
-                                    .await;
-                                    send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
+                                    .await?;
                                     return Ok(());
                                 }
-
-                                if let Some(tt_nick) = deeplink.payload {
-                                    if let Err(e) = db.link_tt_account(telegram_id, &tt_nick).await
-                                    {
-                                        tracing::error!("DB error linking: {}", e);
-                                        notify_admin_error(
-                                            &bot,
-                                            config,
-                                            telegram_id,
-                                            "admin-error-context-command",
-                                            &e.to_string(),
-                                            lang,
-                                        )
-                                        .await;
-                                        send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
-                                        return Ok(());
-                                    }
+                                Ok(subscription_service::SubscribeOutcome::SubscribedLinked) => {
                                     let msg_key = "cmd-success-sub";
                                     send_text_key(&bot, msg.chat.id, lang, msg_key).await?;
-                                } else {
+                                }
+                                Ok(subscription_service::SubscribeOutcome::SubscribedGuest) => {
                                     let msg_key = "cmd-success-sub-guest";
                                     bot.send_message(
                                         msg.chat.id,
@@ -214,15 +146,13 @@ pub async fn answer_command(
                                     .parse_mode(ParseMode::Html)
                                     .await?;
                                 }
-                            }
-                            "unsubscribe" => {
-                                if let Err(e) = db.delete_user_profile(telegram_id).await {
-                                    tracing::error!("DB error unsubscribing: {}", e);
+                                Err(e) => {
+                                    tracing::error!("DB error adding sub: {}", e);
                                     notify_admin_error(
                                         &bot,
                                         config,
                                         telegram_id,
-                                        "admin-error-context-command",
+                                        AdminErrorContext::Command,
                                         &e.to_string(),
                                         lang,
                                     )
@@ -230,14 +160,27 @@ pub async fn answer_command(
                                     send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
                                     return Ok(());
                                 }
-                                send_text_key(&bot, msg.chat.id, lang, "cmd-success-unsub").await?;
-                            }
-                            _ => {
-                                send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink")
-                                    .await?;
                             }
                         }
-                    }
+                        DeeplinkAction::Unsubscribe => {
+                            if let Err(e) = subscription_service::unsubscribe(db, telegram_id).await
+                            {
+                                tracing::error!("DB error unsubscribing: {}", e);
+                                notify_admin_error(
+                                    &bot,
+                                    config,
+                                    telegram_id,
+                                    AdminErrorContext::Command,
+                                    &e.to_string(),
+                                    lang,
+                                )
+                                .await;
+                                send_text_key(&bot, msg.chat.id, lang, "cmd-error").await?;
+                                return Ok(());
+                            }
+                            send_text_key(&bot, msg.chat.id, lang, "cmd-success-unsub").await?;
+                        }
+                    },
                     Ok(None) => {
                         send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
                     }
@@ -247,7 +190,7 @@ pub async fn answer_command(
                             &bot,
                             config,
                             telegram_id,
-                            "admin-error-context-command",
+                            AdminErrorContext::Command,
                             &e.to_string(),
                             lang,
                         )
@@ -296,7 +239,7 @@ pub async fn answer_command(
                     &bot,
                     config,
                     telegram_id,
-                    "admin-error-context-tt-command",
+                    AdminErrorContext::TtCommand,
                     &e.to_string(),
                     lang,
                 )
@@ -430,8 +373,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
 
     let default_lang =
         LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
-    let admin_lang = db
-        .get_or_create_user(telegram_id, default_lang)
+    let admin_lang = user_settings_service::get_or_create(db, telegram_id, default_lang)
         .await
         .map(|u| LanguageCode::from_str_or_default(&u.language_code, default_lang))
         .unwrap_or(default_lang);
@@ -449,7 +391,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
                         &bot,
                         config,
                         telegram_id,
-                        "admin-error-context-command",
+                        AdminErrorContext::Command,
                         &e.to_string(),
                         admin_lang,
                     )
@@ -470,7 +412,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
     let reply_id = reply_to.id.0 as i64;
 
     if let Ok(Some((channel_id, _channel_name, _server_name, original_text))) =
-        db.get_pending_channel_reply(reply_id).await
+        pending_service::get_pending_channel_reply(db, reply_id).await
     {
         let mut reply_key = "tg-reply-sent";
         if let Some(voice) = voice {
@@ -485,7 +427,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
                     &bot,
                     config,
                     telegram_id,
-                    "admin-error-context-command",
+                    AdminErrorContext::Command,
                     &e.to_string(),
                     admin_lang,
                 )
@@ -505,7 +447,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
                     &bot,
                     config,
                     telegram_id,
-                    "admin-error-context-command",
+                    AdminErrorContext::Command,
                     &e.to_string(),
                     admin_lang,
                 )
@@ -522,7 +464,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
             .reply_to(msg.id)
             .await;
 
-        if let Err(e) = db.touch_pending_channel_reply(reply_id).await {
+        if let Err(e) = pending_service::touch_pending_channel_reply(db, reply_id).await {
             tracing::error!("Failed to update pending channel reply {}: {}", reply_id, e);
         }
 
@@ -535,7 +477,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         return Ok(());
     };
 
-    let tt_user_id = match db.get_pending_reply_user_id(reply_id).await {
+    let tt_user_id = match pending_service::get_pending_reply_user_id(db, reply_id).await {
         Ok(Some(id)) => id,
         Ok(None) => return Ok(()),
         Err(e) => {
@@ -544,7 +486,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
                 &bot,
                 config,
                 telegram_id,
-                "admin-error-context-command",
+                AdminErrorContext::Command,
                 &e.to_string(),
                 LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En),
             )
@@ -566,7 +508,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
                 &bot,
                 config,
                 telegram_id,
-                "admin-error-context-command",
+                AdminErrorContext::Command,
                 &e.to_string(),
                 admin_lang,
             )
@@ -582,7 +524,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         .reply_to(msg.id)
         .await;
 
-    if let Err(e) = db.touch_pending_reply(reply_id).await {
+    if let Err(e) = pending_service::touch_pending_reply(db, reply_id).await {
         tracing::error!("Failed to update pending reply {}: {}", reply_id, e);
     }
 

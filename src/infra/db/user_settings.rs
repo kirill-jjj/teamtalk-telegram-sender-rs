@@ -105,6 +105,28 @@ impl Database {
         }
     }
 
+    pub async fn get_tt_username_by_telegram_id(&self, telegram_id: i64) -> Result<Option<String>> {
+        let res: Option<String> = match sqlx::query_scalar!(
+            "SELECT teamtalk_username FROM user_settings WHERE telegram_id = ?",
+            telegram_id
+        )
+        .fetch_optional(&self.pool)
+        .await
+        {
+            Ok(res) => res.flatten(),
+            Err(e) => {
+                tracing::error!(
+                    "Failed to get tt_user for telegram_id '{}': {}",
+                    telegram_id,
+                    e
+                );
+                None
+            }
+        };
+
+        Ok(res)
+    }
+
     pub async fn update_notification_setting(
         &self,
         telegram_id: i64,

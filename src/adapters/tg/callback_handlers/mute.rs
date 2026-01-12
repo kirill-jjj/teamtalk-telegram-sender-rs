@@ -4,9 +4,10 @@ use crate::adapters::tg::settings_logic::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err, notify_admin_error};
+use crate::app::services::mute as mute_service;
 use crate::args;
 use crate::core::callbacks::MuteAction;
-use crate::core::types::{LanguageCode, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -31,10 +32,10 @@ pub async fn handle_mute(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_mute_mode(telegram_id, mode.clone()).await,
+                mute_service::update_mode(db, telegram_id, mode.clone()).await,
                 config,
                 telegram_id,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -58,7 +59,7 @@ pub async fn handle_mute(
             send_mute_menu(&bot, msg, lang, mode).await?;
         }
         MuteAction::List { page } => {
-            let muted = match db.get_muted_users_list(telegram_id).await {
+            let muted = match mute_service::list_muted_users(db, telegram_id).await {
                 Ok(list) => list,
                 Err(e) => {
                     tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
@@ -78,21 +79,21 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::Toggle { username, page } => {
-            if let Err(e) = toggle_mute(db, telegram_id, &username).await {
+            if let Err(e) = mute_service::toggle_mute(db, telegram_id, username.as_str()).await {
                 check_db_err(
                     &bot,
                     &q.id.0,
                     Err(e),
                     config,
                     telegram_id,
-                    "admin-error-context-callback",
+                    AdminErrorContext::Callback,
                     lang,
                 )
                 .await?;
                 return Ok(());
             }
 
-            let args = args!(user = username.clone(), action = "toggled");
+            let args = args!(user = username.to_string(), action = "toggled");
             answer_callback(
                 &bot,
                 &q.id,
@@ -101,8 +102,7 @@ pub async fn handle_mute(
             )
             .await?;
 
-            let muted = db
-                .get_muted_users_list(telegram_id)
+            let muted = mute_service::list_muted_users(db, telegram_id)
                 .await
                 .unwrap_or_else(|e| {
                     tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
@@ -127,7 +127,7 @@ pub async fn handle_mute(
                     &bot,
                     config,
                     telegram_id,
-                    "admin-error-context-tt-command",
+                    AdminErrorContext::TtCommand,
                     &e.to_string(),
                     lang,
                 )
@@ -153,21 +153,21 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::ServerToggle { username, page } => {
-            if let Err(e) = toggle_mute(db, telegram_id, &username).await {
+            if let Err(e) = mute_service::toggle_mute(db, telegram_id, username.as_str()).await {
                 check_db_err(
                     &bot,
                     &q.id.0,
                     Err(e),
                     config,
                     telegram_id,
-                    "admin-error-context-callback",
+                    AdminErrorContext::Callback,
                     lang,
                 )
                 .await?;
                 return Ok(());
             }
 
-            let args = args!(user = username.clone(), action = "toggled");
+            let args = args!(user = username.to_string(), action = "toggled");
             answer_callback(
                 &bot,
                 &q.id,
@@ -196,31 +196,6 @@ pub async fn handle_mute(
             .await?;
         }
     }
-
-    Ok(())
-}
-
-async fn toggle_mute(
-    db: &crate::infra::db::Database,
-    telegram_id: i64,
-    username: &str,
-) -> anyhow::Result<()> {
-    let count: i32 = sqlx::query_scalar("SELECT count(*) FROM muted_users WHERE user_settings_telegram_id = ? AND muted_teamtalk_username = ?")
-        .bind(telegram_id).bind(username).fetch_one(&db.pool).await?;
-
-    let is_muted = count > 0;
-
-    let query = if is_muted {
-        "DELETE FROM muted_users WHERE user_settings_telegram_id = ? AND muted_teamtalk_username = ?"
-    } else {
-        "INSERT INTO muted_users (user_settings_telegram_id, muted_teamtalk_username) VALUES (?, ?)"
-    };
-
-    sqlx::query(query)
-        .bind(telegram_id)
-        .bind(username)
-        .execute(&db.pool)
-        .await?;
 
     Ok(())
 }

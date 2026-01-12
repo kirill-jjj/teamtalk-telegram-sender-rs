@@ -8,8 +8,10 @@ pub mod state;
 pub mod utils;
 
 use crate::adapters::tg::utils::notify_admin_error;
+use crate::app::services::admin as admin_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::bootstrap::config::Config;
-use crate::core::types::{LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use dashmap::DashMap;
@@ -76,7 +78,7 @@ pub async fn run_tg_bot(
                             &admin_bot,
                             &admin_config,
                             0,
-                            "admin-error-context-update-listener",
+                            AdminErrorContext::UpdateListener,
                             &err_str,
                             default_lang,
                         )
@@ -115,7 +117,7 @@ async fn set_bot_commands(
             .await?;
     }
 
-    let mut admin_ids = match db.get_all_admins().await {
+    let mut admin_ids = match admin_service::list_admins(db).await {
         Ok(ids) => ids,
         Err(e) => {
             tracing::error!("Failed to load admin list: {}", e);
@@ -127,8 +129,7 @@ async fn set_bot_commands(
         admin_ids.push(config_admin_id);
     }
     for admin_id in admin_ids {
-        let user_settings = db
-            .get_or_create_user(admin_id, default_lang)
+        let user_settings = user_settings_service::get_or_create(db, admin_id, default_lang)
             .await
             .unwrap_or_else(|e| {
                 tracing::error!("Failed to load admin settings for {}: {}", admin_id, e);

@@ -4,9 +4,11 @@ use crate::adapters::tg::settings_logic::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::app::services::settings as settings_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{AdminErrorContext, LanguageCode, NotificationSetting};
 use crate::infra::locales;
 use teloxide::prelude::*;
 use teloxide::types::InlineKeyboardMarkup;
@@ -65,10 +67,10 @@ pub async fn handle_settings(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                db.update_language(telegram_id, new_lang).await,
+                settings_service::update_language(db, telegram_id, new_lang).await,
                 config,
                 telegram_id,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -88,16 +90,15 @@ pub async fn handle_settings(
             send_sub_settings(&bot, &msg, db, telegram_id, lang).await?;
         }
         SettingsAction::SubSet { setting } => {
-            let res = db
-                .update_notification_setting(telegram_id, setting.clone())
-                .await;
+            let res =
+                settings_service::update_notifications(db, telegram_id, setting.clone()).await;
             if check_db_err(
                 &bot,
                 &q.id.0,
                 res,
                 config,
                 telegram_id,
-                "admin-error-context-callback",
+                AdminErrorContext::Callback,
                 lang,
             )
             .await?
@@ -130,22 +131,24 @@ pub async fn handle_settings(
             send_notif_settings(&bot, &msg, db, telegram_id, lang).await?;
         }
         SettingsAction::NoonToggle => {
-            let user_settings = match db.get_or_create_user(telegram_id, LanguageCode::En).await {
-                Ok(u) => u,
-                Err(e) => {
-                    check_db_err(
-                        &bot,
-                        &q.id.0,
-                        Err(e),
-                        config,
-                        telegram_id,
-                        "admin-error-context-callback",
-                        lang,
-                    )
-                    .await?;
-                    return Ok(());
-                }
-            };
+            let user_settings =
+                match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await
+                {
+                    Ok(u) => u,
+                    Err(e) => {
+                        check_db_err(
+                            &bot,
+                            &q.id.0,
+                            Err(e),
+                            config,
+                            telegram_id,
+                            AdminErrorContext::Callback,
+                            lang,
+                        )
+                        .await?;
+                        return Ok(());
+                    }
+                };
 
             if user_settings.teamtalk_username.is_none() {
                 answer_callback(
@@ -158,7 +161,7 @@ pub async fn handle_settings(
                 return Ok(());
             }
 
-            match db.toggle_noon(telegram_id).await {
+            match settings_service::toggle_noon(db, telegram_id).await {
                 Ok(new_val) => {
                     let status = if new_val {
                         locales::get_text(lang.as_str(), "status-enabled", None)
@@ -194,7 +197,7 @@ pub async fn handle_settings(
                         Err(e),
                         config,
                         telegram_id,
-                        "admin-error-context-callback",
+                        AdminErrorContext::Callback,
                         lang,
                     )
                     .await?;
@@ -202,10 +205,9 @@ pub async fn handle_settings(
             }
         }
         SettingsAction::MuteManage => {
-            match db.get_or_create_user(telegram_id, LanguageCode::En).await {
+            match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
                 Ok(u) => {
-                    let mode = MuteListMode::try_from(u.mute_list_mode.as_str())
-                        .unwrap_or(MuteListMode::Blacklist);
+                    let mode = user_settings_service::parse_mute_list_mode(&u.mute_list_mode);
                     send_mute_menu(&bot, &msg, lang, mode).await?;
                 }
                 Err(e) => {
@@ -215,7 +217,7 @@ pub async fn handle_settings(
                         Err(e),
                         config,
                         telegram_id,
-                        "admin-error-context-callback",
+                        AdminErrorContext::Callback,
                         lang,
                     )
                     .await?;
