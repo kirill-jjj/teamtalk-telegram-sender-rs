@@ -6,6 +6,15 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Route admin messages based on token presence and equality.
 
+## [0.5.0]
+### Added
+- Graceful shutdown for SIGINT/SIGTERM and `/exit`, with coordinated TT/TG/bridge stop.
+
+### Changed
+- Replaced DashMap with `RwLock<HashMap<...>>` for shared in-memory state.
+- Localized root channel label in admin channel notifications.
+- Improved pluralization in admin action messages.
+
 ## [0.4.1]
 ### Fixed
 - Replies now work when message and event bots use different tokens.

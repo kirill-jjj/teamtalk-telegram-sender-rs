@@ -3121,7 +3121,7 @@ dependencies = [
 
 [[package]]
 name = "teamtalk-telegram-sender-rs"
-version = "0.4.2"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "base64",
