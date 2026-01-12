@@ -27,6 +27,7 @@
 - Completely avoid adding code comments unless explicitly requested.
 - Do not commit `Cargo.lock` or `TEAMTALK_DLL/` unless explicitly requested.
 - When asked to commit and push, split commits by type (e.g., docs + code), propose commit messages, and wait for confirmation before pushing. If explicit permission is given to do everything once, proceed; for later push requests, ask again.
+- Cargo registry cache lives under `%USERPROFILE%\.cargo\registry\` (e.g., `src` and `cache`). Use it to inspect crate sources (example: find teloxide reply helpers in `teloxide-0.17.0\src\sugar\request.rs`); cache keeps old versions for speed and is safe to read.
 
 ## Testing Guidelines
 - Use `cargo test` to run unit and integration tests.
