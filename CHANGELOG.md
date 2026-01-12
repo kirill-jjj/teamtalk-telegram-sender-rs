@@ -4,16 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [0.4.0]
 ### Added
-- Pending replies and streaming queue support. (#0d6f18b)
+- Pending replies and streaming queue support.
 
 ### Changed
-- Introduced layered architecture with app services and adapters. (#3dfb6f3, #90691a3)
-- Typed callback usernames to reduce stringly typed data. (#90691a3)
+- Introduced layered architecture with app services and adapters.
+- Typed callback usernames to reduce stringly typed data.
 
 ### Fixed
-- Keep NOON silent notifications when another session is still online. (#4154536)
-- Respect configured admin chat ID for permissions. (#ae29c74)
-- Sync streaming status for TeamTalk worker. (#85d8296)
+- Keep NOON silent notifications when another session is still online.
+- Respect configured admin chat ID for permissions.
+- Sync streaming status for TeamTalk worker.
 
 ## [0.3.0]
 
