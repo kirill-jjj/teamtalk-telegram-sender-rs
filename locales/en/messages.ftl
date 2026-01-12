@@ -155,10 +155,26 @@ tt-channel-reply-text =
 tt-skip-sent = Skip command sent.
 
 # TT Commands & Responses
-tt-admin-added = Successfully added { $count } admins.
-tt-admin-add-fail = Failed to add { $count } admins (already admins or invalid IDs).
-tt-admin-removed = Successfully removed { $count } admins.
-tt-admin-remove-fail = Failed to remove { $count } admins (not admins or invalid IDs).
+tt-admin-added =
+    { $count ->
+        [one] Successfully added { $count } admin.
+       *[other] Successfully added { $count } admins.
+    }
+tt-admin-add-fail =
+    { $count ->
+        [one] Failed to add { $count } admin (already admin or invalid ID).
+       *[other] Failed to add { $count } admins (already admins or invalid IDs).
+    }
+tt-admin-removed =
+    { $count ->
+        [one] Successfully removed { $count } admin.
+       *[other] Successfully removed { $count } admins.
+    }
+tt-admin-remove-fail =
+    { $count ->
+        [one] Failed to remove { $count } admin (not admin or invalid ID).
+       *[other] Failed to remove { $count } admins (not admins or invalid IDs).
+    }
 tt-admin-no-ids = No valid admin IDs provided for adding or removing.
 tt-admin-help-header =
 
@@ -168,7 +184,11 @@ tt-admin-help-cmds =
     /remove_admin <Telegram ID> [<Telegram ID>...] - Remove bot admin.
     /skip - Skip media playback.
 
-tt-report-header = There are { $count } users on the server { $server }:
+tt-report-header =
+    There { $count ->
+        [one] is { $count } user
+       *[other] are { $count } users
+    } on the server { $server }:
 tt-report-unauth = (not in a channel)
 tt-sub-fail-nouser = Your TeamTalk account must have a username to subscribe.
 tt-sub-link = Click this link to subscribe: { $link }

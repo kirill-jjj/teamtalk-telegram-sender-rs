@@ -155,10 +155,30 @@ tt-channel-reply-text =
 tt-skip-sent = Команда пропуска отправлена.
 
 # TeamTalk Admin Commands
-tt-admin-added = Успешно добавлено { $count } администраторов.
-tt-admin-add-fail = Не удалось добавить { $count } администраторов (уже администраторы или неверные ID).
-tt-admin-removed = Успешно удалено { $count } администраторов.
-tt-admin-remove-fail = Не удалось удалить { $count } администраторов (не администраторы или неверные ID).
+tt-admin-added =
+    { $count ->
+        [one] Успешно добавлен { $count } администратор.
+        [few] Успешно добавлены { $count } администратора.
+       *[many] Успешно добавлено { $count } администраторов.
+    }
+tt-admin-add-fail =
+    Не удалось добавить { $count ->
+        [one] { $count } администратора
+        [few] { $count } администратора
+       *[many] { $count } администраторов
+    } (уже администраторы или неверные ID).
+tt-admin-removed =
+    { $count ->
+        [one] Успешно удален { $count } администратор.
+        [few] Успешно удалены { $count } администратора.
+       *[many] Успешно удалено { $count } администраторов.
+    }
+tt-admin-remove-fail =
+    Не удалось удалить { $count ->
+        [one] { $count } администратора
+        [few] { $count } администратора
+       *[many] { $count } администраторов
+    } (не администраторы или неверные ID).
 tt-admin-no-ids = Не указаны действительные ID администраторов для добавления или удаления.
 tt-admin-help-header =
 
@@ -168,7 +188,12 @@ tt-admin-help-cmds =
     /remove_admin <Telegram ID> [<Telegram ID>...] - Удалить админа бота.
     /skip - Пропустить медиа.
 
-tt-report-header = На сервере { $server } сейчас { $count } пользователей:
+tt-report-header =
+    На сервере { $server } сейчас { $count ->
+        [one] { $count } пользователь
+        [few] { $count } пользователя
+       *[many] { $count } пользователей
+    }:
 tt-report-unauth = (не в канале)
 tt-sub-fail-nouser = У вашего аккаунта TeamTalk должен быть установлен username для подписки.
 tt-sub-link = Нажмите на эту ссылку, чтобы подписаться на уведомления: { $link }
