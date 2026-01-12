@@ -109,18 +109,13 @@ pub(super) fn handle_sdk_event(
                 unsafe { teamtalk::types::MediaFileInfo::from(raw.__bindgen_anon_1.mediafileinfo) };
             let gender = parse_gender(&ctx.config.general.gender);
             match info.status {
-                ffi::MediaFileStatus::MFS_STARTED | ffi::MediaFileStatus::MFS_PLAYING => {
-                    let status = UserStatus {
-                        gender,
-                        streaming: true,
-                        ..UserStatus::default()
-                    };
-                    client.set_status(status, &ctx.config.teamtalk.status_text);
-                }
                 ffi::MediaFileStatus::MFS_CLOSED
                 | ffi::MediaFileStatus::MFS_ERROR
                 | ffi::MediaFileStatus::MFS_FINISHED
                 | ffi::MediaFileStatus::MFS_ABORTED => {
+                    client.stop_streaming();
+                    ctx.is_streaming
+                        .store(false, std::sync::atomic::Ordering::Relaxed);
                     let status = UserStatus {
                         gender,
                         streaming: false,
@@ -129,13 +124,25 @@ pub(super) fn handle_sdk_event(
                     client.set_status(status, &ctx.config.teamtalk.status_text);
                 }
                 ffi::MediaFileStatus::MFS_PAUSED => {
-                    let status = UserStatus {
-                        gender,
-                        streaming: true,
-                        media_paused: true,
-                        ..UserStatus::default()
-                    };
-                    client.set_status(status, &ctx.config.teamtalk.status_text);
+                    if ctx.is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
+                        let status = UserStatus {
+                            gender,
+                            streaming: true,
+                            media_paused: true,
+                            ..UserStatus::default()
+                        };
+                        client.set_status(status, &ctx.config.teamtalk.status_text);
+                    }
+                }
+                ffi::MediaFileStatus::MFS_STARTED | ffi::MediaFileStatus::MFS_PLAYING => {
+                    if ctx.is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
+                        let status = UserStatus {
+                            gender,
+                            streaming: true,
+                            ..UserStatus::default()
+                        };
+                        client.set_status(status, &ctx.config.teamtalk.status_text);
+                    }
                 }
             }
         }

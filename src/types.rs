@@ -151,6 +151,9 @@ pub enum TtCommand {
         stream_id: u64,
     },
     SkipStream,
+    SetStreamingStatus {
+        streaming: bool,
+    },
     KickUser {
         user_id: i32,
     },

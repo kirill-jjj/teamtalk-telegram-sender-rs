@@ -13,7 +13,7 @@ use std::time::Duration;
 use teamtalk::Client;
 use teamtalk::client::media::MediaPlayback;
 use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
-use teamtalk::types::{AudioPreprocessor, ChannelId};
+use teamtalk::types::{AudioPreprocessor, ChannelId, UserGender, UserStatus};
 use teamtalk::types::{UserAccount, UserId};
 
 pub(super) fn resolve_server_name(
@@ -39,6 +39,7 @@ pub struct WorkerContext {
     pub db: Database,
     pub rt: tokio::runtime::Handle,
     pub bot_username: Option<String>,
+    pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
 }
 
 pub struct RunTeamtalkArgs {
@@ -90,7 +91,9 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         db,
         rt,
         bot_username,
+        is_streaming: Arc::new(std::sync::atomic::AtomicBool::new(false)),
     };
+    let is_streaming = ctx.is_streaming.clone();
 
     let client = match Client::new() {
         Ok(c) => {
@@ -113,6 +116,20 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     let mut stream_queue: VecDeque<StreamItem> = VecDeque::new();
     let mut current_stream: Option<StreamItem> = None;
     let mut stream_seq: u64 = 0;
+    let status_gender = match config.general.gender.trim().to_lowercase().as_str() {
+        "male" => UserGender::Male,
+        "female" => UserGender::Female,
+        "neutral" | "none" => UserGender::Neutral,
+        _ => UserGender::Neutral,
+    };
+    let set_streaming_status = |client: &Client, streaming: bool| {
+        let status = UserStatus {
+            gender: status_gender,
+            streaming,
+            ..UserStatus::default()
+        };
+        client.set_status(status, &config.teamtalk.status_text);
+    };
 
     let mut reconnect_handler = ReconnectHandler::new(ReconnectConfig {
         min_delay: Duration::from_millis(200),
@@ -180,6 +197,7 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                 });
                 continue;
             }
+            is_streaming.store(true, std::sync::atomic::Ordering::Relaxed);
             let stream_id = item.stream_id;
             let delete_path = item.file_path.clone();
             let duration_ms = item.duration_ms;
@@ -253,6 +271,15 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                         .unwrap_or(false)
                     {
                         client.stop_streaming();
+                        let is_streaming = is_streaming.clone();
+                        let tx_cmd_for_stop = tx_cmd_clone.clone();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(Duration::from_secs(2));
+                            if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
+                                let _ = tx_cmd_for_stop
+                                    .send(TtCommand::SetStreamingStatus { streaming: false });
+                            }
+                        });
                         current_stream = None;
                         start_next(
                             &client,
@@ -265,6 +292,15 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                 TtCommand::SkipStream => {
                     if current_stream.is_some() {
                         client.stop_streaming();
+                        let is_streaming = is_streaming.clone();
+                        let tx_cmd_for_stop = tx_cmd_clone.clone();
+                        std::thread::spawn(move || {
+                            std::thread::sleep(Duration::from_secs(2));
+                            if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
+                                let _ = tx_cmd_for_stop
+                                    .send(TtCommand::SetStreamingStatus { streaming: false });
+                            }
+                        });
                         current_stream = None;
                     }
                     start_next(
@@ -273,6 +309,12 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                         &mut current_stream,
                         &tx_cmd_clone,
                     );
+                }
+                TtCommand::SetStreamingStatus { streaming } => {
+                    if !streaming {
+                        is_streaming.store(false, std::sync::atomic::Ordering::Relaxed);
+                    }
+                    set_streaming_status(&client, streaming);
                 }
                 TtCommand::KickUser { user_id } => {
                     client.kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
