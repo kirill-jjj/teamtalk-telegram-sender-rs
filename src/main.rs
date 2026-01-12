@@ -148,7 +148,11 @@ async fn main() -> Result<()> {
     let (tx_bridge, rx_bridge) = tokio_mpsc::channel::<crate::core::types::BridgeEvent>(100);
     let (tx_tt_cmd, rx_tt_cmd) = std_mpsc::channel::<crate::core::types::TtCommand>();
 
-    let event_bot = if let Some(token) = &shared_config.telegram.event_token {
+    let event_token = shared_config.telegram.event_token.clone();
+    let message_token = shared_config.telegram.message_token.clone();
+    let same_token = event_token.is_some() && message_token == event_token;
+
+    let event_bot = if let Some(token) = &event_token {
         Some(Bot::new(token))
     } else {
         tracing::warn!(
@@ -157,7 +161,10 @@ async fn main() -> Result<()> {
         None
     };
 
-    let message_bot = if let Some(token) = &shared_config.telegram.message_token {
+    let message_bot = if same_token {
+        tracing::info!("message_token matches event_token; using event bot for admin messages.");
+        None
+    } else if let Some(token) = &message_token {
         Some(Bot::new(token))
     } else {
         tracing::warn!("⚠️ 'message_token' missing. Admin alerts disabled.");
@@ -231,6 +238,7 @@ async fn main() -> Result<()> {
     if let Some(bot) = event_bot {
         adapters::tg::run_tg_bot(
             bot,
+            message_bot,
             db,
             online_users,
             all_user_accounts,

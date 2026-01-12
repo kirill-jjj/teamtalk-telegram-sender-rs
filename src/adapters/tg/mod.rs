@@ -28,6 +28,7 @@ use self::state::AppState;
 
 pub async fn run_tg_bot(
     event_bot: Bot,
+    message_bot: Option<Bot>,
     db: Database,
     online_users: Arc<DashMap<i32, LiteUser>>,
     user_accounts: Arc<DashMap<String, UserAccount>>,
@@ -57,6 +58,49 @@ pub async fn run_tg_bot(
 
     let admin_bot = event_bot.clone();
     let admin_config = config.clone();
+    let msg_state = state.clone();
+    let msg_handle = message_bot.map(|msg_bot| {
+        let admin_bot = msg_bot.clone();
+        let admin_config = config.clone();
+        tokio::spawn(async move {
+            let msg_handler =
+                dptree::entry().branch(Update::filter_message().endpoint(commands::answer_message));
+            Dispatcher::builder(msg_bot, msg_handler)
+                .dependencies(dptree::deps![msg_state])
+                .enable_ctrlc_handler()
+                .error_handler(std::sync::Arc::new({
+                    let admin_bot = admin_bot.clone();
+                    let admin_config = admin_config.clone();
+                    move |err: teloxide::errors::RequestError| {
+                        let admin_bot = admin_bot.clone();
+                        let admin_config = admin_config.clone();
+                        async move {
+                            let err_str = err.to_string();
+                            if !err_str.contains("TerminatedByOtherGetUpdates") {
+                                tracing::error!("[TELEGRAM] Update listener error: {}", err);
+                                let default_lang = LanguageCode::from_str_or_default(
+                                    &admin_config.general.default_lang,
+                                    LanguageCode::En,
+                                );
+                                notify_admin_error(
+                                    &admin_bot,
+                                    &admin_config,
+                                    0,
+                                    AdminErrorContext::UpdateListener,
+                                    &err_str,
+                                    default_lang,
+                                )
+                                .await;
+                            }
+                        }
+                    }
+                }))
+                .build()
+                .dispatch()
+                .await;
+        })
+    });
+
     Dispatcher::builder(event_bot, handler)
         .dependencies(dptree::deps![state])
         .enable_ctrlc_handler()
@@ -90,6 +134,10 @@ pub async fn run_tg_bot(
         .build()
         .dispatch()
         .await;
+
+    if let Some(handle) = msg_handle {
+        handle.abort();
+    }
 }
 
 async fn set_bot_commands(
