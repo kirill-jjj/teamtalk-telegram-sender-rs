@@ -1,6 +1,6 @@
 use crate::args;
 use crate::bootstrap::config::Config;
-use crate::core::types::{self, BridgeEvent, LanguageCode};
+use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use dashmap::DashMap;
@@ -13,7 +13,7 @@ use tokio::task::JoinSet;
 
 pub struct BridgeContext {
     pub db: Database,
-    pub online_users_by_username: Arc<DashMap<String, i32>>,
+    pub online_users: Arc<DashMap<i32, LiteUser>>,
     pub config: Arc<Config>,
     pub event_bot: Option<Bot>,
     pub msg_bot: Option<Bot>,
@@ -26,7 +26,7 @@ pub async fn run_bridge(
 ) {
     let BridgeContext {
         db: db_clone,
-        online_users_by_username,
+        online_users,
         config,
         event_bot,
         msg_bot,
@@ -80,7 +80,7 @@ pub async fn run_bridge(
 
                 for sub in recipients {
                     let bot = bot.clone();
-                    let online_users_by_username = online_users_by_username.clone();
+                    let online_users = online_users.clone();
 
                     let lang = LanguageCode::from_str_or_default(&sub.language_code, default_lang);
                     let text = rendered_text_cache
@@ -102,9 +102,13 @@ pub async fn run_bridge(
                         if sub.not_on_online_enabled
                             && sub.not_on_online_confirmed
                             && let Some(linked_tt) = &sub.teamtalk_username
-                            && online_users_by_username.contains_key(linked_tt)
                         {
-                            send_silent = true;
+                            let is_online = online_users
+                                .iter()
+                                .any(|entry| entry.value().username == *linked_tt);
+                            if is_online {
+                                send_silent = true;
+                            }
                         }
 
                         let res = bot
