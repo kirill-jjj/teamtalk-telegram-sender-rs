@@ -97,7 +97,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             if pm_text.is_empty() {
                 return;
             }
-            let channel_name = resolve_channel_name(client, msg.channel_id);
+            let channel_name = resolve_channel_name(client, msg.channel_id, LanguageCode::En);
             let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());
             if let Err(e) =
                 tx_bridge.blocking_send(crate::core::types::BridgeEvent::ToAdminChannel {

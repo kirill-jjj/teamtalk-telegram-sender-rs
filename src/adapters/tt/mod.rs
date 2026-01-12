@@ -3,8 +3,9 @@ pub mod events;
 pub mod reports;
 
 use crate::bootstrap::config::Config;
-use crate::core::types::{BridgeEvent, LiteUser, TtCommand};
+use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, TtCommand};
 use crate::infra::db::Database;
+use crate::infra::locales;
 use std::collections::{HashMap, VecDeque};
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, RwLock};
@@ -28,13 +29,17 @@ pub(super) fn resolve_server_name(
         .to_string()
 }
 
-pub(super) fn resolve_channel_name(client: &Client, channel_id: ChannelId) -> String {
+pub(super) fn resolve_channel_name(
+    client: &Client,
+    channel_id: ChannelId,
+    lang: LanguageCode,
+) -> String {
     if channel_id.0 == 0 {
-        return "/".to_string();
+        return locales::get_text(lang.as_str(), "tt-root-channel-name", None);
     }
     match client.get_channel(channel_id) {
         Some(channel) if !channel.name.is_empty() => channel.name,
-        Some(_) => "/".to_string(),
+        Some(_) => locales::get_text(lang.as_str(), "tt-root-channel-name", None),
         None => "Unknown".to_string(),
     }
 }

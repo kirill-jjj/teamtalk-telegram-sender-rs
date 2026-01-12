@@ -1,6 +1,6 @@
 use crate::adapters::tt::commands;
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
-use crate::core::types::{BridgeEvent, LiteUser, NotificationType};
+use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, NotificationType};
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
 use teamtalk::client::ffi;
@@ -160,7 +160,7 @@ pub(super) fn handle_sdk_event(
             {
                 let nickname = user.nickname.clone();
 
-                let channel_name = resolve_channel_name(client, user.channel_id);
+                let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
                 let lite_user = LiteUser {
                     id: user.id.0,
@@ -201,7 +201,7 @@ pub(super) fn handle_sdk_event(
                 && user.id != client.my_id()
             {
                 let nickname = user.nickname.clone();
-                let channel_name = resolve_channel_name(client, user.channel_id);
+                let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
                 let lite_user = LiteUser {
                     id: user.id.0,
@@ -256,7 +256,7 @@ pub(super) fn handle_sdk_event(
         }
         Event::UserLeft => {
             if let Some(user) = msg.user() {
-                let channel_name = resolve_channel_name(client, user.channel_id);
+                let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
                 if let Ok(mut users) = ctx.online_users.write()
                     && let Some(u) = users.get_mut(&user.id.0)

@@ -184,6 +184,7 @@ icon-check-simple = ✅
 
 # TeamTalk Report
 tt-report-root = корневом канале
+tt-root-channel-name = корневой канал
 tt-report-row = <b>{ $users }</b> в { $channel }
 
 # Subscription Settings
