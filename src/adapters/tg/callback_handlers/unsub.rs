@@ -24,7 +24,11 @@ pub async fn handle_unsub_action(
     match action {
         UnsubAction::Confirm => {
             if let Err(e) = subscription_service::unsubscribe(db, telegram_id).await {
-                tracing::error!("Failed to unsubscribe user {}: {}", telegram_id, e);
+                tracing::error!(
+                    telegram_id,
+                    error = %e,
+                    "Failed to unsubscribe user"
+                );
                 notify_admin_error(
                     &bot,
                     config,

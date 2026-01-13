@@ -26,7 +26,7 @@ pub async fn handle_menu(
                 chat_id: chat_id.0,
                 lang,
             }) {
-                tracing::error!("Failed to send TT who command: {}", e);
+                tracing::error!(error = %e, "Failed to send TT who command");
                 notify_admin_error(
                     &bot,
                     &state.config,

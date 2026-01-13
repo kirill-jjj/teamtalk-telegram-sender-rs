@@ -40,7 +40,7 @@ pub async fn run_bridge(
         LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
 
-    tracing::info!("[BRIDGE] Bridge task started.");
+    tracing::info!(component = "bridge", "Bridge task started");
     loop {
         let event = tokio::select! {
             _ = cancel_token.cancelled() => {
@@ -75,9 +75,11 @@ pub async fn run_bridge(
                     Ok(_) => continue,
                     Err(e) => {
                         tracing::error!(
-                            "Failed to load recipients for {:?} event: {}",
-                            event_type,
-                            e
+                            component = "bridge",
+                            event_type = ?event_type,
+                            tt_username = %related_tt_username,
+                            error = %e,
+                            "Failed to load recipients"
                         );
                         continue;
                     }
@@ -119,11 +121,9 @@ pub async fn run_bridge(
                             && sub.not_on_online_confirmed
                             && let Some(linked_tt) = &sub.teamtalk_username
                         {
-                            let guard =
-                                online_users.read().unwrap_or_else(|e| e.into_inner());
-                            let is_online = guard
-                                .values()
-                                .any(|entry| entry.username == *linked_tt);
+                            let guard = online_users.read().unwrap_or_else(|e| e.into_inner());
+                            let is_online =
+                                guard.values().any(|entry| entry.username == *linked_tt);
                             if is_online {
                                 send_silent = true;
                             }
@@ -136,32 +136,47 @@ pub async fn run_bridge(
                             .await;
 
                         if let Err(e) = res {
-                            tracing::warn!("Failed to send notification to {}: {}", sub.telegram_id, e);
+                            tracing::warn!(
+                                component = "bridge",
+                                telegram_id = sub.telegram_id,
+                                tt_username = ?sub.teamtalk_username,
+                                error = %e,
+                                "Failed to send notification"
+                            );
 
                             if let RequestError::Api(api_err) = e {
                                 match api_err {
-                                    ApiError::BotBlocked |
-                                    ApiError::UserDeactivated |
-                                    ApiError::ChatNotFound => {
+                                    ApiError::BotBlocked
+                                    | ApiError::UserDeactivated
+                                    | ApiError::ChatNotFound => {
                                         tracing::info!(
-                                            "[BRIDGE] Cleaning up: user {} is no longer reachable ({:?}).",
-                                            sub.telegram_id,
-                                            api_err
+                                            component = "bridge",
+                                            telegram_id = sub.telegram_id,
+                                            tt_username = ?sub.teamtalk_username,
+                                            api_error = ?api_err,
+                                            "Cleaning up unreachable user"
                                         );
 
-                                        if let Err(db_err) = db_for_closure.delete_user_profile(sub.telegram_id).await {
+                                        if let Err(db_err) = db_for_closure
+                                            .delete_user_profile(sub.telegram_id)
+                                            .await
+                                        {
                                             tracing::error!(
-                                                "[BRIDGE] DB error during auto-cleanup for {}: {}",
-                                                sub.telegram_id,
-                                                db_err
+                                                component = "bridge",
+                                                telegram_id = sub.telegram_id,
+                                                tt_username = ?sub.teamtalk_username,
+                                                error = %db_err,
+                                                "DB error during auto-cleanup"
                                             );
                                         } else {
                                             tracing::info!(
-                                                "[BRIDGE] Profile for {} removed successfully.",
-                                                sub.telegram_id
+                                                component = "bridge",
+                                                telegram_id = sub.telegram_id,
+                                                tt_username = ?sub.teamtalk_username,
+                                                "Profile removed successfully"
                                             );
                                         }
-                                    },
+                                    }
                                     _ => {}
                                 }
                             }
@@ -172,8 +187,9 @@ pub async fn run_bridge(
                 while let Some(res) = set.join_next().await {
                     if let Err(e) = res {
                         tracing::error!(
-                            "[BRIDGE] A notification task failed after joining: {:?}",
-                            e
+                            component = "bridge",
+                            error = ?e,
+                            "Notification task failed after join"
                         );
                     }
                 }
@@ -199,8 +215,9 @@ pub async fn run_bridge(
                         Ok(u) => LanguageCode::from_str_or_default(&u.language_code, default_lang),
                         Err(e) => {
                             tracing::error!(
-                                "Failed to get admin settings: {}. Defaulting to 'en'.",
-                                e
+                                component = "bridge",
+                                error = %e,
+                                "Failed to get admin settings; defaulting to 'en'"
                             );
                             LanguageCode::En
                         }
@@ -222,7 +239,13 @@ pub async fn run_bridge(
                     if let Ok(msg) = &res
                         && let Err(e) = db_clone.add_pending_reply(msg.id.0 as i64, user_id).await
                     {
-                        tracing::error!("Failed to save pending reply for {}: {}", msg.id.0, e);
+                        tracing::error!(
+                            component = "bridge",
+                            message_id = msg.id.0,
+                            tt_username = %tt_username,
+                            error = %e,
+                            "Failed to save pending reply"
+                        );
                     }
 
                     let reply_lang = if !tt_username.is_empty() {
@@ -246,13 +269,18 @@ pub async fn run_bridge(
                         text: reply_text,
                     }) {
                         tracing::error!(
-                            "Failed to send TT reply command for user {}: {}",
+                            component = "bridge",
                             user_id,
-                            e
+                            tt_username = %tt_username,
+                            error = %e,
+                            "Failed to send TT reply command"
                         );
                     }
                 } else {
-                    tracing::debug!("Skipping Admin Alert: message_token is not configured.");
+                    tracing::debug!(
+                        component = "bridge",
+                        "Skipping admin alert: message_token not configured"
+                    );
                 }
             }
             types::BridgeEvent::ToAdminChannel {
@@ -275,8 +303,9 @@ pub async fn run_bridge(
                         Ok(u) => LanguageCode::from_str_or_default(&u.language_code, default_lang),
                         Err(e) => {
                             tracing::error!(
-                                "Failed to get admin settings: {}. Defaulting to 'en'.",
-                                e
+                                component = "bridge",
+                                error = %e,
+                                "Failed to get admin settings; defaulting to 'en'"
                             );
                             LanguageCode::En
                         }
@@ -310,13 +339,17 @@ pub async fn run_bridge(
                             .await
                     {
                         tracing::error!(
-                            "Failed to save pending channel reply for {}: {}",
-                            msg.id.0,
-                            e
+                            component = "bridge",
+                            message_id = msg.id.0,
+                            error = %e,
+                            "Failed to save pending channel reply"
                         );
                     }
                 } else {
-                    tracing::debug!("Skipping Admin Alert: message_token is not configured.");
+                    tracing::debug!(
+                        component = "bridge",
+                        "Skipping admin alert: message_token not configured"
+                    );
                 }
             }
             types::BridgeEvent::WhoReport { chat_id, text } => {
@@ -326,7 +359,12 @@ pub async fn run_bridge(
                         .parse_mode(teloxide::types::ParseMode::Html)
                         .await
                 {
-                    tracing::error!("Failed to send who report to {}: {}", chat_id, e);
+                    tracing::error!(
+                        component = "bridge",
+                        chat_id,
+                        error = %e,
+                        "Failed to send who report"
+                    );
                 }
             }
         }

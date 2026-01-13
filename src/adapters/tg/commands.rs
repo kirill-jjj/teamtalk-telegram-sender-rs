@@ -72,7 +72,11 @@ pub async fn answer_command(
     let settings = match user_settings_service::get_or_create(db, telegram_id, default_lang).await {
         Ok(s) => s,
         Err(e) => {
-            tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
+            tracing::error!(
+                telegram_id,
+                error = %e,
+                "Failed to get or create user"
+            );
             notify_admin_error(
                 &bot,
                 config,
@@ -93,7 +97,7 @@ pub async fn answer_command(
         match db.get_all_admins().await {
             Ok(admins) => admins.contains(&telegram_id),
             Err(e) => {
-                tracing::error!("Failed to load admin list: {}", e);
+                tracing::error!(error = %e, "Failed to load admin list");
                 false
             }
         }
@@ -146,7 +150,7 @@ pub async fn answer_command(
                                     .await?;
                                 }
                                 Err(e) => {
-                                    tracing::error!("DB error adding sub: {}", e);
+                                    tracing::error!(error = %e, "DB error adding subscriber");
                                     notify_admin_error(
                                         &bot,
                                         config,
@@ -164,7 +168,7 @@ pub async fn answer_command(
                         DeeplinkAction::Unsubscribe => {
                             if let Err(e) = subscription_service::unsubscribe(db, telegram_id).await
                             {
-                                tracing::error!("DB error unsubscribing: {}", e);
+                                tracing::error!(error = %e, "DB error unsubscribing");
                                 notify_admin_error(
                                     &bot,
                                     config,
@@ -184,7 +188,7 @@ pub async fn answer_command(
                         send_text_key(&bot, msg.chat.id, lang, "cmd-invalid-deeplink").await?;
                     }
                     Err(e) => {
-                        tracing::error!("DB error resolving deeplink: {}", e);
+                        tracing::error!(error = %e, "DB error resolving deeplink");
                         notify_admin_error(
                             &bot,
                             config,
@@ -233,7 +237,7 @@ pub async fn answer_command(
                 chat_id: msg.chat.id.0,
                 lang,
             }) {
-                tracing::error!("Failed to send TT who command: {}", e);
+                tracing::error!(error = %e, "Failed to send TT who command");
                 notify_admin_error(
                     &bot,
                     config,
@@ -366,7 +370,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         match db.get_all_admins().await {
             Ok(admins) => admins.contains(&telegram_id),
             Err(e) => {
-                tracing::error!("Failed to load admin list: {}", e);
+                tracing::error!(error = %e, "Failed to load admin list");
                 false
             }
         }
@@ -449,7 +453,11 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
                 channel_id,
                 text: channel_text,
             }) {
-                tracing::error!("Failed to send TT channel reply to {}: {}", channel_id, e);
+                tracing::error!(
+                    channel_id,
+                    error = %e,
+                    "Failed to send TT channel reply"
+                );
                 notify_admin_error(
                     &bot,
                     config,
@@ -472,7 +480,11 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
             .await;
 
         if let Err(e) = pending_service::touch_pending_channel_reply(db, reply_id).await {
-            tracing::error!("Failed to update pending channel reply {}: {}", reply_id, e);
+            tracing::error!(
+                reply_id,
+                error = %e,
+                "Failed to update pending channel reply"
+            );
         }
 
         return Ok(());
@@ -488,7 +500,11 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         Ok(Some(id)) => id,
         Ok(None) => return Ok(()),
         Err(e) => {
-            tracing::error!("Failed to load pending reply {}: {}", reply_id, e);
+            tracing::error!(
+                reply_id,
+                error = %e,
+                "Failed to load pending reply"
+            );
             notify_admin_error(
                 &bot,
                 config,
@@ -515,7 +531,11 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
             text: text.to_string(),
         });
         if let Err(e) = send_res {
-            tracing::error!("Failed to send TT reply command for {}: {}", tt_user_id, e);
+            tracing::error!(
+                tt_user_id,
+                error = %e,
+                "Failed to send TT reply command"
+            );
             notify_admin_error(
                 &bot,
                 config,
@@ -537,7 +557,11 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         .await;
 
     if let Err(e) = pending_service::touch_pending_reply(db, reply_id).await {
-        tracing::error!("Failed to update pending reply {}: {}", reply_id, e);
+        tracing::error!(
+            reply_id,
+            error = %e,
+            "Failed to update pending reply"
+        );
     }
 
     Ok(())

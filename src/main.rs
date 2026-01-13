@@ -30,7 +30,7 @@ fn update_bot() -> Result<()> {
 async fn main() -> Result<()> {
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt().with_env_filter(filter).init();
-    tracing::info!("Starting application.");
+    tracing::info!(component = "main", "Starting application");
 
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--update") {

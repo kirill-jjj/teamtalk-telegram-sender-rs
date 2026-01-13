@@ -27,7 +27,7 @@ pub async fn send_subscribers_list(
     let subs = match db.get_subscribers().await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load subscribers: {}", e);
+            tracing::error!(error = %e, "Failed to load subscribers");
             Vec::new()
         }
     };
@@ -88,7 +88,7 @@ pub async fn edit_subscribers_list(
     let subs = match db.get_subscribers().await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load subscribers: {}", e);
+            tracing::error!(error = %e, "Failed to load subscribers");
             Vec::new()
         }
     };
@@ -150,7 +150,11 @@ async fn prepare_display_list(
         let display_name = match bot.get_chat(teloxide::types::ChatId(sub.telegram_id)).await {
             Ok(chat) => format_tg_user(&chat),
             Err(e) => {
-                tracing::error!("Failed to load Telegram user {}: {}", sub.telegram_id, e);
+                tracing::error!(
+                    telegram_id = sub.telegram_id,
+                    error = %e,
+                    "Failed to load Telegram user"
+                );
                 sub.telegram_id.to_string()
             }
         };
@@ -180,7 +184,11 @@ pub async fn send_subscriber_details(
         .get_or_create_user(sub_id, LanguageCode::En)
         .await
         .unwrap_or_else(|e| {
-            tracing::error!("Failed to load subscriber settings for {}: {}", sub_id, e);
+            tracing::error!(
+                sub_id,
+                error = %e,
+                "Failed to load subscriber settings"
+            );
             crate::infra::db::types::UserSettings {
                 telegram_id: sub_id,
                 language_code: "en".to_string(),

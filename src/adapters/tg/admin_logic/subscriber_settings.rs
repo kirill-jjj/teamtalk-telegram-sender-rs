@@ -22,7 +22,11 @@ pub async fn send_sub_manage_tt_menu(
     let settings = match user_settings_service::get_or_create(db, sub_id, LanguageCode::En).await {
         Ok(s) => s,
         Err(e) => {
-            tracing::error!("Failed to get or create user {}: {}", sub_id, e);
+            tracing::error!(
+                sub_id,
+                error = %e,
+                "Failed to get or create user"
+            );
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
@@ -277,7 +281,11 @@ pub async fn send_sub_mute_list(
     let muted: Vec<String> = match db.get_muted_users_list(target_id).await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load muted users for {}: {}", target_id, e);
+            tracing::error!(
+                target_id,
+                error = %e,
+                "Failed to load muted users"
+            );
             Vec::new()
         }
     };

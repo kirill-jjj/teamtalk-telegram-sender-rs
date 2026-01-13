@@ -61,7 +61,11 @@ pub async fn handle_mute(
             let muted = match db.get_muted_users_list(telegram_id).await {
                 Ok(list) => list,
                 Err(e) => {
-                    tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
+                    tracing::error!(
+                        telegram_id,
+                        error = %e,
+                        "Failed to load muted users"
+                    );
                     Vec::new()
                 }
             };
@@ -105,7 +109,11 @@ pub async fn handle_mute(
                 .get_muted_users_list(telegram_id)
                 .await
                 .unwrap_or_else(|e| {
-                    tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
+                    tracing::error!(
+                        telegram_id,
+                        error = %e,
+                        "Failed to load muted users"
+                    );
                     Vec::new()
                 });
             let guest_username = state.config.teamtalk.guest_username.as_deref();
@@ -122,7 +130,7 @@ pub async fn handle_mute(
         }
         MuteAction::ServerList { page } => {
             if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts) {
-                tracing::error!("Failed to request TT accounts: {}", e);
+                tracing::error!(error = %e, "Failed to request TT accounts");
                 notify_admin_error(
                     &bot,
                     config,

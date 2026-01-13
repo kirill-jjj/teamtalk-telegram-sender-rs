@@ -73,7 +73,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 };
                 let text_key = if is_admin {
                     if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream) {
-                        tracing::error!("Failed to send TT skip command: {}", e);
+                        tracing::error!(
+                            tt_username = %username,
+                            error = %e,
+                            "Failed to send TT skip command"
+                        );
                         "tt-error-generic"
                     } else {
                         "tt-skip-sent"
@@ -83,7 +87,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 };
                 let text = locales::get_text(reply_lang.as_str(), text_key, None);
                 if let Err(e) = tx_tt_cmd.send(TtCommand::SendToChannel { channel_id, text }) {
-                    tracing::error!("Failed to send TT channel reply: {}", e);
+                    tracing::error!(
+                        channel_id,
+                        error = %e,
+                        "Failed to send TT channel reply"
+                    );
                 }
             });
             return;
@@ -103,7 +111,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     msg_content: pm_text.to_string(),
                 })
             {
-                tracing::error!("Failed to send channel pm event: {}", e);
+                tracing::error!(error = %e, "Failed to send channel PM event");
             }
         }
         return;
@@ -123,7 +131,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 ("Unknown".to_string(), "".to_string())
             };
 
-            tracing::info!("💬 [TT_WORKER] Msg from {}: {}", nick, content);
+            tracing::info!(
+                component = "tt_worker",
+                nick = %nick,
+                tt_username = %username,
+                "Received TT message"
+            );
 
             let reply_lang = if !username.is_empty() {
                 db.get_user_lang_by_tt_user(&username)
@@ -144,7 +157,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     user_id: from_uid,
                     text,
                 }) {
-                    tracing::error!("Failed to send TT reply command for {}: {}", from_uid, e);
+                    tracing::error!(
+                        user_id = from_uid,
+                        tt_username = %username,
+                        error = %e,
+                        "Failed to send TT reply command"
+                    );
                 }
             };
 
@@ -278,7 +296,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     return;
                 }
                 if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream) {
-                    tracing::error!("Failed to send TT skip command: {}", e);
+                    tracing::error!(
+                        tt_username = %username,
+                        error = %e,
+                        "Failed to send TT skip command"
+                    );
                     let text = locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
                     send_reply(text);
                     return;
@@ -307,7 +329,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         let success = match db.add_admin(tg_id).await {
                             Ok(val) => val,
                             Err(e) => {
-                                tracing::error!("DB error adding admin {}: {}", tg_id, e);
+                                tracing::error!(
+                                    telegram_id = tg_id,
+                                    error = %e,
+                                    "DB error adding admin"
+                                );
                                 false
                             }
                         };
@@ -352,7 +378,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         let success = match db.remove_admin(tg_id).await {
                             Ok(val) => val,
                             Err(e) => {
-                                tracing::error!("DB error removing admin {}: {}", tg_id, e);
+                                tracing::error!(
+                                    telegram_id = tg_id,
+                                    error = %e,
+                                    "DB error removing admin"
+                                );
                                 false
                             }
                         };
@@ -393,7 +423,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     })
                     .await
                 {
-                    tracing::error!("Failed to send admin bridge event: {}", e);
+                    tracing::error!(error = %e, "Failed to send admin bridge event");
                 }
             }
         }

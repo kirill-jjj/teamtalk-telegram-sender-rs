@@ -179,7 +179,7 @@ pub async fn handle_settings(
                     )
                     .await
                     {
-                        tracing::error!("Failed to send noon update callback: {}", e);
+                        tracing::error!(error = %e, "Failed to send noon update callback");
                     }
 
                     if let Err(e) = send_notif_settings(&bot, &msg, db, telegram_id, lang).await

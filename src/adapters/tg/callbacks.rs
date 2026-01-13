@@ -30,9 +30,9 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
             Ok(settings) => settings,
             Err(e) => {
                 tracing::error!(
-                    "Failed to get/create user {} in callback: {}",
                     telegram_id,
-                    e
+                    error = %e,
+                    "Failed to get/create user in callback"
                 );
                 notify_admin_error(
                     &bot,
@@ -62,7 +62,11 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
             return Ok(());
         }
         Err(e) => {
-            tracing::error!("Failed to check subscription for {}: {}", telegram_id, e);
+            tracing::error!(
+                telegram_id,
+                error = %e,
+                "Failed to check subscription"
+            );
             notify_admin_error(
                 &bot,
                 config,
@@ -84,9 +88,9 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
         Ok(a) => a,
         Err(e) => {
             tracing::warn!(
-                "Unknown or legacy callback data '{}': {}",
-                callback_data_str,
-                e
+                callback_data = %callback_data_str,
+                error = %e,
+                "Unknown or legacy callback data"
             );
             return Ok(());
         }

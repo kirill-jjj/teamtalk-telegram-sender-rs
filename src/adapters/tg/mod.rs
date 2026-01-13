@@ -58,7 +58,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
     };
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
-        tracing::error!("Failed to set bot commands: {}", e);
+        tracing::error!(error = %e, "Failed to set bot commands");
     }
 
     let handler = dptree::entry()
@@ -91,7 +91,11 @@ pub async fn run_tg_bot(args: TgRunArgs) {
                         async move {
                             let err_str = err.to_string();
                             if !err_str.contains("TerminatedByOtherGetUpdates") {
-                                tracing::error!("[TELEGRAM] Update listener error: {}", err);
+                                tracing::error!(
+                                    component = "telegram",
+                                    error = %err,
+                                    "Update listener error"
+                                );
                                 let default_lang = LanguageCode::from_str_or_default(
                                     &admin_config.general.default_lang,
                                     LanguageCode::En,
@@ -133,7 +137,11 @@ pub async fn run_tg_bot(args: TgRunArgs) {
                 async move {
                     let err_str = err.to_string();
                     if !err_str.contains("TerminatedByOtherGetUpdates") {
-                        tracing::error!("[TELEGRAM] Update listener error: {}", err);
+                        tracing::error!(
+                            component = "telegram",
+                            error = %err,
+                            "Update listener error"
+                        );
                         let default_lang = LanguageCode::from_str_or_default(
                             &admin_config.general.default_lang,
                             LanguageCode::En,
@@ -196,7 +204,7 @@ async fn set_bot_commands(
     let mut admin_ids = match db.get_all_admins().await {
         Ok(ids) => ids,
         Err(e) => {
-            tracing::error!("Failed to load admin list: {}", e);
+            tracing::error!(error = %e, "Failed to load admin list");
             Vec::new()
         }
     };
@@ -208,7 +216,11 @@ async fn set_bot_commands(
         let user_settings = user_settings_service::get_or_create(db, admin_id, default_lang)
             .await
             .unwrap_or_else(|e| {
-                tracing::error!("Failed to load admin settings for {}: {}", admin_id, e);
+                tracing::error!(
+                    admin_id,
+                    error = %e,
+                    "Failed to load admin settings"
+                );
                 crate::infra::db::types::UserSettings {
                     telegram_id: admin_id,
                     language_code: default_lang.as_str().to_string(),
@@ -230,7 +242,11 @@ async fn set_bot_commands(
             })
             .await
             .unwrap_or_else(|e| {
-                tracing::error!("Failed to set admin commands for {}: {}", admin_id, e);
+                tracing::error!(
+                    admin_id,
+                    error = %e,
+                    "Failed to set admin commands"
+                );
                 teloxide::types::True
             });
     }

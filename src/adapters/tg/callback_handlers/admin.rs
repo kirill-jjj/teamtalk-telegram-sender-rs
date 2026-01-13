@@ -105,7 +105,11 @@ pub async fn handle_admin(
         }
         AdminAction::KickPerform { user_id } => {
             if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }) {
-                tracing::error!("Failed to send kick command for {}: {}", user_id, e);
+                tracing::error!(
+                    user_id,
+                    error = %e,
+                    "Failed to send kick command"
+                );
                 notify_admin_error(
                     &bot,
                     config,
@@ -139,7 +143,11 @@ pub async fn handle_admin(
                     )
                     .await
                 {
-                    tracing::error!("Failed to add ban: {}", e);
+                    tracing::error!(
+                        tt_username = %u.username,
+                        error = %e,
+                        "Failed to add ban"
+                    );
                     notify_admin_error(
                         &bot,
                         config,
@@ -165,7 +173,11 @@ pub async fn handle_admin(
                     if let Err(e) =
                         admin_cleanup_service::cleanup_deleted_banned_user(db, tg_id).await
                     {
-                        tracing::error!("Failed to delete user profile during ban: {}", e);
+                        tracing::error!(
+                            tt_username = %u.username,
+                            error = %e,
+                            "Failed to delete user profile during ban"
+                        );
                     }
                     if let Err(e) = db
                         .add_ban(
@@ -175,11 +187,20 @@ pub async fn handle_admin(
                         )
                         .await
                     {
-                        tracing::error!("Failed to add second ban record: {}", e);
+                        tracing::error!(
+                            tt_username = %u.username,
+                            error = %e,
+                            "Failed to add second ban record"
+                        );
                     }
                 }
                 if let Err(e) = state.tx_tt.send(TtCommand::BanUser { user_id }) {
-                    tracing::error!("Failed to send ban command for {}: {}", user_id, e);
+                    tracing::error!(
+                        user_id,
+                        tt_username = %u.username,
+                        error = %e,
+                        "Failed to send ban command"
+                    );
                     notify_admin_error(
                         &bot,
                         config,

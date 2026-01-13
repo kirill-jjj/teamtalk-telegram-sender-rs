@@ -24,15 +24,19 @@ pub async fn ensure_subscribed(
                 .parse_mode(ParseMode::Html)
                 .await
             {
-                tracing::error!("Failed to send not-subscribed message: {}", e);
+                tracing::error!(
+                    error = %e,
+                    chat_id = msg.chat.id.0,
+                    "Failed to send not-subscribed message"
+                );
             }
             false
         }
         Err(e) => {
             tracing::error!(
-                "Database error checking subscription for {}: {}",
-                msg.chat.id.0,
-                e
+                error = %e,
+                chat_id = msg.chat.id.0,
+                "Database error checking subscription"
             );
             notify_admin_error(
                 bot,
@@ -51,7 +55,11 @@ pub async fn ensure_subscribed(
                 .parse_mode(ParseMode::Html)
                 .await
             {
-                tracing::error!("Failed to send not-subscribed message: {}", e);
+                tracing::error!(
+                    error = %e,
+                    chat_id = msg.chat.id.0,
+                    "Failed to send error message"
+                );
             }
             false
         }
@@ -68,7 +76,7 @@ pub async fn check_db_err(
     lang: LanguageCode,
 ) -> ResponseResult<bool> {
     if let Err(e) = result {
-        tracing::error!("? Database Error: {:?}", e);
+        tracing::error!(error = ?e, "Database error");
         notify_admin_error(bot, config, user_id, context, &e.to_string(), lang).await;
 
         let error_text = locales::get_text(lang.as_str(), "cmd-error", None);
@@ -99,7 +107,7 @@ pub async fn notify_admin_error(
     );
     let text = locales::get_text(lang.as_str(), "admin-error-user", args.as_ref());
     if let Err(e) = bot.send_message(admin_chat_id, text).await {
-        tracing::error!("Failed to notify admin about error: {}", e);
+        tracing::error!(error = %e, "Failed to notify admin about error");
     }
 }
 

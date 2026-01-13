@@ -67,14 +67,19 @@ pub async fn send_sub_settings(
         match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
             Ok(s) => {
                 tracing::debug!(
-                    "[UI] Fetched settings for {}: enabled={}",
+                    component = "ui",
                     telegram_id,
-                    s.not_on_online_enabled
+                    enabled = s.not_on_online_enabled,
+                    "Fetched settings"
                 );
                 s
             }
             Err(e) => {
-                tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
+                tracing::error!(
+                    telegram_id,
+                    error = %e,
+                    "Failed to get or create user"
+                );
                 bot.edit_message_text(
                     msg.chat.id,
                     msg.id,
@@ -161,14 +166,19 @@ pub async fn send_notif_settings(
         match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
             Ok(s) => {
                 tracing::debug!(
-                    "[UI] Fetched settings for {}: enabled={}",
+                    component = "ui",
                     telegram_id,
-                    s.not_on_online_enabled
+                    enabled = s.not_on_online_enabled,
+                    "Fetched settings"
                 );
                 s
             }
             Err(e) => {
-                tracing::error!("Failed to get or create user {}: {}", telegram_id, e);
+                tracing::error!(
+                    telegram_id,
+                    error = %e,
+                    "Failed to get or create user"
+                );
                 bot.edit_message_text(
                     msg.chat.id,
                     msg.id,
@@ -329,7 +339,11 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
     let muted_users: Vec<String> = match args.db.get_muted_users_list(args.telegram_id).await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load muted users for {}: {}", args.telegram_id, e);
+            tracing::error!(
+                telegram_id = args.telegram_id,
+                error = %e,
+                "Failed to load muted users"
+            );
             Vec::new()
         }
     };

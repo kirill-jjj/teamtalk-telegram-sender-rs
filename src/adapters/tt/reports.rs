@@ -52,7 +52,7 @@ pub(super) fn handle_who_command(
 
     let mut report = String::with_capacity(1024);
     if let Err(e) = writeln!(report, "{}\n", header) {
-        tracing::error!("Failed to write who report header: {}", e);
+        tracing::error!(error = %e, "Failed to write who report header");
     }
 
     for (chan_name, mut nicks) in channels_data {
@@ -70,13 +70,13 @@ pub(super) fn handle_who_command(
         let row_text = locales::get_text(lang.as_str(), "tt-report-row", row_args.as_ref());
 
         if let Err(e) = writeln!(report, "{}", row_text) {
-            tracing::error!("Failed to write who report row: {}", e);
+            tracing::error!(error = %e, "Failed to write who report row");
         }
     }
     if !unauth_users.is_empty() {
         let unauth_label = locales::get_text(lang.as_str(), "tt-report-unauth", None);
         if let Err(e) = writeln!(report, "{} {}", unauth_users.join(", "), unauth_label) {
-            tracing::error!("Failed to write who report unauth row: {}", e);
+            tracing::error!(error = %e, "Failed to write who report unauth row");
         }
     }
 
@@ -84,6 +84,6 @@ pub(super) fn handle_who_command(
         chat_id,
         text: report.trim_end().to_string(),
     }) {
-        tracing::error!("Failed to send who report to bridge for {}: {}", chat_id, e);
+        tracing::error!(chat_id, error = %e, "Failed to send who report to bridge");
     }
 }

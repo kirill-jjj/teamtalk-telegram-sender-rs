@@ -150,13 +150,13 @@ fn encode_callback(action: &CallbackAction) -> String {
     let bytes = match postcard::to_stdvec(action) {
         Ok(bytes) => bytes,
         Err(e) => {
-            tracing::error!("Failed to serialize callback action: {}", e);
+            tracing::error!(error = %e, "Failed to serialize callback action");
             return "noop".to_string();
         }
     };
     let encoded = z85::encode(bytes);
     if encoded.len() > 64 {
-        tracing::error!("Callback data too long ({} bytes)", encoded.len());
+        tracing::error!(len = encoded.len(), "Callback data too long");
         return "noop".to_string();
     }
     encoded

@@ -16,7 +16,7 @@ pub(super) fn handle_sdk_event(
     reconnect_handler: &mut ReconnectHandler,
     ready_time: &mut Option<Instant>,
 ) {
-    tracing::trace!("📥 [TT_WORKER] Event received: {:?}", event);
+    tracing::trace!(component = "tt_worker", event = ?event, "Event received");
     let tt_config = &ctx.config.teamtalk;
 
     match event {
@@ -38,8 +38,9 @@ pub(super) fn handle_sdk_event(
             }
             *ready_time = None;
             tracing::warn!(
-                "❌ [TT_WORKER] Disconnection event ({:?}). Reconnect pending...",
-                e
+                component = "tt_worker",
+                event = ?e,
+                "Disconnection event; reconnect pending"
             );
         }
         Event::MySelfLoggedIn => {
@@ -55,9 +56,10 @@ pub(super) fn handle_sdk_event(
                     .join_channel(chan_id, tt_config.channel_password.as_deref().unwrap_or(""));
                 if cmd_id <= 0 {
                     tracing::error!(
-                        "[TT_WORKER] Failed to join channel '{}' (id={})",
-                        tt_config.channel,
-                        chan_id.0
+                        component = "tt_worker",
+                        channel = %tt_config.channel,
+                        channel_id = chan_id.0,
+                        "Failed to join channel"
                     );
                 }
             }
@@ -102,10 +104,11 @@ pub(super) fn handle_sdk_event(
 
                 if existing_lite_user.nickname != user.nickname {
                     tracing::info!(
-                        "🔄 [TT_WORKER] Nickname changed for {}: {} -> {}",
-                        user.username,
-                        existing_lite_user.nickname,
-                        user.nickname
+                        component = "tt_worker",
+                        username = %user.username,
+                        old_nick = %existing_lite_user.nickname,
+                        new_nick = %user.nickname,
+                        "Nickname changed"
                     );
                     existing_lite_user.nickname = user.nickname.clone();
                 }
@@ -191,7 +194,7 @@ pub(super) fn handle_sdk_event(
                         server_name,
                         related_tt_username: user.username.clone(),
                     }) {
-                        tracing::error!("Failed to send join broadcast: {}", e);
+                        tracing::error!(error = %e, "Failed to send join broadcast");
                     }
                 }
             }
@@ -247,7 +250,7 @@ pub(super) fn handle_sdk_event(
                                 server_name,
                                 related_tt_username: u.username.clone(),
                             }) {
-                                tracing::error!("Failed to send leave broadcast: {}", e);
+                                tracing::error!(error = %e, "Failed to send leave broadcast");
                             }
                         }
                     }

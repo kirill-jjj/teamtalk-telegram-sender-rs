@@ -79,8 +79,9 @@ pub async fn handle_subscriber_actions(
                 }
             };
 
+            let tt_user_for_ban = tt_user.clone();
             if let Err(e) = db
-                .add_ban(Some(sub_id), tt_user, Some("Admin Ban".to_string()))
+                .add_ban(Some(sub_id), tt_user_for_ban, Some("Admin Ban".to_string()))
                 .await
             {
                 check_db_err(
@@ -97,7 +98,12 @@ pub async fn handle_subscriber_actions(
             }
 
             if let Err(e) = subscriber_actions_service::delete_user(db, sub_id).await {
-                tracing::error!("Partial failure during ban: {}", e);
+                tracing::error!(
+                    telegram_id = sub_id,
+                    tt_username = ?tt_user,
+                    error = %e,
+                    "Partial failure during ban"
+                );
             }
 
             answer_callback(
@@ -145,7 +151,7 @@ pub async fn handle_subscriber_actions(
             list_page,
         } => {
             if let Err(e) = tx_tt.send(TtCommand::LoadAccounts) {
-                tracing::error!("Failed to request TT accounts: {}", e);
+                tracing::error!(error = %e, "Failed to request TT accounts");
                 notify_admin_error(
                     &bot,
                     config,

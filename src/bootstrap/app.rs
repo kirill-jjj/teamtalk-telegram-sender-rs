@@ -20,7 +20,7 @@ pub struct Application {
 
 impl Application {
     pub async fn build(config_path: String) -> Result<Self> {
-        tracing::info!("Loading config from: {}", config_path);
+        tracing::info!(path = %config_path, "Loading config");
 
         let config_content = std::fs::read_to_string(&config_path)?;
         let mut config: Config = toml::from_str(&config_content)?;
@@ -38,7 +38,7 @@ impl Application {
             .to_str()
             .ok_or_else(|| anyhow!("Invalid DB path"))?
             .to_string();
-        tracing::info!("Database path: {}", db_path_str);
+        tracing::info!(db_path = %db_path_str, "Database path");
 
         config.database.db_file = db_path_str.clone();
 
@@ -75,11 +75,11 @@ impl Application {
                     }
                     match db_for_cleanup.cleanup_expired_deeplinks().await {
                         Ok(count) if count > 0 => {
-                            tracing::info!("Cleaned up {} expired deeplinks.", count);
+                            tracing::info!(count, "Cleaned up expired deeplinks");
                         }
                         Ok(_) => {}
                         Err(e) => {
-                            tracing::error!("Failed to clean up expired deeplinks: {}", e);
+                            tracing::error!(error = %e, "Failed to clean up expired deeplinks");
                         }
                     }
                 }
@@ -104,11 +104,11 @@ impl Application {
                         .await
                     {
                         Ok(count) if count > 0 => {
-                            tracing::info!("Cleaned up {} pending replies.", count);
+                            tracing::info!(count, "Cleaned up pending replies");
                         }
                         Ok(_) => {}
                         Err(e) => {
-                            tracing::error!("Failed to clean up pending replies: {}", e);
+                            tracing::error!(error = %e, "Failed to clean up pending replies");
                         }
                     }
                     match db_for_pending_cleanup
@@ -116,11 +116,14 @@ impl Application {
                         .await
                     {
                         Ok(count) if count > 0 => {
-                            tracing::info!("Cleaned up {} pending channel replies.", count);
+                            tracing::info!(count, "Cleaned up pending channel replies");
                         }
                         Ok(_) => {}
                         Err(e) => {
-                            tracing::error!("Failed to clean up pending channel replies: {}", e);
+                            tracing::error!(
+                                error = %e,
+                                "Failed to clean up pending channel replies"
+                            );
                         }
                     }
                 }
@@ -145,20 +148,19 @@ impl Application {
             Some(Bot::new(token))
         } else {
             tracing::warn!(
-                "'event_token' missing. Telegram interactions and notifications disabled."
+                config_key = "event_token",
+                "Telegram interactions and notifications disabled"
             );
             None
         };
 
         let message_bot = if same_token {
-            tracing::info!(
-                "message_token matches event_token; using event bot for admin messages."
-            );
+            tracing::info!("message_token matches event_token; using event bot for admin messages");
             None
         } else if let Some(token) = &message_token {
             Some(Bot::new(token))
         } else {
-            tracing::warn!("'message_token' missing. Admin alerts disabled.");
+            tracing::warn!(config_key = "message_token", "Admin alerts disabled");
             None
         };
 
@@ -168,7 +170,7 @@ impl Application {
                 .username
                 .clone()
                 .ok_or_else(|| anyhow!("Bot must have a username!"))?;
-            tracing::info!("Interaction bot username: @{}", username);
+            tracing::info!(username = %username, "Interaction bot username");
             Some(username)
         } else {
             None
@@ -251,13 +253,13 @@ impl Application {
             let _ = bridge_handle.await;
             let _ = tt_handle.join();
         } else if let Err(e) = bridge_handle.await {
-            tracing::error!("Bridge task failed: {}", e);
+            tracing::error!(error = %e, "Bridge task failed");
             let _ = tt_handle.join();
         }
 
-        tracing::info!("[SHUTDOWN] Closing database pool...");
+        tracing::info!(component = "shutdown", "Closing database pool");
         db.close().await;
-        tracing::info!("[SHUTDOWN] Database pool closed.");
+        tracing::info!(component = "shutdown", "Database pool closed");
 
         Ok(())
     }
@@ -270,7 +272,7 @@ async fn wait_for_termination_signal() {
     let mut sigterm = match signal(SignalKind::terminate()) {
         Ok(sigterm) => sigterm,
         Err(e) => {
-            tracing::error!("Failed to register SIGTERM handler: {}", e);
+            tracing::error!(error = %e, "Failed to register SIGTERM handler");
             tokio::signal::ctrl_c().await.ok();
             return;
         }
@@ -284,7 +286,7 @@ async fn wait_for_termination_signal() {
 #[cfg(not(unix))]
 async fn wait_for_termination_signal() {
     if let Err(e) = tokio::signal::ctrl_c().await {
-        tracing::error!("Failed to listen for Ctrl+C: {}", e);
+        tracing::error!(error = %e, "Failed to listen for Ctrl+C");
     }
 }
 

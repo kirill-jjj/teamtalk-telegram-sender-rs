@@ -15,7 +15,7 @@ pub async fn send_unban_list(
     let entries = match db.get_banned_users().await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load banned users: {}", e);
+            tracing::error!(error = %e, "Failed to load banned users");
             Vec::new()
         }
     };
@@ -76,7 +76,7 @@ pub async fn edit_unban_list(
     let entries = match db.get_banned_users().await {
         Ok(list) => list,
         Err(e) => {
-            tracing::error!("Failed to load banned users: {}", e);
+            tracing::error!(error = %e, "Failed to load banned users");
             Vec::new()
         }
     };

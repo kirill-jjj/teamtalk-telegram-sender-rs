@@ -74,9 +74,9 @@ impl Database {
             Ok(res) => res,
             Err(e) => {
                 tracing::error!(
-                    "Failed to get user lang for tt_user '{}': {}",
-                    tt_username,
-                    e
+                    tt_username = %tt_username,
+                    error = %e,
+                    "Failed to get user language"
                 );
                 None
             }
@@ -96,9 +96,9 @@ impl Database {
             Ok(res) => res.flatten(),
             Err(e) => {
                 tracing::error!(
-                    "Failed to get telegram_id for tt_user '{}': {}",
-                    tt_username,
-                    e
+                    tt_username = %tt_username,
+                    error = %e,
+                    "Failed to get telegram id for TeamTalk user"
                 );
                 None
             }
@@ -116,9 +116,9 @@ impl Database {
             Ok(res) => res.flatten(),
             Err(e) => {
                 tracing::error!(
-                    "Failed to get tt_user for telegram_id '{}': {}",
                     telegram_id,
-                    e
+                    error = %e,
+                    "Failed to get TeamTalk username for telegram id"
                 );
                 None
             }
@@ -170,10 +170,11 @@ impl Database {
         let new_int = if new_bool { 1 } else { 0 };
 
         tracing::debug!(
-            "[DB] Toggling NOON for {}: current={}, new_bool={}",
+            component = "db",
             telegram_id,
-            current_val,
-            new_bool
+            current = current_val,
+            new_value = new_bool,
+            "Toggling NOON"
         );
 
         sqlx::query!(

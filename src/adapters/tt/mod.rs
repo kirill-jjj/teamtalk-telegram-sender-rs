@@ -113,15 +113,18 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     let client = match Client::new() {
         Ok(c) => {
             if let Err(e) = tx_init.send(Ok(())) {
-                tracing::error!("Failed to signal TT init success: {}", e);
+                tracing::error!(error = %e, "Failed to signal TT init success");
             }
             c
         }
         Err(e) => {
             let err_msg = format!("Failed to initialize TeamTalk SDK: {}", e);
-            tracing::error!("{}", err_msg);
+            tracing::error!(error = %e, "Failed to initialize TeamTalk SDK");
             if let Err(send_err) = tx_init.send(Err(err_msg)) {
-                tracing::error!("Failed to signal TT init failure: {}", send_err);
+                tracing::error!(
+                    error = %send_err,
+                    "Failed to signal TT init failure"
+                );
             }
             return;
         }
@@ -161,10 +164,11 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     };
 
     tracing::info!(
-        "🔌 [TT_WORKER] Connecting to {}:{} (Encrypted: {})...",
-        tt_config.host_name,
-        tt_config.port,
-        tt_config.encrypted
+        component = "tt_worker",
+        host = %tt_config.host_name,
+        port = tt_config.port,
+        encrypted = tt_config.encrypted,
+        "Connecting to TeamTalk"
     );
 
     if let Err(e) = client.connect(
@@ -174,11 +178,11 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         connect_params.encrypted,
     ) {
         tracing::error!(
-            "TT connect failed to {}:{} (encrypted={}): {}",
-            connect_params.host,
-            connect_params.tcp,
-            connect_params.encrypted,
-            e
+            host = %connect_params.host,
+            port = connect_params.tcp,
+            encrypted = connect_params.encrypted,
+            error = %e,
+            "TeamTalk connect failed"
         );
     }
 
@@ -205,7 +209,10 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
             };
             let started = client.start_streaming_ex(&item.file_path, &playback, None);
             if !started {
-                tracing::error!("Failed to start streaming: {}", item.file_path);
+                tracing::error!(
+                    file_path = %item.file_path,
+                    "Failed to start streaming"
+                );
                 let delete_path = item.file_path.clone();
                 std::thread::spawn(move || {
                     let _ = std::fs::remove_file(&delete_path);
@@ -229,9 +236,9 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                             attempts += 1;
                             if attempts >= 10 {
                                 tracing::error!(
-                                    "Failed to delete streamed file {}: {}",
-                                    delete_path,
-                                    e
+                                    file_path = %delete_path,
+                                    error = %e,
+                                    "Failed to delete streamed file"
                                 );
                                 break;
                             }
@@ -346,18 +353,21 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                     reports::handle_who_command(&client, &ctx, chat_id, lang);
                 }
                 TtCommand::LoadAccounts => {
-                    tracing::info!("📥 [TT_WORKER] Requesting full user accounts list...");
+                    tracing::info!(
+                        component = "tt_worker",
+                        "Requesting full user accounts list"
+                    );
                     client.list_user_accounts(0, 1000);
                 }
             }
         }
         if shutdown {
-            tracing::info!("[TT_WORKER] Shutdown requested.");
+            tracing::info!(component = "tt_worker", "Shutdown requested");
             if current_stream.is_some() {
-                tracing::info!("[TT_WORKER] Stopping active stream...");
+                tracing::info!(component = "tt_worker", "Stopping active stream");
                 client.stop_streaming();
             }
-            tracing::info!("[TT_WORKER] Logging out...");
+            tracing::info!(component = "tt_worker", "Logging out");
             client.logout();
             break;
         }
@@ -402,6 +412,6 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
             );
         }
     }
-    tracing::info!("[TT_WORKER] Disconnecting...");
+    tracing::info!(component = "tt_worker", "Disconnecting");
     let _ = client.disconnect();
 }
