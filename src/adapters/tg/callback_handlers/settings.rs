@@ -38,15 +38,13 @@ pub async fn handle_settings(
                     "🇷🇺 Русский",
                     CallbackAction::Settings(SettingsAction::LangSet {
                         lang: LanguageCode::Ru,
-                    })
-                    .to_string(),
+                    }),
                 )],
                 vec![callback_button(
                     "🇬🇧 English",
                     CallbackAction::Settings(SettingsAction::LangSet {
                         lang: LanguageCode::En,
-                    })
-                    .to_string(),
+                    }),
                 )],
                 vec![back_button(
                     lang,

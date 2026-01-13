@@ -1,11 +1,11 @@
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use anyhow::{Result, anyhow};
 use base64::Engine;
+use derive_more::From;
 use serde::{Deserialize, Serialize};
-use std::fmt;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, From)]
 pub enum CallbackAction {
     Menu(MenuAction),
     Admin(AdminAction),
@@ -133,6 +133,20 @@ pub enum UnsubAction {
     Cancel,
 }
 
+pub trait AsCallbackData {
+    fn to_data(&self) -> String;
+}
+
+impl<T> AsCallbackData for T
+where
+    T: Clone + Into<CallbackAction>,
+{
+    fn to_data(&self) -> String {
+        let action: CallbackAction = self.clone().into();
+        encode_callback(&action)
+    }
+}
+
 fn encode_callback(action: &CallbackAction) -> String {
     let bytes = match postcard::to_stdvec(action) {
         Ok(bytes) => bytes,
@@ -147,73 +161,6 @@ fn encode_callback(action: &CallbackAction) -> String {
         return "noop".to_string();
     }
     encoded
-}
-
-impl fmt::Display for CallbackAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let encoded = encode_callback(self);
-        write!(f, "{}", encoded)
-    }
-}
-
-impl fmt::Display for MenuAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            encode_callback(&CallbackAction::Menu(self.clone()))
-        )
-    }
-}
-
-impl fmt::Display for AdminAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            encode_callback(&CallbackAction::Admin(self.clone()))
-        )
-    }
-}
-
-impl fmt::Display for SettingsAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            encode_callback(&CallbackAction::Settings(self.clone()))
-        )
-    }
-}
-
-impl fmt::Display for SubAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            encode_callback(&CallbackAction::Subscriber(self.clone()))
-        )
-    }
-}
-
-impl fmt::Display for MuteAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            encode_callback(&CallbackAction::Mute(self.clone()))
-        )
-    }
-}
-
-impl fmt::Display for UnsubAction {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            encode_callback(&CallbackAction::Unsub(self.clone()))
-        )
-    }
 }
 
 impl FromStr for CallbackAction {

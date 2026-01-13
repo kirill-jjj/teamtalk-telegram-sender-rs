@@ -45,8 +45,7 @@ pub async fn send_sub_manage_tt_menu(
             CallbackAction::Subscriber(SubAction::Unlink {
                 sub_id,
                 page: return_page,
-            })
-            .to_string(),
+            }),
         )]);
     }
     buttons.push(vec![callback_button(
@@ -55,8 +54,7 @@ pub async fn send_sub_manage_tt_menu(
             sub_id,
             page: return_page,
             list_page: 0,
-        })
-        .to_string(),
+        }),
     )]);
     buttons.push(vec![back_button(
         lang,
@@ -152,8 +150,7 @@ pub async fn send_sub_lang_menu(
                     "ru" => LanguageCode::Ru,
                     _ => LanguageCode::En,
                 },
-            })
-            .to_string(),
+            }),
         )
     };
 
@@ -199,7 +196,6 @@ pub async fn send_sub_notif_menu(
             page: return_page,
             val,
         })
-        .to_string()
     };
 
     let keyboard = InlineKeyboardMarkup::new(vec![
@@ -248,7 +244,6 @@ pub async fn send_sub_mute_mode_menu(
             page: return_page,
             mode,
         })
-        .to_string()
     };
 
     let keyboard = InlineKeyboardMarkup::new(vec![

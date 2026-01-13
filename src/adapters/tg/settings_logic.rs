@@ -118,7 +118,7 @@ pub async fn send_sub_settings(
     );
 
     let mk_act = |val: NotificationSetting| {
-        CallbackAction::Settings(SettingsAction::SubSet { setting: val }).to_string()
+        CallbackAction::Settings(SettingsAction::SubSet { setting: val })
     };
 
     let keyboard = InlineKeyboardMarkup::new(vec![
@@ -192,11 +192,11 @@ pub async fn send_notif_settings(
     let keyboard = InlineKeyboardMarkup::new(vec![
         vec![callback_button(
             noon_text,
-            CallbackAction::Settings(SettingsAction::NoonToggle).to_string(),
+            CallbackAction::Settings(SettingsAction::NoonToggle),
         )],
         vec![callback_button(
             locales::get_text(lang.as_str(), "btn-mute-manage", None),
-            CallbackAction::Settings(SettingsAction::MuteManage).to_string(),
+            CallbackAction::Settings(SettingsAction::MuteManage),
         )],
         vec![back_button(
             lang,
@@ -272,24 +272,22 @@ pub async fn send_mute_menu(
                 btn_bl_text,
                 CallbackAction::Mute(MuteAction::ModeSet {
                     mode: MuteListMode::Blacklist,
-                })
-                .to_string(),
+                }),
             ),
             callback_button(
                 btn_wl_text,
                 CallbackAction::Mute(MuteAction::ModeSet {
                     mode: MuteListMode::Whitelist,
-                })
-                .to_string(),
+                }),
             ),
         ],
         vec![callback_button(
             btn_manage_text,
-            CallbackAction::Mute(MuteAction::List { page: 0 }).to_string(),
+            CallbackAction::Mute(MuteAction::List { page: 0 }),
         )],
         vec![callback_button(
             locales::get_text(lang.as_str(), "btn-mute-server-list", None),
-            CallbackAction::Mute(MuteAction::ServerList { page: 0 }).to_string(),
+            CallbackAction::Mute(MuteAction::ServerList { page: 0 }),
         )],
         vec![back_button(
             lang,

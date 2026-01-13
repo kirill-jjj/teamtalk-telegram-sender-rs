@@ -241,7 +241,7 @@ pub async fn send_subscriber_details(
     let btn = |text_key: &str, action: SubAction| {
         callback_button(
             locales::get_text(lang.as_str(), text_key, None),
-            CallbackAction::Subscriber(action).to_string(),
+            CallbackAction::Subscriber(action),
         )
     };
 
