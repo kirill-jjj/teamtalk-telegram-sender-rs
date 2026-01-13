@@ -109,6 +109,18 @@ Run the executable. You can optionally specify the config file path:
 
 On the first run, the bot will automatically create the SQLite database file (`bot_data.db`) and apply all necessary migrations.
 
+## 🐳 Docker
+
+Build and run with a mounted config and persistent data:
+
+```bash
+docker build -t teamtalk-telegram-sender-rs .
+docker run --rm \
+  -v "$PWD/config.toml:/app/config.toml:ro" \
+  -v "$PWD/data:/app/data" \
+  teamtalk-telegram-sender-rs --config /app/config.toml
+```
+
 ## 🤖 Bot Commands
 
 ### User Commands

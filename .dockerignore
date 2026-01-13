@@ -1,0 +1,14 @@
+.git
+.gitignore
+.github
+target
+.sqlx
+*.md
+*.log
+*.tmp
+*.bak
+node_modules
+dist
+build
+.vscode
+.idea
