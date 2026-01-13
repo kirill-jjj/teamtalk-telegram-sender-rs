@@ -4,7 +4,6 @@ use crate::adapters::tg::settings_logic::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err, notify_admin_error};
-use crate::app::services::mute as mute_service;
 use crate::args;
 use crate::core::callbacks::MuteAction;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
@@ -32,7 +31,7 @@ pub async fn handle_mute(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                mute_service::update_mode(db, telegram_id, mode.clone()).await,
+                db.update_mute_mode(telegram_id, mode.clone()).await,
                 config,
                 telegram_id,
                 AdminErrorContext::Callback,
@@ -59,7 +58,7 @@ pub async fn handle_mute(
             send_mute_menu(&bot, msg, lang, mode).await?;
         }
         MuteAction::List { page } => {
-            let muted = match mute_service::list_muted_users(db, telegram_id).await {
+            let muted = match db.get_muted_users_list(telegram_id).await {
                 Ok(list) => list,
                 Err(e) => {
                     tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
@@ -79,7 +78,7 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::Toggle { username, page } => {
-            if let Err(e) = mute_service::toggle_mute(db, telegram_id, username.as_str()).await {
+            if let Err(e) = db.toggle_muted_user(telegram_id, username.as_str()).await {
                 check_db_err(
                     &bot,
                     &q.id.0,
@@ -102,7 +101,8 @@ pub async fn handle_mute(
             )
             .await?;
 
-            let muted = mute_service::list_muted_users(db, telegram_id)
+            let muted = db
+                .get_muted_users_list(telegram_id)
                 .await
                 .unwrap_or_else(|e| {
                     tracing::error!("Failed to load muted users for {}: {}", telegram_id, e);
@@ -157,7 +157,7 @@ pub async fn handle_mute(
             .await?;
         }
         MuteAction::ServerToggle { username, page } => {
-            if let Err(e) = mute_service::toggle_mute(db, telegram_id, username.as_str()).await {
+            if let Err(e) = db.toggle_muted_user(telegram_id, username.as_str()).await {
                 check_db_err(
                     &bot,
                     &q.id.0,

@@ -19,7 +19,7 @@ pub struct BridgeContext {
     pub msg_bot: Option<Bot>,
     pub message_token_present: bool,
     pub tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
-    pub shutdown: tokio::sync::watch::Receiver<bool>,
+    pub cancel_token: tokio_util::sync::CancellationToken,
 }
 
 pub async fn run_bridge(
@@ -34,16 +34,16 @@ pub async fn run_bridge(
         msg_bot,
         message_token_present,
         tx_tt_cmd,
-        mut shutdown,
+        cancel_token,
     } = ctx;
     let default_lang =
         LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
 
-    tracing::info!("🌉 [BRIDGE] Bridge task started.");
+    tracing::info!("[BRIDGE] Bridge task started.");
     loop {
         let event = tokio::select! {
-            _ = shutdown.changed() => {
+            _ = cancel_token.cancelled() => {
                 break;
             }
             maybe_event = rx_bridge.recv() => {
@@ -143,12 +143,23 @@ pub async fn run_bridge(
                                     ApiError::BotBlocked |
                                     ApiError::UserDeactivated |
                                     ApiError::ChatNotFound => {
-                                        tracing::info!("🗑️ [BRIDGE] Cleaning up: User {} is no longer reachable ({:?}).", sub.telegram_id, api_err);
+                                        tracing::info!(
+                                            "[BRIDGE] Cleaning up: user {} is no longer reachable ({:?}).",
+                                            sub.telegram_id,
+                                            api_err
+                                        );
 
                                         if let Err(db_err) = db_for_closure.delete_user_profile(sub.telegram_id).await {
-                                            tracing::error!("❌ [BRIDGE] DB error during auto-cleanup for {}: {}", sub.telegram_id, db_err);
+                                            tracing::error!(
+                                                "[BRIDGE] DB error during auto-cleanup for {}: {}",
+                                                sub.telegram_id,
+                                                db_err
+                                            );
                                         } else {
-                                            tracing::info!("✅ [BRIDGE] Profile for {} removed successfully.", sub.telegram_id);
+                                            tracing::info!(
+                                                "[BRIDGE] Profile for {} removed successfully.",
+                                                sub.telegram_id
+                                            );
                                         }
                                     },
                                     _ => {}

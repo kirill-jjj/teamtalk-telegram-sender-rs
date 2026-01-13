@@ -4,7 +4,6 @@ use crate::adapters::tg::settings_logic::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err};
-use crate::app::services::settings as settings_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
@@ -67,7 +66,7 @@ pub async fn handle_settings(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                settings_service::update_language(db, telegram_id, new_lang).await,
+                db.update_language(telegram_id, new_lang).await,
                 config,
                 telegram_id,
                 AdminErrorContext::Callback,
@@ -90,8 +89,9 @@ pub async fn handle_settings(
             send_sub_settings(&bot, &msg, db, telegram_id, lang).await?;
         }
         SettingsAction::SubSet { setting } => {
-            let res =
-                settings_service::update_notifications(db, telegram_id, setting.clone()).await;
+            let res = db
+                .update_notification_setting(telegram_id, setting.clone())
+                .await;
             if check_db_err(
                 &bot,
                 &q.id.0,
@@ -161,7 +161,7 @@ pub async fn handle_settings(
                 return Ok(());
             }
 
-            match settings_service::toggle_noon(db, telegram_id).await {
+            match db.toggle_noon(telegram_id).await {
                 Ok(new_val) => {
                     let status = if new_val {
                         locales::get_text(lang.as_str(), "status-enabled", None)

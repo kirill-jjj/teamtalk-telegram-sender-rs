@@ -1,5 +1,4 @@
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
-use crate::app::services::admin as admin_service;
 use crate::app::services::messages as messages_service;
 use crate::args;
 use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand};
@@ -310,7 +309,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = match admin_service::add_admin(&db, tg_id).await {
+                        let success = match db.add_admin(tg_id).await {
                             Ok(val) => val,
                             Err(e) => {
                                 tracing::error!("DB error adding admin {}: {}", tg_id, e);
@@ -355,7 +354,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = match admin_service::remove_admin(&db, tg_id).await {
+                        let success = match db.remove_admin(tg_id).await {
                             Ok(val) => val,
                             Err(e) => {
                                 tracing::error!("DB error removing admin {}: {}", tg_id, e);

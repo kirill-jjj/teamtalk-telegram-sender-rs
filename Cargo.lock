@@ -3134,6 +3134,7 @@ dependencies = [
  "teamtalk",
  "teloxide",
  "tokio",
+ "tokio-util",
  "toml",
  "tracing",
  "tracing-futures",

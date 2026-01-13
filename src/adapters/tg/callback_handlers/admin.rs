@@ -6,7 +6,6 @@ use crate::adapters::tg::utils::{
     answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
 };
 use crate::app::services::admin_cleanup as admin_cleanup_service;
-use crate::app::services::bans as bans_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
@@ -168,13 +167,13 @@ pub async fn handle_admin(
                     {
                         tracing::error!("Failed to delete user profile during ban: {}", e);
                     }
-                    if let Err(e) = bans_service::add_ban(
-                        db,
-                        Some(tg_id),
-                        Some(u.username.clone()),
-                        Some("TG+TT Ban".to_string()),
-                    )
-                    .await
+                    if let Err(e) = db
+                        .add_ban(
+                            Some(tg_id),
+                            Some(u.username.clone()),
+                            Some("TG+TT Ban".to_string()),
+                        )
+                        .await
                     {
                         tracing::error!("Failed to add second ban record: {}", e);
                     }
@@ -220,7 +219,7 @@ pub async fn handle_admin(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                bans_service::remove_ban(db, ban_db_id).await,
+                db.remove_ban_by_id(ban_db_id).await,
                 config,
                 q.from.id.0 as i64,
                 AdminErrorContext::Callback,

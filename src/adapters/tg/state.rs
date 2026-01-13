@@ -14,5 +14,5 @@ pub struct AppState {
     pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     pub tx_tt: Sender<TtCommand>,
     pub config: Arc<Config>,
-    pub shutdown_tx: tokio::sync::watch::Sender<bool>,
+    pub cancel_token: tokio_util::sync::CancellationToken,
 }

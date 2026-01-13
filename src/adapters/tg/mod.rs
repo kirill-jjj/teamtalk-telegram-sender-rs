@@ -8,7 +8,6 @@ pub mod state;
 pub mod utils;
 
 use crate::adapters::tg::utils::notify_admin_error;
-use crate::app::services::admin as admin_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::bootstrap::config::Config;
 use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
@@ -35,8 +34,7 @@ pub struct TgRunArgs {
     pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub config: Arc<Config>,
-    pub shutdown: tokio::sync::watch::Receiver<bool>,
-    pub shutdown_tx: tokio::sync::watch::Sender<bool>,
+    pub cancel_token: tokio_util::sync::CancellationToken,
 }
 
 pub async fn run_tg_bot(args: TgRunArgs) {
@@ -48,8 +46,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         user_accounts,
         tx_tt_cmd,
         config,
-        shutdown,
-        shutdown_tx,
+        cancel_token,
     } = args;
     let state = AppState {
         db: db.clone(),
@@ -57,7 +54,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         user_accounts,
         tx_tt: tx_tt_cmd,
         config: config.clone(),
-        shutdown_tx,
+        cancel_token: cancel_token.clone(),
     };
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
@@ -79,7 +76,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
     let msg_handle = message_bot.map(|msg_bot| {
         let admin_bot = msg_bot.clone();
         let admin_config = config.clone();
-        let mut shutdown = shutdown.clone();
+        let cancel_token = cancel_token.clone();
         tokio::spawn(async move {
             let msg_handler =
                 dptree::entry().branch(Update::filter_message().endpoint(commands::answer_message));
@@ -115,9 +112,8 @@ pub async fn run_tg_bot(args: TgRunArgs) {
                 .build();
             let shutdown_token = dispatcher.shutdown_token();
             let shutdown_task = tokio::spawn(async move {
-                if shutdown.changed().await.is_ok()
-                    && let Ok(fut) = shutdown_token.shutdown()
-                {
+                cancel_token.cancelled().await;
+                if let Ok(fut) = shutdown_token.shutdown() {
                     fut.await;
                 }
             });
@@ -157,11 +153,10 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         }))
         .build();
     let shutdown_token = dispatcher.shutdown_token();
-    let mut shutdown = shutdown.clone();
+    let cancel_token = cancel_token.clone();
     let shutdown_task = tokio::spawn(async move {
-        if shutdown.changed().await.is_ok()
-            && let Ok(fut) = shutdown_token.shutdown()
-        {
+        cancel_token.cancelled().await;
+        if let Ok(fut) = shutdown_token.shutdown() {
             fut.await;
         }
     });
@@ -198,7 +193,7 @@ async fn set_bot_commands(
             .await?;
     }
 
-    let mut admin_ids = match admin_service::list_admins(db).await {
+    let mut admin_ids = match db.get_all_admins().await {
         Ok(ids) => ids,
         Err(e) => {
             tracing::error!("Failed to load admin list: {}", e);

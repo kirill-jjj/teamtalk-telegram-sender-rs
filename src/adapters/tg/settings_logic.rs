@@ -1,7 +1,6 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, back_button_keyboard, callback_button, create_user_list_keyboard,
 };
-use crate::app::services::mute as mute_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, MuteAction, SettingsAction};
@@ -329,14 +328,13 @@ pub struct RenderMuteListStringsArgs<'a> {
 }
 
 pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()> {
-    let muted_users: Vec<String> =
-        match mute_service::list_muted_users(args.db, args.telegram_id).await {
-            Ok(list) => list,
-            Err(e) => {
-                tracing::error!("Failed to load muted users for {}: {}", args.telegram_id, e);
-                Vec::new()
-            }
-        };
+    let muted_users: Vec<String> = match args.db.get_muted_users_list(args.telegram_id).await {
+        Ok(list) => list,
+        Err(e) => {
+            tracing::error!("Failed to load muted users for {}: {}", args.telegram_id, e);
+            Vec::new()
+        }
+    };
     let muted_set: std::collections::HashSet<_> = muted_users.into_iter().collect();
 
     let keyboard = create_user_list_keyboard(

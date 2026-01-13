@@ -9,8 +9,6 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
     answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
 };
-use crate::app::services::bans as bans_service;
-use crate::app::services::settings as settings_service;
 use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::args;
 use crate::core::callbacks::SubAction;
@@ -63,7 +61,7 @@ pub async fn handle_subscriber_actions(
             edit_subscribers_list(&bot, &msg, db, lang, page).await?;
         }
         SubAction::Ban { sub_id, page } => {
-            let tt_user_res = bans_service::get_tt_username_by_telegram_id(db, sub_id).await;
+            let tt_user_res = db.get_tt_username_by_telegram_id(sub_id).await;
             let tt_user = match tt_user_res {
                 Ok(u) => u,
                 Err(e) => {
@@ -81,9 +79,9 @@ pub async fn handle_subscriber_actions(
                 }
             };
 
-            if let Err(e) =
-                bans_service::add_ban(db, Some(sub_id), tt_user, Some("Admin Ban".to_string()))
-                    .await
+            if let Err(e) = db
+                .add_ban(Some(sub_id), tt_user, Some("Admin Ban".to_string()))
+                .await
             {
                 check_db_err(
                     &bot,
@@ -203,7 +201,7 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                settings_service::update_language(db, sub_id, new_lang).await,
+                db.update_language(sub_id, new_lang).await,
                 config,
                 q.from.id.0 as i64,
                 AdminErrorContext::Callback,
@@ -260,7 +258,7 @@ pub async fn handle_subscriber_actions(
             if check_db_err(
                 &bot,
                 &q.id.0,
-                settings_service::toggle_noon(db, sub_id).await.map(|_| ()),
+                db.toggle_noon(sub_id).await.map(|_| ()),
                 config,
                 q.from.id.0 as i64,
                 AdminErrorContext::Callback,

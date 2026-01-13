@@ -1,7 +1,6 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, callback_button, create_user_list_keyboard,
 };
-use crate::app::services::mute as mute_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
@@ -280,7 +279,7 @@ pub async fn send_sub_mute_list(
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
-    let muted: Vec<String> = match mute_service::list_muted_users(db, target_id).await {
+    let muted: Vec<String> = match db.get_muted_users_list(target_id).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load muted users for {}: {}", target_id, e);

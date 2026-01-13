@@ -6,7 +6,6 @@ use crate::adapters::tg::keyboards::{
 use crate::adapters::tg::settings_logic::send_main_settings;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{ensure_subscribed, notify_admin_error, send_text_key};
-use crate::app::services::admin as admin_service;
 use crate::app::services::deeplink as deeplink_service;
 use crate::app::services::pending as pending_service;
 use crate::app::services::subscription as subscription_service;
@@ -91,8 +90,8 @@ pub async fn answer_command(
     let is_admin = if telegram_id == config.telegram.admin_chat_id {
         true
     } else {
-        match admin_service::is_admin(db, telegram_id).await {
-            Ok(val) => val,
+        match db.get_all_admins().await {
+            Ok(admins) => admins.contains(&telegram_id),
             Err(e) => {
                 tracing::error!("Failed to load admin list: {}", e);
                 false
@@ -344,7 +343,8 @@ pub async fn answer_command(
                 locales::get_text(lang.as_str(), "cmd-shutting-down", None),
             )
             .await?;
-            crate::core::shutdown::request_shutdown(&state.shutdown_tx, &state.tx_tt);
+            let _ = state.tx_tt.send(TtCommand::Shutdown);
+            state.cancel_token.cancel();
         }
     }
     Ok(())
@@ -363,8 +363,8 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
     let is_admin = if telegram_id == config.telegram.admin_chat_id {
         true
     } else {
-        match admin_service::is_admin(db, telegram_id).await {
-            Ok(val) => val,
+        match db.get_all_admins().await {
+            Ok(admins) => admins.contains(&telegram_id),
             Err(e) => {
                 tracing::error!("Failed to load admin list: {}", e);
                 false
