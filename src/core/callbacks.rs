@@ -1,6 +1,5 @@
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use anyhow::{Result, anyhow};
-use base64::Engine;
 use derive_more::From;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -155,7 +154,7 @@ fn encode_callback(action: &CallbackAction) -> String {
             return "noop".to_string();
         }
     };
-    let encoded = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(bytes);
+    let encoded = z85::encode(bytes);
     if encoded.len() > 64 {
         tracing::error!("Callback data too long ({} bytes)", encoded.len());
         return "noop".to_string();
@@ -170,9 +169,8 @@ impl FromStr for CallbackAction {
         if s == "noop" {
             return Ok(CallbackAction::NoOp);
         }
-        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
-            .decode(s)
-            .map_err(|e| anyhow!("Invalid callback encoding: {}", e))?;
+        let bytes =
+            z85::decode(s.as_bytes()).map_err(|e| anyhow!("Invalid callback encoding: {}", e))?;
         postcard::from_bytes(&bytes).map_err(|e| anyhow!("Invalid callback data: {}", e))
     }
 }
