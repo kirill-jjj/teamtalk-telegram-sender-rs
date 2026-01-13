@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0]
+### Breaking
+- Callback payloads now use Z85 encoding instead of base64; old inline buttons
+  from previous releases will no longer decode.
+
+### Added
+- Bootstrap application runner to centralize startup/shutdown wiring.
+- Dockerfile and .dockerignore for container builds.
+
+### Changed
+- Removed proxy-only app services in favor of direct database calls.
+- Simplified callback serialization helpers and keyboard usage.
+
 ## [0.4.2]
 ### Fixed
 - Route admin messages based on token presence and equality.
