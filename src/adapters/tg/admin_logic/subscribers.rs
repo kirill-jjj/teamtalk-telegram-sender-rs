@@ -2,7 +2,6 @@ use crate::adapters::tg::admin_logic::utils::format_tg_user;
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, callback_button, create_user_list_keyboard,
 };
-use crate::app::services::subscribers as subscribers_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
@@ -25,7 +24,7 @@ pub async fn send_subscribers_list(
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
-    let subs = match subscribers_service::list_subscribers(db).await {
+    let subs = match db.get_subscribers().await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load subscribers: {}", e);
@@ -86,7 +85,7 @@ pub async fn edit_subscribers_list(
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
-    let subs = match subscribers_service::list_subscribers(db).await {
+    let subs = match db.get_subscribers().await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!("Failed to load subscribers: {}", e);
@@ -177,7 +176,8 @@ pub async fn send_subscriber_details(
     sub_id: i64,
     return_page: usize,
 ) -> ResponseResult<()> {
-    let settings = subscribers_service::get_user_settings(db, sub_id, LanguageCode::En)
+    let settings = db
+        .get_or_create_user(sub_id, LanguageCode::En)
         .await
         .unwrap_or_else(|e| {
             tracing::error!("Failed to load subscriber settings for {}: {}", sub_id, e);

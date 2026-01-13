@@ -1,5 +1,4 @@
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
-use crate::app::services::messages as messages_service;
 use crate::args;
 use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand};
 use crate::infra::locales;
@@ -50,7 +49,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     String::new()
                 };
                 let reply_lang = if !username.is_empty() {
-                    messages_service::get_user_lang_by_tt_user(&db, &username)
+                    db.get_user_lang_by_tt_user(&username)
                         .await
                         .unwrap_or(default_lang)
                 } else {
@@ -64,10 +63,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false)
                 {
                     true
-                } else if let Some(tg_id) =
-                    messages_service::get_telegram_id_by_tt_user(&db, &username).await
-                {
-                    messages_service::list_admins(&db)
+                } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
+                    db.get_all_admins()
                         .await
                         .map(|admins| admins.contains(&tg_id))
                         .unwrap_or(false)
@@ -129,7 +126,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             tracing::info!("💬 [TT_WORKER] Msg from {}: {}", nick, content);
 
             let reply_lang = if !username.is_empty() {
-                messages_service::get_user_lang_by_tt_user(&db, &username)
+                db.get_user_lang_by_tt_user(&username)
                     .await
                     .unwrap_or(default_lang)
             } else {
@@ -170,7 +167,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     let expected_telegram_id = if username.is_empty() {
                         None
                     } else {
-                        messages_service::get_telegram_id_by_tt_user(&db, &username).await
+                        db.get_telegram_id_by_tt_user(&username).await
                     };
                     let res = db
                         .create_deeplink(
@@ -210,7 +207,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     let expected_telegram_id = if username.is_empty() {
                         None
                     } else {
-                        messages_service::get_telegram_id_by_tt_user(&db, &username).await
+                        db.get_telegram_id_by_tt_user(&username).await
                     };
                     let res = db
                         .create_deeplink(
@@ -267,10 +264,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false)
                 {
                     true
-                } else if let Some(tg_id) =
-                    messages_service::get_telegram_id_by_tt_user(&db, &username).await
-                {
-                    messages_service::list_admins(&db)
+                } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
+                    db.get_all_admins()
                         .await
                         .map(|admins| admins.contains(&tg_id))
                         .unwrap_or(false)
