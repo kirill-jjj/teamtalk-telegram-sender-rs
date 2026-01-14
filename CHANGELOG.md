@@ -15,6 +15,16 @@ All notable changes to this project will be documented in this file.
 - Removed proxy-only app services in favor of direct database calls.
 - Simplified callback serialization helpers and keyboard usage.
 
+## [0.6.1]
+### Added
+- Configurable log level via `general.log_level` in `config.toml`.
+
+### Changed
+- Structured tracing fields across TG/TT/bridge/DB logs for better filtering.
+
+### Fixed
+- Corrected "Join/Leave Only" subscription label mappings in settings UI.
+
 ## [0.4.2]
 ### Fixed
 - Route admin messages based on token presence and equality.
