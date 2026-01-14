@@ -7,6 +7,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release --locked
+RUN rm -rf src
+
 COPY . .
 
 ENV SQLX_OFFLINE=true
