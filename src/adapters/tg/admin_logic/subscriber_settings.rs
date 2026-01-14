@@ -206,11 +206,11 @@ pub async fn send_sub_notif_menu(
         vec![callback_button(btn_all, mk_act(NotificationSetting::All))],
         vec![callback_button(
             btn_join,
-            mk_act(NotificationSetting::JoinOff),
+            mk_act(NotificationSetting::LeaveOff),
         )],
         vec![callback_button(
             btn_leave,
-            mk_act(NotificationSetting::LeaveOff),
+            mk_act(NotificationSetting::JoinOff),
         )],
         vec![callback_button(btn_none, mk_act(NotificationSetting::None))],
         vec![back_button(

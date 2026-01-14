@@ -212,10 +212,10 @@ pub async fn send_subscriber_details(
             locales::get_text(lang.as_str(), "btn-sub-all", args!(marker = "").as_ref())
         }
         NotificationSetting::JoinOff => {
-            locales::get_text(lang.as_str(), "btn-sub-join", args!(marker = "").as_ref())
+            locales::get_text(lang.as_str(), "btn-sub-leave", args!(marker = "").as_ref())
         }
         NotificationSetting::LeaveOff => {
-            locales::get_text(lang.as_str(), "btn-sub-leave", args!(marker = "").as_ref())
+            locales::get_text(lang.as_str(), "btn-sub-join", args!(marker = "").as_ref())
         }
         NotificationSetting::None => {
             locales::get_text(lang.as_str(), "btn-sub-none", args!(marker = "").as_ref())
