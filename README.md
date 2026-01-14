@@ -89,6 +89,7 @@ admin_chat_id = 123456789
 [general]
 admin_username = "MainAdminTTAccount"
 default_lang = "en" # 'en' or 'ru'
+log_level = "info" # trace|debug|info|warn|error
 
 [operational_parameters]
 deeplink_ttl_seconds = 300

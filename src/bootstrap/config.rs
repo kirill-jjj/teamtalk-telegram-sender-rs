@@ -15,6 +15,8 @@ pub struct Config {
 pub struct GeneralConfig {
     #[serde(default = "default_lang")]
     pub default_lang: String,
+    #[serde(default = "default_log_level")]
+    pub log_level: String,
 
     pub admin_username: Option<String>,
 
@@ -24,6 +26,10 @@ pub struct GeneralConfig {
 
 fn default_lang() -> String {
     "en".to_string()
+}
+
+fn default_log_level() -> String {
+    "info".to_string()
 }
 
 fn default_gender() -> String {

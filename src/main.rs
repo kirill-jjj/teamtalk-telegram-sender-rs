@@ -28,10 +28,6 @@ fn update_bot() -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    tracing_subscriber::fmt().with_env_filter(filter).init();
-    tracing::info!(component = "main", "Starting application");
-
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--update") {
         update_bot()?;
@@ -45,8 +41,21 @@ async fn main() -> Result<()> {
         "config.toml".to_string()
     };
 
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        let level = read_log_level(&config_path).unwrap_or_else(|| "info".to_string());
+        EnvFilter::new(level)
+    });
+    tracing_subscriber::fmt().with_env_filter(filter).init();
+    tracing::info!(component = "main", "Starting application");
+
     let app = bootstrap::app::Application::build(config_path).await?;
     app.run().await?;
 
     Ok(())
+}
+
+fn read_log_level(config_path: &str) -> Option<String> {
+    let content = std::fs::read_to_string(config_path).ok()?;
+    let config: bootstrap::config::Config = toml::from_str(&content).ok()?;
+    Some(config.general.log_level)
 }

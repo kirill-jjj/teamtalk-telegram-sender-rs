@@ -21,6 +21,7 @@ admin_chat_id = 123456789
 [general]
 admin_username = "AdminTG"
 default_lang = "ru"
+log_level = "info"
 
 [database]
 db_file = "bot_data.db"
