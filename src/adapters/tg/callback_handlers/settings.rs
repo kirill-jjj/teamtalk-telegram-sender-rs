@@ -106,8 +106,8 @@ pub async fn handle_settings(
 
             let text_key = match setting {
                 NotificationSetting::All => "btn-sub-all",
-                NotificationSetting::JoinOff => "btn-sub-join",
-                NotificationSetting::LeaveOff => "btn-sub-leave",
+                NotificationSetting::JoinOff => "btn-sub-leave",
+                NotificationSetting::LeaveOff => "btn-sub-join",
                 NotificationSetting::None => "btn-sub-none",
             };
             let setting_text =

@@ -109,12 +109,12 @@ pub async fn send_sub_settings(
     let btn_join = locales::get_text(
         lang.as_str(),
         "btn-sub-join",
-        args!(marker = mk(NotificationSetting::LeaveOff)).as_ref(),
+        args!(marker = mk(NotificationSetting::JoinOff)).as_ref(),
     );
     let btn_leave = locales::get_text(
         lang.as_str(),
         "btn-sub-leave",
-        args!(marker = mk(NotificationSetting::JoinOff)).as_ref(),
+        args!(marker = mk(NotificationSetting::LeaveOff)).as_ref(),
     );
     let btn_none = locales::get_text(
         lang.as_str(),
@@ -130,11 +130,11 @@ pub async fn send_sub_settings(
         vec![callback_button(btn_all, mk_act(NotificationSetting::All))],
         vec![callback_button(
             btn_join,
-            mk_act(NotificationSetting::LeaveOff),
+            mk_act(NotificationSetting::JoinOff),
         )],
         vec![callback_button(
             btn_leave,
-            mk_act(NotificationSetting::JoinOff),
+            mk_act(NotificationSetting::LeaveOff),
         )],
         vec![callback_button(btn_none, mk_act(NotificationSetting::None))],
         vec![back_button(
