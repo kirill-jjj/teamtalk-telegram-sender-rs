@@ -16,12 +16,12 @@
 - `cargo run -- <args>` runs the binary locally (see `README.md` for required config).
 - `cargo test` runs the test suite.
 - `cargo fmt` formats Rust code with rustfmt.
-- `cargo clippy --all-targets --all-features` runs lint checks.
-- After changes, run `cargo check`, then `cargo clippy --all-targets --all-features` if check passes, and `cargo fmt` if clippy passes.
+- `cargo clippy --all-targets --all-features -- -D warnings` runs lint checks.
+- After changes, run `cargo check`, then `cargo clippy --all-targets --all-features -- -D warnings`, then `cargo fmt`.
 ## Verification and Delivery Sequence
-- After each significant change (or a batch of related changes), run `cargo check`, then `cargo clippy --all-targets --all-features`, then `cargo fmt`.
-- Before committing, run `cargo test` (especially after major changes).
-- After tests pass, commit and push.
+- Pre-commit runs `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test`, and `cargo sqlx prepare`.
+- In CI, the workflow runs `cargo check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test`, and `cargo fmt --check`.
+- After each significant change, run `cargo check` and `cargo test` locally; use `cargo fmt` and `cargo clippy` to match pre-commit/CI.
 
 ## Coding Style & Naming Conventions
 - Follow rustfmt defaults; keep diffs minimal and avoid formatting churn.
@@ -29,12 +29,13 @@
 - Prefer `Result` with contextual errors over `unwrap` in non-test code.
 - Keep modules focused; avoid widening `pub` visibility unless needed.
 - Completely avoid adding code comments unless explicitly requested.
-- Do not commit `Cargo.lock` or `TEAMTALK_DLL/` unless explicitly requested.
+- `Cargo.lock` is committed in this repo; avoid manual edits and prefer `cargo update` when needed.
 - When asked to commit and push, split commits by type (e.g., docs + code), propose commit messages, and wait for confirmation before pushing. If explicit permission is given to do everything once, proceed; for later push requests, ask again.
 - Cargo registry cache lives under `%USERPROFILE%\.cargo\registry\` (e.g., `src` and `cache`). Use it to inspect crate sources (example: find teloxide reply helpers in `teloxide-0.17.0\src\sugar\request.rs`); cache keeps old versions for speed and is safe to read.
 - If `pre-commit` fails on `cargo sqlx prepare`, install `sqlx-cli` with `cargo install sqlx-cli --no-default-features --features sqlite`, then run `cargo sqlx prepare` with `DATABASE_URL=sqlite://data.db`.
 
 ## Testing Guidelines
+- Unit tests live under `tests/unit/` and are wired into modules via `#[path]`.
 - Use `cargo test` to run unit and integration tests.
 - Prefer deterministic tests; avoid network calls unless required.
 - Name tests by intent, e.g., `connect_retries_on_timeout`.
