@@ -14,9 +14,8 @@ pub async fn handle_menu(
     action: MenuAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let msg = match q.message {
-        Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
-        _ => return Ok(()),
+    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
+        return Ok(());
     };
     let chat_id = msg.chat.id;
 
@@ -30,7 +29,7 @@ pub async fn handle_menu(
                 notify_admin_error(
                     &bot,
                     &state.config,
-                    q.from.id.0 as i64,
+                    tg_user_id_i64(q.from.id.0),
                     AdminErrorContext::TtCommand,
                     &e.to_string(),
                     lang,
@@ -64,4 +63,8 @@ pub async fn handle_menu(
         MenuAction::Settings => {}
     }
     Ok(())
+}
+
+fn tg_user_id_i64(user_id: u64) -> i64 {
+    i64::try_from(user_id).unwrap_or(i64::MAX)
 }

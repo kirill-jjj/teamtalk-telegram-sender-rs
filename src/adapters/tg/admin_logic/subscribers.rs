@@ -7,6 +7,7 @@ use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
 use crate::infra::db::Database;
+use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
 use teloxide::prelude::*;
 use teloxide::types::{InlineKeyboardMarkup, ParseMode};
@@ -49,7 +50,7 @@ pub async fn send_subscribers_list(
         |s| {
             let mut parts = vec![s.display_name.clone()];
             if let Some(tt) = &s.tt_username {
-                parts.push(format!("TT: {}", tt));
+                parts.push(format!("TT: {tt}"));
             }
             let name = parts.join(", ");
             (
@@ -111,7 +112,7 @@ pub async fn edit_subscribers_list(
         |s| {
             let mut parts = vec![s.display_name.clone()];
             if let Some(tt) = &s.tt_username {
-                parts.push(format!("TT: {}", tt));
+                parts.push(format!("TT: {tt}"));
             }
             let name = parts.join(", ");
             (
@@ -180,8 +181,23 @@ pub async fn send_subscriber_details(
     sub_id: i64,
     return_page: usize,
 ) -> ResponseResult<()> {
-    let settings = db
-        .get_or_create_user(sub_id, LanguageCode::En)
+    let settings = load_subscriber_settings(db, sub_id).await;
+
+    let display_name = (bot.get_chat(teloxide::types::ChatId(sub_id)).await)
+        .map_or_else(|_| sub_id.to_string(), |chat| format_tg_user(&chat));
+
+    let text = build_subscriber_details_text(lang, &settings, display_name);
+    let keyboard = build_subscriber_details_keyboard(lang, sub_id, return_page);
+
+    bot.edit_message_text(msg.chat.id, msg.id, text)
+        .reply_markup(keyboard)
+        .parse_mode(ParseMode::Html)
+        .await?;
+    Ok(())
+}
+
+async fn load_subscriber_settings(db: &Database, sub_id: i64) -> UserSettings {
+    db.get_or_create_user(sub_id, LanguageCode::En)
         .await
         .unwrap_or_else(|e| {
             tracing::error!(
@@ -189,7 +205,7 @@ pub async fn send_subscriber_details(
                 error = %e,
                 "Failed to load subscriber settings"
             );
-            crate::infra::db::types::UserSettings {
+            UserSettings {
                 telegram_id: sub_id,
                 language_code: "en".to_string(),
                 notification_settings: "all".to_string(),
@@ -198,13 +214,14 @@ pub async fn send_subscriber_details(
                 not_on_online_enabled: false,
                 not_on_online_confirmed: false,
             }
-        });
+        })
+}
 
-    let display_name = match bot.get_chat(teloxide::types::ChatId(sub_id)).await {
-        Ok(chat) => format_tg_user(&chat),
-        Err(_) => sub_id.to_string(),
-    };
-
+fn build_subscriber_details_text(
+    lang: LanguageCode,
+    settings: &UserSettings,
+    display_name: String,
+) -> String {
     let notif_setting =
         user_settings_service::parse_notification_setting(&settings.notification_settings);
     let notif_text = match notif_setting {
@@ -233,6 +250,7 @@ pub async fn send_subscriber_details(
         name = display_name,
         tt_user = settings
             .teamtalk_username
+            .clone()
             .unwrap_or_else(|| locales::get_text(lang.as_str(), "val-none", None)),
         lang = sub_lang.as_str(),
         noon = if settings.not_on_online_enabled {
@@ -244,8 +262,14 @@ pub async fn send_subscriber_details(
         mode = mode_text
     );
 
-    let text = locales::get_text(lang.as_str(), "sub-details-title", args.as_ref());
+    locales::get_text(lang.as_str(), "sub-details-title", args.as_ref())
+}
 
+fn build_subscriber_details_keyboard(
+    lang: LanguageCode,
+    sub_id: i64,
+    return_page: usize,
+) -> InlineKeyboardMarkup {
     let btn = |text_key: &str, action: SubAction| {
         callback_button(
             locales::get_text(lang.as_str(), text_key, None),
@@ -253,7 +277,7 @@ pub async fn send_subscriber_details(
         )
     };
 
-    let keyboard = InlineKeyboardMarkup::new(vec![
+    InlineKeyboardMarkup::new(vec![
         vec![btn(
             "btn-sub-delete",
             SubAction::Delete {
@@ -316,11 +340,5 @@ pub async fn send_subscriber_details(
             "btn-back-subs",
             CallbackAction::Admin(AdminAction::SubsList { page: return_page }),
         )],
-    ]);
-
-    bot.edit_message_text(msg.chat.id, msg.id, text)
-        .reply_markup(keyboard)
-        .parse_mode(ParseMode::Html)
-        .await?;
-    Ok(())
+    ])
 }

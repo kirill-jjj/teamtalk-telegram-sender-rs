@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                action as \"action!\",\n                payload,\n                expected_telegram_id,\n                expiry_time as \"expiry_time!\"\n            FROM deeplinks WHERE token = ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "action!",
+        "ordinal": 0,
+        "type_info": "Text"
+      },
+      {
+        "name": "payload",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "expected_telegram_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "expiry_time!",
+        "ordinal": 3,
+        "type_info": "Datetime"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "35a3abbb2c59ef757162f4b6451e5a9baf8a62ad64c90b83f4cbbc6d848351f6"
+}

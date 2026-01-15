@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                su.telegram_id as \"telegram_id!\",\n                us.teamtalk_username\n            FROM subscribed_users su\n            LEFT JOIN user_settings us ON su.telegram_id = us.telegram_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "teamtalk_username",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "b3f76b0495cf0fc220404541fed450e439c5f316dafd45154e9ef3f38e83507b"
+}

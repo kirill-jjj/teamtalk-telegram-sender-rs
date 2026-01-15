@@ -97,7 +97,7 @@ pub async fn send_sub_settings(
         if ns == current_notif {
             check_icon.clone()
         } else {
-            "".to_string()
+            String::new()
         }
     };
 
@@ -254,12 +254,12 @@ pub async fn send_mute_menu(
         &icon_unchecked
     };
 
-    let btn_bl_text = locales::get_text(
+    let btn_blacklist_text = locales::get_text(
         lang.as_str(),
         "btn-mode-blacklist",
         args!(marker = bl_marker).as_ref(),
     );
-    let btn_wl_text = locales::get_text(
+    let btn_whitelist_text = locales::get_text(
         lang.as_str(),
         "btn-mode-whitelist",
         args!(marker = wl_marker).as_ref(),
@@ -279,13 +279,13 @@ pub async fn send_mute_menu(
     let keyboard = InlineKeyboardMarkup::new(vec![
         vec![
             callback_button(
-                btn_bl_text,
+                btn_blacklist_text,
                 CallbackAction::Mute(MuteAction::ModeSet {
                     mode: MuteListMode::Blacklist,
                 }),
             ),
             callback_button(
-                btn_wl_text,
+                btn_whitelist_text,
                 CallbackAction::Mute(MuteAction::ModeSet {
                     mode: MuteListMode::Whitelist,
                 }),

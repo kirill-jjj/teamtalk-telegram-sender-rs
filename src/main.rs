@@ -1,3 +1,5 @@
+//! `TeamTalk` 5 to Telegram bridge bot.
+
 use self_update::cargo_crate_version;
 
 mod adapters;
@@ -22,7 +24,7 @@ fn update_bot() -> Result<()> {
         .build()?
         .update()?;
 
-    println!("Update status: `{}`!", status.version());
+    tracing::info!(version = %status.version(), "Update completed");
     Ok(())
 }
 
@@ -33,13 +35,12 @@ async fn main() -> Result<()> {
         update_bot()?;
         return Ok(());
     }
-    let config_path = if let Some(idx) = args.iter().position(|a| a == "--config") {
-        args.get(idx + 1)
-            .cloned()
-            .unwrap_or_else(|| "config.toml".to_string())
-    } else {
-        "config.toml".to_string()
-    };
+    let config_path = args
+        .iter()
+        .position(|a| a == "--config")
+        .and_then(|idx| args.get(idx + 1))
+        .cloned()
+        .unwrap_or_else(|| "config.toml".to_string());
 
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         let level = read_log_level(&config_path).unwrap_or_else(|| "info".to_string());

@@ -88,7 +88,7 @@ pub async fn send_sub_link_account_list(
 ) -> ResponseResult<()> {
     let mut accounts: Vec<UserAccount> = user_accounts
         .read()
-        .unwrap_or_else(|e| e.into_inner())
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
         .values()
         .cloned()
         .collect();
@@ -290,7 +290,7 @@ pub async fn send_sub_mute_list(
         }
     };
 
-    let user_name = format!("{}", target_id);
+    let user_name = format!("{target_id}");
     let args = args!(name = user_name);
     let title = locales::get_text(lang.as_str(), "list-mute-title", args.as_ref());
 

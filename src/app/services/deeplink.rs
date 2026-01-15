@@ -13,9 +13,8 @@ pub async fn resolve_for_user(
     token: &str,
     telegram_id: i64,
 ) -> Result<Option<ResolvedDeeplink>> {
-    let deeplink = match db.resolve_deeplink(token).await? {
-        Some(val) => val,
-        None => return Ok(None),
+    let Some(deeplink) = db.resolve_deeplink(token).await? else {
+        return Ok(None);
     };
 
     if let Some(expected_id) = deeplink.expected_telegram_id
@@ -24,9 +23,8 @@ pub async fn resolve_for_user(
         return Ok(None);
     }
 
-    let action = match DeeplinkAction::try_from(deeplink.action.as_str()) {
-        Ok(val) => val,
-        Err(_) => return Ok(None),
+    let Ok(action) = DeeplinkAction::try_from(deeplink.action.as_str()) else {
+        return Ok(None);
     };
 
     Ok(Some(ResolvedDeeplink {

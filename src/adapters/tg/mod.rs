@@ -18,6 +18,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use std::sync::mpsc::Sender;
 use teamtalk::types::UserAccount;
+use teloxide::error_handlers::ErrorHandler;
 use teloxide::{
     prelude::*,
     types::{BotCommand, BotCommandScope, Recipient},
@@ -48,19 +49,102 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         config,
         cancel_token,
     } = args;
-    let state = AppState {
-        db: db.clone(),
+    let state = build_state(
+        db.clone(),
         online_users,
         user_accounts,
-        tx_tt: tx_tt_cmd,
-        config: config.clone(),
-        cancel_token: cancel_token.clone(),
-    };
+        tx_tt_cmd,
+        &config,
+        &cancel_token,
+    );
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
         tracing::error!(error = %e, "Failed to set bot commands");
     }
 
+    let msg_handle = message_bot
+        .map(|bot| spawn_message_bot(bot, state.clone(), config.clone(), cancel_token.clone()));
+    run_event_bot(event_bot, state, config, cancel_token).await;
+
+    if let Some(handle) = msg_handle {
+        handle.abort();
+    }
+}
+
+fn build_state(
+    db: Database,
+    online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    tx_tt_cmd: Sender<TtCommand>,
+    config: &Arc<Config>,
+    cancel_token: &tokio_util::sync::CancellationToken,
+) -> AppState {
+    AppState {
+        db,
+        online_users,
+        user_accounts,
+        tx_tt: tx_tt_cmd,
+        config: config.clone(),
+        cancel_token: cancel_token.clone(),
+    }
+}
+
+fn make_error_handler(
+    admin_bot: Bot,
+    admin_config: Arc<Config>,
+) -> std::sync::Arc<dyn ErrorHandler<teloxide::errors::RequestError> + Send + Sync> {
+    std::sync::Arc::new(move |err: teloxide::errors::RequestError| {
+        let admin_bot = admin_bot.clone();
+        let admin_config = admin_config.clone();
+        async move {
+            let err_str = err.to_string();
+            if !err_str.contains("TerminatedByOtherGetUpdates") {
+                tracing::error!(
+                    component = "telegram",
+                    error = %err,
+                    "Update listener error"
+                );
+                let default_lang = LanguageCode::from_str_or_default(
+                    &admin_config.general.default_lang,
+                    LanguageCode::En,
+                );
+                notify_admin_error(
+                    &admin_bot,
+                    &admin_config,
+                    0,
+                    AdminErrorContext::UpdateListener,
+                    &err_str,
+                    default_lang,
+                )
+                .await;
+            }
+        }
+    })
+}
+
+fn spawn_message_bot(
+    message_bot: Bot,
+    state: AppState,
+    config: Arc<Config>,
+    cancel_token: tokio_util::sync::CancellationToken,
+) -> tokio::task::JoinHandle<()> {
+    tokio::spawn(async move {
+        let msg_handler =
+            dptree::entry().branch(Update::filter_message().endpoint(commands::answer_message));
+        let mut dispatcher = Dispatcher::builder(message_bot.clone(), msg_handler)
+            .dependencies(dptree::deps![state])
+            .error_handler(make_error_handler(message_bot.clone(), config.clone()))
+            .build();
+        run_dispatcher(&mut dispatcher, cancel_token).await;
+    })
+}
+
+async fn run_event_bot(
+    event_bot: Bot,
+    state: AppState,
+    config: Arc<Config>,
+    cancel_token: tokio_util::sync::CancellationToken,
+) {
     let handler = dptree::entry()
         .branch(
             Update::filter_message()
@@ -69,99 +153,22 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         )
         .branch(Update::filter_message().endpoint(commands::answer_message))
         .branch(Update::filter_callback_query().endpoint(callbacks::answer_callback));
-
-    let admin_bot = event_bot.clone();
-    let admin_config = config.clone();
-    let msg_state = state.clone();
-    let msg_handle = message_bot.map(|msg_bot| {
-        let admin_bot = msg_bot.clone();
-        let admin_config = config.clone();
-        let cancel_token = cancel_token.clone();
-        tokio::spawn(async move {
-            let msg_handler =
-                dptree::entry().branch(Update::filter_message().endpoint(commands::answer_message));
-            let mut dispatcher = Dispatcher::builder(msg_bot, msg_handler)
-                .dependencies(dptree::deps![msg_state])
-                .error_handler(std::sync::Arc::new({
-                    let admin_bot = admin_bot.clone();
-                    let admin_config = admin_config.clone();
-                    move |err: teloxide::errors::RequestError| {
-                        let admin_bot = admin_bot.clone();
-                        let admin_config = admin_config.clone();
-                        async move {
-                            let err_str = err.to_string();
-                            if !err_str.contains("TerminatedByOtherGetUpdates") {
-                                tracing::error!(
-                                    component = "telegram",
-                                    error = %err,
-                                    "Update listener error"
-                                );
-                                let default_lang = LanguageCode::from_str_or_default(
-                                    &admin_config.general.default_lang,
-                                    LanguageCode::En,
-                                );
-                                notify_admin_error(
-                                    &admin_bot,
-                                    &admin_config,
-                                    0,
-                                    AdminErrorContext::UpdateListener,
-                                    &err_str,
-                                    default_lang,
-                                )
-                                .await;
-                            }
-                        }
-                    }
-                }))
-                .build();
-            let shutdown_token = dispatcher.shutdown_token();
-            let shutdown_task = tokio::spawn(async move {
-                cancel_token.cancelled().await;
-                if let Ok(fut) = shutdown_token.shutdown() {
-                    fut.await;
-                }
-            });
-            dispatcher.dispatch().await;
-            shutdown_task.abort();
-        })
-    });
-
-    let mut dispatcher = Dispatcher::builder(event_bot, handler)
+    let mut dispatcher = Dispatcher::builder(event_bot.clone(), handler)
         .dependencies(dptree::deps![state])
-        .error_handler(std::sync::Arc::new({
-            let admin_bot = admin_bot.clone();
-            let admin_config = admin_config.clone();
-            move |err: teloxide::errors::RequestError| {
-                let admin_bot = admin_bot.clone();
-                let admin_config = admin_config.clone();
-                async move {
-                    let err_str = err.to_string();
-                    if !err_str.contains("TerminatedByOtherGetUpdates") {
-                        tracing::error!(
-                            component = "telegram",
-                            error = %err,
-                            "Update listener error"
-                        );
-                        let default_lang = LanguageCode::from_str_or_default(
-                            &admin_config.general.default_lang,
-                            LanguageCode::En,
-                        );
-                        notify_admin_error(
-                            &admin_bot,
-                            &admin_config,
-                            0,
-                            AdminErrorContext::UpdateListener,
-                            &err_str,
-                            default_lang,
-                        )
-                        .await;
-                    }
-                }
-            }
-        }))
+        .error_handler(make_error_handler(event_bot.clone(), config))
         .build();
+    run_dispatcher(&mut dispatcher, cancel_token).await;
+}
+
+async fn run_dispatcher(
+    dispatcher: &mut Dispatcher<
+        Bot,
+        teloxide::errors::RequestError,
+        teloxide::dispatching::DefaultKey,
+    >,
+    cancel_token: tokio_util::sync::CancellationToken,
+) {
     let shutdown_token = dispatcher.shutdown_token();
-    let cancel_token = cancel_token.clone();
     let shutdown_task = tokio::spawn(async move {
         cancel_token.cancelled().await;
         if let Ok(fut) = shutdown_token.shutdown() {
@@ -170,10 +177,6 @@ pub async fn run_tg_bot(args: TgRunArgs) {
     });
     dispatcher.dispatch().await;
     shutdown_task.abort();
-
-    if let Some(handle) = msg_handle {
-        handle.abort();
-    }
 }
 
 async fn set_bot_commands(

@@ -32,14 +32,14 @@ pub fn get_text(
 ) -> String {
     let lang_id = get_lang_id(lang_code);
 
-    if let Some(args_map) = args {
-        LOCALES.lookup_with_args(lang_id, key, args_map)
-    } else {
-        LOCALES.lookup(lang_id, key)
-    }
+    args.map_or_else(
+        || LOCALES.lookup(lang_id, key),
+        |args_map| LOCALES.lookup_with_args(lang_id, key, args_map),
+    )
 }
 
 #[macro_export]
+/// Helper to build Fluent arguments.
 macro_rules! args {
     ( $($k:ident = $v:expr),* ) => {{
         let mut map = std::collections::HashMap::new();

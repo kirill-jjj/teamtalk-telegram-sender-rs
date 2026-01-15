@@ -8,7 +8,7 @@ where
     T: Into<String>,
     A: AsCallbackData,
 {
-    InlineKeyboardButton::callback(text.into(), action.to_data())
+    InlineKeyboardButton::callback(text.into(), action.into_data())
 }
 
 pub fn back_button(

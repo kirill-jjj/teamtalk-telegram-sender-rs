@@ -51,7 +51,7 @@ pub(super) fn handle_who_command(
     let header = locales::get_text(lang.as_str(), "tt-report-header", header_args.as_ref());
 
     let mut report = String::with_capacity(1024);
-    if let Err(e) = writeln!(report, "{}\n", header) {
+    if let Err(e) = writeln!(report, "{header}\n") {
         tracing::error!(error = %e, "Failed to write who report header");
     }
 
@@ -69,7 +69,7 @@ pub(super) fn handle_who_command(
         let row_args = args!(users = user_list, channel = location);
         let row_text = locales::get_text(lang.as_str(), "tt-report-row", row_args.as_ref());
 
-        if let Err(e) = writeln!(report, "{}", row_text) {
+        if let Err(e) = writeln!(report, "{row_text}") {
             tracing::error!(error = %e, "Failed to write who report row");
         }
     }

@@ -33,13 +33,14 @@ pub async fn send_unban_list(
         &entries,
         page,
         |e| {
-            let name = if let Some(tg) = e.telegram_id {
-                format!("{}", tg)
-            } else if let Some(tt) = &e.teamtalk_username {
-                tt.clone()
-            } else {
-                "Unknown".to_string()
-            };
+            let name = e.telegram_id.map_or_else(
+                || {
+                    e.teamtalk_username
+                        .clone()
+                        .unwrap_or_else(|| "Unknown".to_string())
+                },
+                |tg| format!("{tg}"),
+            );
             (
                 name,
                 CallbackAction::Admin(AdminAction::UnbanPerform {
@@ -95,13 +96,14 @@ pub async fn edit_unban_list(
         &entries,
         page,
         |e| {
-            let name = if let Some(tg) = e.telegram_id {
-                format!("{}", tg)
-            } else if let Some(tt) = &e.teamtalk_username {
-                tt.clone()
-            } else {
-                "Unknown".to_string()
-            };
+            let name = e.telegram_id.map_or_else(
+                || {
+                    e.teamtalk_username
+                        .clone()
+                        .unwrap_or_else(|| "Unknown".to_string())
+                },
+                |tg| format!("{tg}"),
+            );
             (
                 name,
                 CallbackAction::Admin(AdminAction::UnbanPerform {

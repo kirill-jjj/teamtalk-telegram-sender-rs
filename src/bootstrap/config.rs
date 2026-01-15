@@ -36,7 +36,7 @@ fn default_gender() -> String {
     "None".to_string()
 }
 
-fn default_deeplink_cleanup_interval_seconds() -> u64 {
+const fn default_deeplink_cleanup_interval_seconds() -> u64 {
     3600
 }
 
@@ -82,21 +82,24 @@ impl TeamTalkConfig {
 
 #[derive(Deserialize, Clone)]
 pub struct OperationalParameters {
-    pub deeplink_ttl_seconds: i64,
-    pub tt_reconnect_retry_seconds: u64,
+    #[serde(rename = "deeplink_ttl_seconds")]
+    pub deeplink_ttl: i64,
+    #[serde(rename = "tt_reconnect_retry_seconds")]
+    pub tt_reconnect_retry: u64,
     #[serde(default = "default_deeplink_cleanup_interval_seconds")]
-    pub deeplink_cleanup_interval_seconds: u64,
-    #[allow(dead_code)]
-    pub tt_reconnect_check_interval_seconds: u64,
+    #[serde(rename = "deeplink_cleanup_interval_seconds")]
+    pub deeplink_cleanup_interval: u64,
+    #[serde(rename = "tt_reconnect_check_interval_seconds")]
+    pub tt_reconnect_check_interval: u64,
 }
 
 impl Default for OperationalParameters {
     fn default() -> Self {
         Self {
-            deeplink_ttl_seconds: 300,
-            tt_reconnect_retry_seconds: 10,
-            deeplink_cleanup_interval_seconds: 3600,
-            tt_reconnect_check_interval_seconds: 30,
+            deeplink_ttl: 300,
+            tt_reconnect_retry: 10,
+            deeplink_cleanup_interval: 3600,
+            tt_reconnect_check_interval: 30,
         }
     }
 }

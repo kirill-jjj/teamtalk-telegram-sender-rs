@@ -32,7 +32,6 @@ impl Database {
             Deeplink,
             r#"
             SELECT
-                token as "token!",
                 action as "action!",
                 payload,
                 expected_telegram_id,

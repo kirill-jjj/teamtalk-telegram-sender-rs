@@ -8,15 +8,15 @@ pub enum LanguageCode {
 }
 
 impl LanguageCode {
-    pub fn as_str(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
-            LanguageCode::En => "en",
-            LanguageCode::Ru => "ru",
+            Self::En => "en",
+            Self::Ru => "ru",
         }
     }
 
-    pub fn from_str_or_default(value: &str, fallback: LanguageCode) -> LanguageCode {
-        LanguageCode::try_from(value).unwrap_or(fallback)
+    pub fn from_str_or_default(value: &str, fallback: Self) -> Self {
+        Self::try_from(value).unwrap_or(fallback)
     }
 }
 
@@ -31,14 +31,14 @@ impl TryFrom<&str> for LanguageCode {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase().as_str() {
-            "en" => Ok(LanguageCode::En),
-            "ru" => Ok(LanguageCode::Ru),
+            "en" => Ok(Self::En),
+            "ru" => Ok(Self::Ru),
             _ => Err("unsupported language code"),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum NotificationSetting {
     All,
     JoinOff,
@@ -55,8 +55,8 @@ pub enum DeeplinkAction {
 impl fmt::Display for DeeplinkAction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DeeplinkAction::Subscribe => write!(f, "subscribe"),
-            DeeplinkAction::Unsubscribe => write!(f, "unsubscribe"),
+            Self::Subscribe => write!(f, "subscribe"),
+            Self::Unsubscribe => write!(f, "unsubscribe"),
         }
     }
 }
@@ -66,8 +66,8 @@ impl TryFrom<&str> for DeeplinkAction {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase().as_str() {
-            "subscribe" => Ok(DeeplinkAction::Subscribe),
-            "unsubscribe" => Ok(DeeplinkAction::Unsubscribe),
+            "subscribe" => Ok(Self::Subscribe),
+            "unsubscribe" => Ok(Self::Unsubscribe),
             _ => Err("unsupported deeplink action"),
         }
     }
@@ -76,10 +76,10 @@ impl TryFrom<&str> for DeeplinkAction {
 impl fmt::Display for NotificationSetting {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            NotificationSetting::All => write!(f, "all"),
-            NotificationSetting::JoinOff => write!(f, "join_off"),
-            NotificationSetting::LeaveOff => write!(f, "leave_off"),
-            NotificationSetting::None => write!(f, "none"),
+            Self::All => write!(f, "all"),
+            Self::JoinOff => write!(f, "join_off"),
+            Self::LeaveOff => write!(f, "leave_off"),
+            Self::None => write!(f, "none"),
         }
     }
 }
@@ -89,16 +89,16 @@ impl TryFrom<&str> for NotificationSetting {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "all" => Ok(NotificationSetting::All),
-            "join_off" => Ok(NotificationSetting::JoinOff),
-            "leave_off" => Ok(NotificationSetting::LeaveOff),
-            "none" => Ok(NotificationSetting::None),
+            "all" => Ok(Self::All),
+            "join_off" => Ok(Self::JoinOff),
+            "leave_off" => Ok(Self::LeaveOff),
+            "none" => Ok(Self::None),
             _ => Err("unsupported notification setting"),
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum MuteListMode {
     Blacklist,
     Whitelist,
@@ -107,8 +107,8 @@ pub enum MuteListMode {
 impl fmt::Display for MuteListMode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            MuteListMode::Blacklist => write!(f, "blacklist"),
-            MuteListMode::Whitelist => write!(f, "whitelist"),
+            Self::Blacklist => write!(f, "blacklist"),
+            Self::Whitelist => write!(f, "whitelist"),
         }
     }
 }
@@ -118,8 +118,8 @@ impl TryFrom<&str> for MuteListMode {
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "blacklist" => Ok(MuteListMode::Blacklist),
-            "whitelist" => Ok(MuteListMode::Whitelist),
+            "blacklist" => Ok(Self::Blacklist),
+            "whitelist" => Ok(Self::Whitelist),
             _ => Err("unsupported mute list mode"),
         }
     }
@@ -173,13 +173,13 @@ pub enum AdminErrorContext {
 }
 
 impl AdminErrorContext {
-    pub fn as_str(self) -> &'static str {
+    pub const fn as_str(self) -> &'static str {
         match self {
-            AdminErrorContext::Command => "admin-error-context-command",
-            AdminErrorContext::Callback => "admin-error-context-callback",
-            AdminErrorContext::Subscription => "admin-error-context-subscription",
-            AdminErrorContext::TtCommand => "admin-error-context-tt-command",
-            AdminErrorContext::UpdateListener => "admin-error-context-update-listener",
+            Self::Command => "admin-error-context-command",
+            Self::Callback => "admin-error-context-callback",
+            Self::Subscription => "admin-error-context-subscription",
+            Self::TtCommand => "admin-error-context-tt-command",
+            Self::UpdateListener => "admin-error-context-update-listener",
         }
     }
 }
@@ -211,7 +211,7 @@ pub enum BridgeEvent {
     },
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum NotificationType {
     Join,
     Leave,
@@ -254,7 +254,7 @@ pub enum TtCommand {
     LoadAccounts,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LiteUser {
     pub id: i32,
     pub nickname: String,

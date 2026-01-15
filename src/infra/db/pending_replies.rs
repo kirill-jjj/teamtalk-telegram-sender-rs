@@ -35,7 +35,7 @@ impl Database {
     }
 
     pub async fn cleanup_pending_replies(&self, ttl_seconds: i64) -> Result<u64> {
-        let window = format!("-{} seconds", ttl_seconds);
+        let window = format!("-{ttl_seconds} seconds");
         let res =
             sqlx::query("DELETE FROM pending_replies WHERE last_used_at < datetime('now', ?)")
                 .bind(window)

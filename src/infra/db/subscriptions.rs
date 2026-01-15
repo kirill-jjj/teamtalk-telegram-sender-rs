@@ -33,8 +33,7 @@ impl Database {
             r#"
             SELECT
                 su.telegram_id as "telegram_id!",
-                us.teamtalk_username,
-                us.language_code as "language_code!"
+                us.teamtalk_username
             FROM subscribed_users su
             LEFT JOIN user_settings us ON su.telegram_id = us.telegram_id
             "#

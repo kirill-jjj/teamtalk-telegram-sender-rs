@@ -18,200 +18,265 @@ pub async fn handle_mute(
     action: MuteAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let msg = match &q.message {
-        Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
-        _ => return Ok(()),
+    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = &q.message else {
+        return Ok(());
     };
-    let telegram_id = q.from.id.0 as i64;
-    let db = &state.db;
-    let config = &state.config;
+    let telegram_id = tg_user_id_i64(q.from.id.0);
+    let ctx = MuteCtx {
+        bot: &bot,
+        q: &q,
+        msg,
+        state: &state,
+        telegram_id,
+        lang,
+    };
 
     match action {
         MuteAction::ModeSet { mode } => {
-            if check_db_err(
-                &bot,
-                &q.id.0,
-                db.update_mute_mode(telegram_id, mode.clone()).await,
-                config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                lang,
-            )
-            .await?
-            {
-                return Ok(());
-            }
-            answer_callback(
-                &bot,
-                &q.id,
-                locales::get_text(
-                    lang.as_str(),
-                    "toast-mute-mode-set",
-                    args!(mode = mode.to_string()).as_ref(),
-                ),
-                false,
-            )
-            .await?;
-            send_mute_menu(&bot, msg, lang, mode).await?;
+            handle_mode_set(&bot, &q, &state, msg, telegram_id, lang, mode).await?;
         }
         MuteAction::Menu { mode } => {
             send_mute_menu(&bot, msg, lang, mode).await?;
         }
         MuteAction::List { page } => {
-            let muted = match db.get_muted_users_list(telegram_id).await {
-                Ok(list) => list,
-                Err(e) => {
-                    tracing::error!(
-                        telegram_id,
-                        error = %e,
-                        "Failed to load muted users"
-                    );
-                    Vec::new()
-                }
-            };
-            let guest_username = state.config.teamtalk.guest_username.as_deref();
-            render_mute_list_strings(RenderMuteListStringsArgs {
-                bot: &bot,
-                msg,
-                lang,
-                items: &muted,
-                page,
-                title_key: "list-mute-title",
-                guest_username,
-            })
-            .await?;
+            handle_list(&bot, msg, &state, telegram_id, lang, page).await?;
         }
         MuteAction::Toggle { username, page } => {
-            if let Err(e) = db.toggle_muted_user(telegram_id, username.as_str()).await {
-                check_db_err(
-                    &bot,
-                    &q.id.0,
-                    Err(e),
-                    config,
-                    telegram_id,
-                    AdminErrorContext::Callback,
-                    lang,
-                )
-                .await?;
-                return Ok(());
-            }
-
-            let args = args!(user = username.to_string(), action = "toggled");
-            answer_callback(
-                &bot,
-                &q.id,
-                locales::get_text(lang.as_str(), "toast-user-muted", args.as_ref()),
-                false,
-            )
-            .await?;
-
-            let muted = db
-                .get_muted_users_list(telegram_id)
-                .await
-                .unwrap_or_else(|e| {
-                    tracing::error!(
-                        telegram_id,
-                        error = %e,
-                        "Failed to load muted users"
-                    );
-                    Vec::new()
-                });
-            let guest_username = state.config.teamtalk.guest_username.as_deref();
-            render_mute_list_strings(RenderMuteListStringsArgs {
-                bot: &bot,
-                msg,
-                lang,
-                items: &muted,
-                page,
-                title_key: "list-mute-title",
-                guest_username,
-            })
-            .await?;
+            handle_toggle(&ctx, username.to_string(), page).await?;
         }
         MuteAction::ServerList { page } => {
-            if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts) {
-                tracing::error!(error = %e, "Failed to request TT accounts");
-                notify_admin_error(
-                    &bot,
-                    config,
-                    telegram_id,
-                    AdminErrorContext::TtCommand,
-                    &e.to_string(),
-                    lang,
-                )
-                .await;
-            }
-            let user_accounts = &state.user_accounts;
-            let mut accounts: Vec<UserAccount> = user_accounts
-                .read()
-                .unwrap_or_else(|e| e.into_inner())
-                .values()
-                .cloned()
-                .collect();
-            accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
-
-            let guest_username = state.config.teamtalk.guest_username.as_deref();
-            render_mute_list(RenderMuteListArgs {
-                bot: &bot,
-                msg,
-                db,
-                telegram_id,
-                lang,
-                accounts: &accounts,
-                page,
-                title_key: "list-all-accs-title",
-                guest_username,
-            })
-            .await?;
+            handle_server_list(&bot, msg, &state, telegram_id, lang, page).await?;
         }
         MuteAction::ServerToggle { username, page } => {
-            if let Err(e) = db.toggle_muted_user(telegram_id, username.as_str()).await {
-                check_db_err(
-                    &bot,
-                    &q.id.0,
-                    Err(e),
-                    config,
-                    telegram_id,
-                    AdminErrorContext::Callback,
-                    lang,
-                )
-                .await?;
-                return Ok(());
-            }
-
-            let args = args!(user = username.to_string(), action = "toggled");
-            answer_callback(
-                &bot,
-                &q.id,
-                locales::get_text(lang.as_str(), "toast-user-muted", args.as_ref()),
-                false,
-            )
-            .await?;
-
-            let user_accounts = &state.user_accounts;
-            let mut accounts: Vec<UserAccount> = user_accounts
-                .read()
-                .unwrap_or_else(|e| e.into_inner())
-                .values()
-                .cloned()
-                .collect();
-            accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
-            let guest_username = state.config.teamtalk.guest_username.as_deref();
-
-            render_mute_list(RenderMuteListArgs {
-                bot: &bot,
-                msg,
-                db,
-                telegram_id,
-                lang,
-                accounts: &accounts,
-                page,
-                title_key: "list-all-accs-title",
-                guest_username,
-            })
-            .await?;
+            handle_server_toggle(&ctx, username.to_string(), page).await?;
         }
     }
 
     Ok(())
+}
+
+async fn handle_mode_set(
+    bot: &Bot,
+    q: &CallbackQuery,
+    state: &AppState,
+    msg: &Message,
+    telegram_id: i64,
+    lang: LanguageCode,
+    mode: crate::core::types::MuteListMode,
+) -> ResponseResult<()> {
+    if check_db_err(
+        bot,
+        &q.id.0,
+        state.db.update_mute_mode(telegram_id, mode.clone()).await,
+        &state.config,
+        telegram_id,
+        AdminErrorContext::Callback,
+        lang,
+    )
+    .await?
+    {
+        return Ok(());
+    }
+    answer_callback(
+        bot,
+        &q.id,
+        locales::get_text(
+            lang.as_str(),
+            "toast-mute-mode-set",
+            args!(mode = mode.to_string()).as_ref(),
+        ),
+        false,
+    )
+    .await?;
+    send_mute_menu(bot, msg, lang, mode).await
+}
+
+async fn handle_list(
+    bot: &Bot,
+    msg: &Message,
+    state: &AppState,
+    telegram_id: i64,
+    lang: LanguageCode,
+    page: usize,
+) -> ResponseResult<()> {
+    let muted = load_muted_users(&state.db, telegram_id).await;
+    let guest_username = state.config.teamtalk.guest_username.as_deref();
+    render_mute_list_strings(RenderMuteListStringsArgs {
+        bot,
+        msg,
+        lang,
+        items: &muted,
+        page,
+        title_key: "list-mute-title",
+        guest_username,
+    })
+    .await
+}
+
+async fn handle_toggle(ctx: &MuteCtx<'_>, username: String, page: usize) -> ResponseResult<()> {
+    if let Err(e) = ctx
+        .state
+        .db
+        .toggle_muted_user(ctx.telegram_id, username.as_str())
+        .await
+    {
+        check_db_err(
+            ctx.bot,
+            &ctx.q.id.0,
+            Err(e),
+            &ctx.state.config,
+            ctx.telegram_id,
+            AdminErrorContext::Callback,
+            ctx.lang,
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let args = args!(user = username.clone(), action = "toggled");
+    answer_callback(
+        ctx.bot,
+        &ctx.q.id,
+        locales::get_text(ctx.lang.as_str(), "toast-user-muted", args.as_ref()),
+        false,
+    )
+    .await?;
+
+    let muted = load_muted_users(&ctx.state.db, ctx.telegram_id).await;
+    let guest_username = ctx.state.config.teamtalk.guest_username.as_deref();
+    render_mute_list_strings(RenderMuteListStringsArgs {
+        bot: ctx.bot,
+        msg: ctx.msg,
+        lang: ctx.lang,
+        items: &muted,
+        page,
+        title_key: "list-mute-title",
+        guest_username,
+    })
+    .await
+}
+
+async fn handle_server_list(
+    bot: &Bot,
+    msg: &Message,
+    state: &AppState,
+    telegram_id: i64,
+    lang: LanguageCode,
+    page: usize,
+) -> ResponseResult<()> {
+    request_accounts(bot, state, telegram_id, lang).await;
+
+    let accounts = load_accounts(&state.user_accounts);
+    let guest_username = state.config.teamtalk.guest_username.as_deref();
+    render_mute_list(RenderMuteListArgs {
+        bot,
+        msg,
+        db: &state.db,
+        telegram_id,
+        lang,
+        accounts: &accounts,
+        page,
+        title_key: "list-all-accs-title",
+        guest_username,
+    })
+    .await
+}
+
+async fn handle_server_toggle(
+    ctx: &MuteCtx<'_>,
+    username: String,
+    page: usize,
+) -> ResponseResult<()> {
+    if let Err(e) = ctx
+        .state
+        .db
+        .toggle_muted_user(ctx.telegram_id, username.as_str())
+        .await
+    {
+        check_db_err(
+            ctx.bot,
+            &ctx.q.id.0,
+            Err(e),
+            &ctx.state.config,
+            ctx.telegram_id,
+            AdminErrorContext::Callback,
+            ctx.lang,
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let args = args!(user = username.clone(), action = "toggled");
+    answer_callback(
+        ctx.bot,
+        &ctx.q.id,
+        locales::get_text(ctx.lang.as_str(), "toast-user-muted", args.as_ref()),
+        false,
+    )
+    .await?;
+
+    let accounts = load_accounts(&ctx.state.user_accounts);
+    let guest_username = ctx.state.config.teamtalk.guest_username.as_deref();
+    render_mute_list(RenderMuteListArgs {
+        bot: ctx.bot,
+        msg: ctx.msg,
+        db: &ctx.state.db,
+        telegram_id: ctx.telegram_id,
+        lang: ctx.lang,
+        accounts: &accounts,
+        page,
+        title_key: "list-all-accs-title",
+        guest_username,
+    })
+    .await
+}
+
+struct MuteCtx<'a> {
+    bot: &'a Bot,
+    q: &'a CallbackQuery,
+    msg: &'a Message,
+    state: &'a AppState,
+    telegram_id: i64,
+    lang: LanguageCode,
+}
+
+async fn request_accounts(bot: &Bot, state: &AppState, telegram_id: i64, lang: LanguageCode) {
+    if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts) {
+        tracing::error!(error = %e, "Failed to request TT accounts");
+        notify_admin_error(
+            bot,
+            &state.config,
+            telegram_id,
+            AdminErrorContext::TtCommand,
+            &e.to_string(),
+            lang,
+        )
+        .await;
+    }
+}
+
+async fn load_muted_users(db: &crate::infra::db::Database, telegram_id: i64) -> Vec<String> {
+    db.get_muted_users_list(telegram_id)
+        .await
+        .unwrap_or_else(|e| {
+            tracing::error!(telegram_id, error = %e, "Failed to load muted users");
+            Vec::new()
+        })
+}
+
+fn load_accounts(
+    user_accounts: &std::sync::RwLock<std::collections::HashMap<String, UserAccount>>,
+) -> Vec<UserAccount> {
+    let mut accounts: Vec<UserAccount> = user_accounts
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .values()
+        .cloned()
+        .collect();
+    accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
+    accounts
+}
+
+fn tg_user_id_i64(user_id: u64) -> i64 {
+    i64::try_from(user_id).unwrap_or(i64::MAX)
 }

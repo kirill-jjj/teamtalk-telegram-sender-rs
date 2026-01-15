@@ -13,11 +13,10 @@ pub async fn handle_unsub_action(
     action: UnsubAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let msg = match q.message {
-        Some(teloxide::types::MaybeInaccessibleMessage::Regular(m)) => m,
-        _ => return Ok(()),
+    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
+        return Ok(());
     };
-    let telegram_id = q.from.id.0 as i64;
+    let telegram_id = tg_user_id_i64(q.from.id.0);
     let db = &state.db;
     let config = &state.config;
 
@@ -72,4 +71,8 @@ pub async fn handle_unsub_action(
         }
     }
     Ok(())
+}
+
+fn tg_user_id_i64(user_id: u64) -> i64 {
+    i64::try_from(user_id).unwrap_or(i64::MAX)
 }

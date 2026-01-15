@@ -30,7 +30,7 @@ impl Database {
         tg_message_id: i64,
     ) -> Result<Option<(i32, String, String, String)>> {
         let row = sqlx::query(
-            r#"
+            r"
             SELECT
                 channel_id,
                 channel_name,
@@ -38,7 +38,7 @@ impl Database {
                 original_text
             FROM pending_channel_replies
             WHERE tg_message_id = ?
-            "#,
+            ",
         )
         .bind(tg_message_id)
         .fetch_optional(&self.pool)
@@ -65,7 +65,7 @@ impl Database {
     }
 
     pub async fn cleanup_pending_channel_replies(&self, ttl_seconds: i64) -> Result<u64> {
-        let window = format!("-{} seconds", ttl_seconds);
+        let window = format!("-{ttl_seconds} seconds");
         let res = sqlx::query(
             "DELETE FROM pending_channel_replies WHERE last_used_at < datetime('now', ?)",
         )

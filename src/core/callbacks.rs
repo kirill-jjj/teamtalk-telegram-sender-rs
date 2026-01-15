@@ -4,7 +4,7 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, From)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, From)]
 pub enum CallbackAction {
     Menu(MenuAction),
     Admin(AdminAction),
@@ -15,7 +15,7 @@ pub enum CallbackAction {
     NoOp,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum MenuAction {
     Who,
     Settings,
@@ -23,7 +23,7 @@ pub enum MenuAction {
     Unsub,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum AdminAction {
     KickList { page: usize },
     KickPerform { user_id: i32 },
@@ -34,7 +34,7 @@ pub enum AdminAction {
     SubsList { page: usize },
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum SettingsAction {
     Main,
     LangSelect,
@@ -46,7 +46,7 @@ pub enum SettingsAction {
     MuteManage,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum SubAction {
     Details {
         sub_id: i64,
@@ -116,7 +116,7 @@ pub enum SubAction {
     },
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum MuteAction {
     ModeSet { mode: MuteListMode },
     Menu { mode: MuteListMode },
@@ -126,22 +126,22 @@ pub enum MuteAction {
     ServerToggle { username: TtUsername, page: usize },
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum UnsubAction {
     Confirm,
     Cancel,
 }
 
 pub trait AsCallbackData {
-    fn to_data(&self) -> String;
+    fn into_data(self) -> String;
 }
 
 impl<T> AsCallbackData for T
 where
-    T: Clone + Into<CallbackAction>,
+    T: Into<CallbackAction>,
 {
-    fn to_data(&self) -> String {
-        let action: CallbackAction = self.clone().into();
+    fn into_data(self) -> String {
+        let action: CallbackAction = self.into();
         encode_callback(&action)
     }
 }
@@ -167,10 +167,10 @@ impl FromStr for CallbackAction {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "noop" {
-            return Ok(CallbackAction::NoOp);
+            return Ok(Self::NoOp);
         }
         let bytes =
-            z85::decode(s.as_bytes()).map_err(|e| anyhow!("Invalid callback encoding: {}", e))?;
-        postcard::from_bytes(&bytes).map_err(|e| anyhow!("Invalid callback data: {}", e))
+            z85::decode(s.as_bytes()).map_err(|e| anyhow!("Invalid callback encoding: {e}"))?;
+        postcard::from_bytes(&bytes).map_err(|e| anyhow!("Invalid callback data: {e}"))
     }
 }

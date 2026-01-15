@@ -2,6 +2,11 @@
 name = "teamtalk-telegram-sender-rs"
 version = "0.6.1"
 edition = "2024"
+license = "MIT"
+description = "TeamTalk 5 to Telegram bridge bot"
+repository = "https://github.com/kirill-jjj/teamtalk-telegram-sender-rs"
+keywords = ["teamtalk", "telegram", "bot", "bridge", "rust"]
+categories = ["network-programming", "asynchronous"]
 
 [profile.release]
 lto = true              # "Fat" LTO
@@ -30,3 +35,29 @@ self_update = { version = "0.42", features = ["archive-zip", "archive-tar", "com
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-futures = "0.2"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+complexity = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+style = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
+multiple_crate_versions = "allow"
+
+[lints.rust]
+warnings = "deny"
+future_incompatible = { level = "deny", priority = -1 }
+rust_2021_compatibility = { level = "deny", priority = -1 }
+rust_2024_compatibility = { level = "deny", priority = -1 }
+nonstandard_style = { level = "deny", priority = -1 }
+unused = { level = "deny", priority = -1 }
+missing_docs = "deny"

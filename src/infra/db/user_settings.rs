@@ -167,7 +167,7 @@ impl Database {
         .unwrap_or(0);
 
         let new_bool = current_val == 0;
-        let new_int = if new_bool { 1 } else { 0 };
+        let new_int = i64::from(new_bool);
 
         tracing::debug!(
             component = "db",
