@@ -27,3 +27,7 @@ impl Database {
         Ok(rows)
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_admins.rs"]
+mod tests;

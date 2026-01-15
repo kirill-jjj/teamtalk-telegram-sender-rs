@@ -242,3 +242,7 @@ impl Database {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_user_settings.rs"]
+mod tests;

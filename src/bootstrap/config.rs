@@ -80,6 +80,10 @@ impl TeamTalkConfig {
     }
 }
 
+#[cfg(test)]
+#[path = "../../tests/unit/bootstrap_config.rs"]
+mod tests;
+
 #[derive(Deserialize, Clone)]
 pub struct OperationalParameters {
     #[serde(rename = "deeplink_ttl_seconds")]

@@ -66,3 +66,7 @@ impl Database {
         Ok(res.rows_affected())
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_deeplinks.rs"]
+mod tests;

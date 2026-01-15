@@ -32,3 +32,7 @@ pub async fn resolve_for_user(
         payload: deeplink.payload,
     }))
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/app_deeplink.rs"]
+mod tests;

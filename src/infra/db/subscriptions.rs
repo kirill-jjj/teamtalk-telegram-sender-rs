@@ -89,3 +89,7 @@ impl Database {
         Ok(recipients)
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_subscriptions.rs"]
+mod tests;

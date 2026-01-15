@@ -17,3 +17,7 @@ pub fn parse_notification_setting(raw: &str) -> NotificationSetting {
 pub fn parse_mute_list_mode(raw: &str) -> MuteListMode {
     MuteListMode::try_from(raw).unwrap_or(MuteListMode::Blacklist)
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/app_user_settings.rs"]
+mod tests;

@@ -51,3 +51,7 @@ impl Database {
         Ok(())
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_mutes.rs"]
+mod tests;

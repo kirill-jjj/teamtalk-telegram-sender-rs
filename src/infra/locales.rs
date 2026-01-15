@@ -1,4 +1,4 @@
-use fluent_templates::fluent_bundle::FluentValue;
+﻿use fluent_templates::fluent_bundle::FluentValue;
 use fluent_templates::{Loader, static_loader};
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -37,6 +37,10 @@ pub fn get_text(
         |args_map| LOCALES.lookup_with_args(lang_id, key, args_map),
     )
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/infra_locales.rs"]
+mod tests;
 
 #[macro_export]
 /// Helper to build Fluent arguments.

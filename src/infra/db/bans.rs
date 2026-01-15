@@ -60,3 +60,7 @@ impl Database {
         Ok(record.count > 0)
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_bans.rs"]
+mod tests;

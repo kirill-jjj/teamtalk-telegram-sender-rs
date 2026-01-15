@@ -174,3 +174,7 @@ impl FromStr for CallbackAction {
         postcard::from_bytes(&bytes).map_err(|e| anyhow!("Invalid callback data: {e}"))
     }
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/core_callbacks.rs"]
+mod tests;

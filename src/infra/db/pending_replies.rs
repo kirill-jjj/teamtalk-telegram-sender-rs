@@ -44,3 +44,7 @@ impl Database {
         Ok(res.rows_affected())
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/infra_db_pending_replies.rs"]
+mod tests;

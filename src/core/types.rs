@@ -261,3 +261,7 @@ pub struct LiteUser {
     pub username: String,
     pub channel_name: String,
 }
+
+#[cfg(test)]
+#[path = "../../tests/unit/core_types.rs"]
+mod tests;
