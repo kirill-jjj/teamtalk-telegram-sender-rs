@@ -183,3 +183,7 @@ pub fn create_main_menu_keyboard(lang: LanguageCode, is_admin: bool) -> InlineKe
 
     InlineKeyboardMarkup::new(buttons)
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/tg_keyboards.rs"]
+mod tests;

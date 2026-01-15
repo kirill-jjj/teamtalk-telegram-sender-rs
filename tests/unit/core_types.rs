@@ -9,6 +9,10 @@ fn language_code_parse_and_display() {
         LanguageCode::from_str_or_default("xx", LanguageCode::Ru),
         LanguageCode::Ru
     );
+    assert_eq!(
+        LanguageCode::from_str_or_default("", LanguageCode::En),
+        LanguageCode::En
+    );
     assert_eq!(LanguageCode::En.to_string(), "en");
 }
 

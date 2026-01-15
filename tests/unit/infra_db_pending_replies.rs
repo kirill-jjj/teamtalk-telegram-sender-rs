@@ -27,6 +27,15 @@ async fn cleanup_keeps_recent_when_ttl_large() {
     let _ = std::fs::remove_file(path);
 }
 
+#[tokio::test]
+async fn cleanup_empty_returns_zero() {
+    let (db, path) = setup_db().await;
+    let removed = db.cleanup_pending_replies(0).await.unwrap();
+    assert_eq!(removed, 0);
+    db.close().await;
+    let _ = std::fs::remove_file(path);
+}
+
 async fn setup_db() -> (Database, std::path::PathBuf) {
     let mut path = std::env::temp_dir();
     path.push(format!("tt_tg_pending_{}.db", uuid::Uuid::now_v7()));

@@ -43,6 +43,16 @@ async fn update_mute_mode() {
     let _ = std::fs::remove_file(path);
 }
 
+#[tokio::test]
+async fn muted_list_is_empty_for_new_user() {
+    let (db, path) = setup_db().await;
+    db.get_or_create_user(15, LanguageCode::En).await.unwrap();
+    let list = db.get_muted_users_list(15).await.unwrap();
+    assert!(list.is_empty());
+    db.close().await;
+    let _ = std::fs::remove_file(path);
+}
+
 async fn setup_db() -> (Database, std::path::PathBuf) {
     let mut path = std::env::temp_dir();
     path.push(format!("tt_tg_mutes_{}.db", uuid::Uuid::now_v7()));

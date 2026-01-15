@@ -98,3 +98,15 @@ fn callback_fuzz_lite_inputs_do_not_panic() {
         let _ = CallbackAction::from_str(&s);
     }
 }
+
+#[test]
+fn callback_oversized_payload_encodes_as_noop() {
+    let long_name = "x".repeat(200);
+    let action = CallbackAction::Subscriber(SubAction::LinkPerform {
+        sub_id: 1,
+        page: 0,
+        username: TtUsername::from(long_name),
+    });
+    let encoded = encode_callback(&action);
+    assert_eq!(encoded, "noop");
+}

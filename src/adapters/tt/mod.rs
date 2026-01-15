@@ -521,3 +521,7 @@ fn shutdown_teamtalk(client: &Client, has_stream: bool) {
     tracing::info!(component = "tt_worker", "Logging out");
     client.logout();
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/tt_mod.rs"]
+mod tests;

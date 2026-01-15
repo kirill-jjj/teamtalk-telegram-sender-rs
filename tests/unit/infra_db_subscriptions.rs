@@ -83,6 +83,25 @@ async fn recipients_respect_mute_modes() {
     let _ = std::fs::remove_file(path);
 }
 
+#[tokio::test]
+async fn recipients_are_empty_when_notifications_disabled() {
+    let (db, path) = setup_db().await;
+    db.get_or_create_user(40, LanguageCode::En).await.unwrap();
+    db.add_subscriber(40).await.unwrap();
+    db.update_notification_setting(40, NotificationSetting::None)
+        .await
+        .unwrap();
+
+    let join = db
+        .get_recipients_for_event("user", crate::core::types::NotificationType::Join)
+        .await
+        .unwrap();
+    assert!(join.is_empty());
+
+    db.close().await;
+    let _ = std::fs::remove_file(path);
+}
+
 async fn setup_db() -> (Database, std::path::PathBuf) {
     let mut path = std::env::temp_dir();
     path.push(format!("tt_tg_subs_{}.db", uuid::Uuid::now_v7()));

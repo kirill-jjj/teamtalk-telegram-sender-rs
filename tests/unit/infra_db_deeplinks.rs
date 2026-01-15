@@ -47,3 +47,12 @@ async fn resolve_returns_none_for_missing_token() {
     db.close().await;
     let _ = std::fs::remove_file(path);
 }
+
+#[tokio::test]
+async fn cleanup_no_rows_returns_zero() {
+    let (db, path) = setup_db().await;
+    let removed = db.cleanup_expired_deeplinks().await.unwrap();
+    assert_eq!(removed, 0);
+    db.close().await;
+    let _ = std::fs::remove_file(path);
+}

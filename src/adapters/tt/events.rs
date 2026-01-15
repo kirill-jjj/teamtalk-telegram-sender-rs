@@ -336,3 +336,7 @@ fn parse_gender(raw: &str) -> UserGender {
         _ => UserGender::Neutral,
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/unit/tt_events.rs"]
+mod tests;

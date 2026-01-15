@@ -8,7 +8,9 @@ async fn setup_db() -> (Database, PathBuf) {
         "teamtalk_bot_admin_cleanup_{}.db",
         uuid::Uuid::now_v7()
     ));
-    let db = Database::new(&db_path).await.expect("db init");
+    let db = Database::new(db_path.to_str().unwrap())
+        .await
+        .expect("db init");
     (db, db_path)
 }
 
