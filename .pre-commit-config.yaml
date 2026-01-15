@@ -26,6 +26,13 @@ repos:
         types: [rust]
         pass_filenames: false
 
+      - id: test
+        name: cargo test
+        entry: cargo test
+        language: system
+        types: [rust]
+        pass_filenames: false
+
       - id: sqlx-prepare
         name: cargo sqlx prepare
         entry: cargo sqlx prepare
