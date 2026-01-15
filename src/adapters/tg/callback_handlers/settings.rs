@@ -57,13 +57,13 @@ pub async fn handle_settings(
 async fn handle_lang_select(bot: &Bot, msg: &Message, lang: LanguageCode) -> ResponseResult<()> {
     let keyboard = InlineKeyboardMarkup::new(vec![
         vec![callback_button(
-            "dY??dY? D???????D?D,D1",
+            "Русский",
             CallbackAction::Settings(SettingsAction::LangSet {
                 lang: LanguageCode::Ru,
             }),
         )],
         vec![callback_button(
-            "dY?dY?\u{0015} English",
+            "English",
             CallbackAction::Settings(SettingsAction::LangSet {
                 lang: LanguageCode::En,
             }),
