@@ -267,11 +267,15 @@ fn parse_status_gender(raw: &str) -> UserGender {
 }
 
 fn handle_commands(cmd_ctx: &CommandCtx<'_>, stream_state: &mut StreamState, shutdown: &mut bool) {
-    while let Ok(cmd) = cmd_ctx.rx_cmd.try_recv() {
+    use std::sync::mpsc::RecvTimeoutError;
+
+    let handle_command = |cmd_ctx: &CommandCtx<'_>,
+                          stream_state: &mut StreamState,
+                          shutdown: &mut bool,
+                          cmd: TtCommand| {
         match cmd {
             TtCommand::Shutdown => {
                 *shutdown = true;
-                break;
             }
             TtCommand::ReplyToUser { user_id, text } => {
                 cmd_ctx.client.send_to_user(UserId(user_id), &text);
@@ -345,6 +349,22 @@ fn handle_commands(cmd_ctx: &CommandCtx<'_>, stream_state: &mut StreamState, shu
                 );
                 cmd_ctx.client.list_user_accounts(0, 1000);
             }
+        }
+    };
+
+    match cmd_ctx.rx_cmd.recv_timeout(Duration::from_millis(100)) {
+        Ok(cmd) => {
+            handle_command(cmd_ctx, stream_state, shutdown, cmd);
+            while let Ok(cmd) = cmd_ctx.rx_cmd.try_recv() {
+                handle_command(cmd_ctx, stream_state, shutdown, cmd);
+                if *shutdown {
+                    break;
+                }
+            }
+        }
+        Err(RecvTimeoutError::Timeout) => {}
+        Err(RecvTimeoutError::Disconnected) => {
+            *shutdown = true;
         }
     }
 }
@@ -494,7 +514,7 @@ fn poll_events(
         }
     }
     if events_processed == 0
-        && let Some((event, msg)) = client.poll(100)
+        && let Some((event, msg)) = client.poll(0)
     {
         if stream_state.current.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing)
         {
