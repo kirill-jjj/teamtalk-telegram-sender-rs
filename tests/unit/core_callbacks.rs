@@ -33,7 +33,7 @@ fn callback_invalid_base85() {
 
 #[test]
 fn callback_invalid_postcard() {
-    let encoded = z85::encode(&[1, 2, 3, 4, 5, 6]);
+    let encoded = z85::encode([1, 2, 3, 4, 5, 6]);
     let decoded = CallbackAction::from_str(&encoded);
     assert!(decoded.is_ok() || decoded.is_err());
 }
