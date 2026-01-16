@@ -21,10 +21,14 @@ pub async fn handle_menu(
 
     match action {
         MenuAction::Who => {
-            if let Err(e) = state.tx_tt.send(TtCommand::Who {
-                chat_id: chat_id.0,
-                lang,
-            }) {
+            if let Err(e) = state
+                .tx_tt
+                .send(TtCommand::Who {
+                    chat_id: chat_id.0,
+                    lang,
+                })
+                .await
+            {
                 tracing::error!(error = %e, "Failed to send TT who command");
                 notify_admin_error(
                     &bot,

@@ -19,7 +19,7 @@ struct BridgeDeps<'a> {
     message_token_present: bool,
     default_lang: LanguageCode,
     admin_id: teloxide::types::ChatId,
-    tx_tt_cmd: &'a std::sync::mpsc::Sender<types::TtCommand>,
+    tx_tt_cmd: &'a tokio::sync::mpsc::Sender<types::TtCommand>,
 }
 
 struct BroadcastData {
@@ -62,7 +62,7 @@ pub struct BridgeContext {
     pub event_bot: Option<Bot>,
     pub msg_bot: Option<Bot>,
     pub message_token_present: bool,
-    pub tx_tt_cmd: std::sync::mpsc::Sender<types::TtCommand>,
+    pub tx_tt_cmd: tokio::sync::mpsc::Sender<types::TtCommand>,
     pub cancel_token: tokio_util::sync::CancellationToken,
 }
 
@@ -379,10 +379,14 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     };
     let reply_text = locales::get_text(reply_lang.as_str(), key_reply, None);
 
-    if let Err(e) = deps.tx_tt_cmd.send(types::TtCommand::ReplyToUser {
-        user_id: data.user_id,
-        text: reply_text,
-    }) {
+    if let Err(e) = deps
+        .tx_tt_cmd
+        .send(types::TtCommand::ReplyToUser {
+            user_id: data.user_id,
+            text: reply_text,
+        })
+        .await
+    {
         tracing::error!(
             component = "bridge",
             user_id = data.user_id,

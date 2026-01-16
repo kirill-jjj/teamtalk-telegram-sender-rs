@@ -6,15 +6,17 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, TtCommand};
 use crate::infra::db::Database;
 use crate::infra::locales;
+use futures::StreamExt;
 use std::collections::{HashMap, VecDeque};
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use teamtalk::Client;
 use teamtalk::client::media::MediaPlayback;
-use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
+use teamtalk::client::{ConnectParams, ConnectParamsOwned, ReconnectConfig, ReconnectHandler};
 use teamtalk::types::{AudioPreprocessor, ChannelId, UserGender, UserStatus};
 use teamtalk::types::{UserAccount, UserId};
+use teamtalk::{AsyncClient, AsyncConfig};
+use tokio::sync::mpsc::{Receiver, Sender};
 
 pub(super) fn resolve_server_name(
     tt_config: &crate::bootstrap::config::TeamTalkConfig,
@@ -98,10 +100,23 @@ impl StreamState {
 struct CommandCtx<'a> {
     client: &'a Client,
     worker: &'a WorkerContext,
-    set_streaming_status: &'a dyn Fn(&Client, bool),
     tx_cmd_clone: &'a Sender<TtCommand>,
     is_streaming: &'a Arc<std::sync::atomic::AtomicBool>,
-    rx_cmd: &'a Receiver<TtCommand>,
+    status_gender: UserGender,
+    status_text: &'a str,
+}
+
+struct AsyncWorkerArgs {
+    async_client: AsyncClient,
+    ctx: WorkerContext,
+    rx_cmd: Receiver<TtCommand>,
+    tx_cmd_clone: Sender<TtCommand>,
+    is_streaming: Arc<std::sync::atomic::AtomicBool>,
+    status_gender: UserGender,
+    status_text: String,
+    reconnect_handler: ReconnectHandler,
+    connect_params: ConnectParamsOwned,
+    reconnect_check_interval_seconds: u64,
 }
 
 pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
@@ -143,16 +158,9 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     };
 
     let status_gender = parse_status_gender(&config.general.gender);
-    let set_streaming_status = |client: &Client, streaming: bool| {
-        let status = UserStatus {
-            gender: status_gender,
-            streaming,
-            ..UserStatus::default()
-        };
-        client.set_status(status, &config.teamtalk.status_text);
-    };
+    let status_text = config.teamtalk.status_text.clone();
 
-    let mut reconnect_handler = build_reconnect_handler();
+    let reconnect_handler = build_reconnect_handler();
     let connect_params = build_connect_params(tt_config);
 
     tracing::info!(
@@ -165,44 +173,100 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         "Connecting to TeamTalk"
     );
 
-    connect_to_teamtalk(&client, &connect_params);
+    let async_client = client.into_async_with_config(AsyncConfig::new().poll_timeout_ms(100));
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .expect("failed to build TT runtime");
 
+    let args = AsyncWorkerArgs {
+        async_client,
+        ctx,
+        rx_cmd,
+        tx_cmd_clone,
+        is_streaming,
+        status_gender,
+        status_text,
+        reconnect_handler,
+        connect_params,
+        reconnect_check_interval_seconds,
+    };
+
+    rt.block_on(run_async_worker(args));
+}
+
+async fn run_async_worker(mut args: AsyncWorkerArgs) {
     let mut ready_time: Option<std::time::Instant> = None;
     let mut is_connected = false;
     let mut stream_state = StreamState::new();
     let mut shutdown = false;
+    let mut reconnect_tick = tokio::time::interval(Duration::from_secs(
+        args.reconnect_check_interval_seconds.max(1),
+    ));
 
-    while !shutdown {
-        if !is_connected {
-            client.handle_reconnect(&connect_params, &mut reconnect_handler);
+    args.async_client.with_client(|client| {
+        let params = connect_params_ref(&args.connect_params);
+        connect_to_teamtalk(client, &params);
+    });
+
+    loop {
+        tokio::select! {
+            _ = reconnect_tick.tick() => {
+                if !is_connected {
+                    args.async_client.with_client(|client| {
+                        let params = connect_params_ref(&args.connect_params);
+                        client.handle_reconnect(&params, &mut args.reconnect_handler);
+                    });
+                }
+            }
+            cmd = args.rx_cmd.recv() => {
+                match cmd {
+                    Some(cmd) => {
+                        args.async_client.with_client(|client| {
+                            let cmd_ctx = CommandCtx {
+                                client,
+                                worker: &args.ctx,
+                                tx_cmd_clone: &args.tx_cmd_clone,
+                                is_streaming: &args.is_streaming,
+                                status_gender: args.status_gender,
+                                status_text: &args.status_text,
+                            };
+                            handle_command(&cmd_ctx, &mut stream_state, &mut shutdown, cmd);
+                        });
+                    }
+                    None => shutdown = true,
+                }
+            }
+            maybe_event = args.async_client.next() => {
+                let Some((event, msg)) = maybe_event else {
+                    break;
+                };
+                if stream_state.current.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing) {
+                    continue;
+                }
+                args.async_client.with_client(|client| {
+                    events::handle_sdk_event(
+                        client,
+                        &args.ctx,
+                        event,
+                        &msg,
+                        &mut is_connected,
+                        &mut args.reconnect_handler,
+                        &mut ready_time,
+                    );
+                });
+            }
         }
-
-        let cmd_ctx = CommandCtx {
-            client: &client,
-            worker: &ctx,
-            set_streaming_status: &set_streaming_status,
-            tx_cmd_clone: &tx_cmd_clone,
-            is_streaming: &is_streaming,
-            rx_cmd: &rx_cmd,
-        };
-        handle_commands(&cmd_ctx, &mut stream_state, &mut shutdown);
-
         if shutdown {
             break;
         }
-
-        poll_events(
-            &client,
-            &ctx,
-            &mut is_connected,
-            &mut reconnect_handler,
-            &mut ready_time,
-            &stream_state,
-        );
     }
 
-    shutdown_teamtalk(&client, stream_state.current.is_some());
-    let _ = client.disconnect();
+    args.async_client.stop();
+    args.async_client.with_client(|client| {
+        shutdown_teamtalk(client, stream_state.current.is_some());
+        let _ = client.disconnect();
+    });
 }
 
 fn init_client(tx_init: &std::sync::mpsc::Sender<Result<(), String>>) -> Option<Client> {
@@ -233,16 +297,22 @@ fn build_reconnect_handler() -> ReconnectHandler {
     })
 }
 
-fn build_connect_params(tt_config: &crate::bootstrap::config::TeamTalkConfig) -> ConnectParams<'_> {
+fn build_connect_params(
+    tt_config: &crate::bootstrap::config::TeamTalkConfig,
+) -> ConnectParamsOwned {
     let port = i32::try_from(tt_config.port).unwrap_or_else(|_| {
         tracing::error!(port = tt_config.port, "Invalid TeamTalk port");
         0
     });
+    ConnectParamsOwned::new(&tt_config.host_name, port, port, tt_config.encrypted)
+}
+
+fn connect_params_ref(params: &ConnectParamsOwned) -> ConnectParams<'_> {
     ConnectParams {
-        host: &tt_config.host_name,
-        tcp: port,
-        udp: port,
-        encrypted: tt_config.encrypted,
+        host: &params.host,
+        tcp: params.tcp,
+        udp: params.udp,
+        encrypted: params.encrypted,
     }
 }
 
@@ -266,107 +336,103 @@ fn parse_status_gender(raw: &str) -> UserGender {
     }
 }
 
-fn handle_commands(cmd_ctx: &CommandCtx<'_>, stream_state: &mut StreamState, shutdown: &mut bool) {
-    use std::sync::mpsc::RecvTimeoutError;
-
-    let handle_command = |cmd_ctx: &CommandCtx<'_>,
-                          stream_state: &mut StreamState,
-                          shutdown: &mut bool,
-                          cmd: TtCommand| {
-        match cmd {
-            TtCommand::Shutdown => {
-                *shutdown = true;
-            }
-            TtCommand::ReplyToUser { user_id, text } => {
-                cmd_ctx.client.send_to_user(UserId(user_id), &text);
-            }
-            TtCommand::SendToChannel { channel_id, text } => {
-                cmd_ctx.client.send_to_channel(ChannelId(channel_id), &text);
-            }
-            TtCommand::EnqueueStream {
+fn handle_command(
+    cmd_ctx: &CommandCtx<'_>,
+    stream_state: &mut StreamState,
+    shutdown: &mut bool,
+    cmd: TtCommand,
+) {
+    match cmd {
+        TtCommand::Shutdown => {
+            *shutdown = true;
+        }
+        TtCommand::ReplyToUser { user_id, text } => {
+            cmd_ctx.client.send_to_user(UserId(user_id), &text);
+        }
+        TtCommand::SendToChannel { channel_id, text } => {
+            cmd_ctx.client.send_to_channel(ChannelId(channel_id), &text);
+        }
+        TtCommand::EnqueueStream {
+            channel_id,
+            file_path,
+            duration_ms,
+            announce_text,
+        } => {
+            stream_state.seq = stream_state.seq.wrapping_add(1);
+            stream_state.queue.push_back(StreamItem {
+                stream_id: stream_state.seq,
                 channel_id,
                 file_path,
                 duration_ms,
                 announce_text,
-            } => {
-                stream_state.seq = stream_state.seq.wrapping_add(1);
-                stream_state.queue.push_back(StreamItem {
-                    stream_id: stream_state.seq,
-                    channel_id,
-                    file_path,
-                    duration_ms,
-                    announce_text,
-                });
-                start_next_stream(
-                    cmd_ctx.client,
-                    stream_state,
-                    cmd_ctx.tx_cmd_clone,
-                    cmd_ctx.is_streaming,
-                );
-            }
-            TtCommand::StopStreamingIf { stream_id } => {
-                stop_stream_if_current(
-                    cmd_ctx.client,
-                    stream_state,
-                    stream_id,
-                    cmd_ctx.tx_cmd_clone,
-                    cmd_ctx.is_streaming,
-                );
-            }
-            TtCommand::SkipStream => {
-                skip_stream(
-                    cmd_ctx.client,
-                    stream_state,
-                    cmd_ctx.tx_cmd_clone,
-                    cmd_ctx.is_streaming,
-                );
-            }
-            TtCommand::SetStreamingStatus { streaming } => {
-                if !streaming {
-                    cmd_ctx
-                        .is_streaming
-                        .store(false, std::sync::atomic::Ordering::Relaxed);
-                }
-                (cmd_ctx.set_streaming_status)(cmd_ctx.client, streaming);
-            }
-            TtCommand::KickUser { user_id } => {
-                cmd_ctx
-                    .client
-                    .kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
-            }
-            TtCommand::BanUser { user_id } => {
-                cmd_ctx
-                    .client
-                    .ban_user(UserId(user_id), cmd_ctx.client.my_channel_id());
-            }
-            TtCommand::Who { chat_id, lang } => {
-                reports::handle_who_command(cmd_ctx.client, cmd_ctx.worker, chat_id, lang);
-            }
-            TtCommand::LoadAccounts => {
-                tracing::info!(
-                    component = "tt_worker",
-                    "Requesting full user accounts list"
-                );
-                cmd_ctx.client.list_user_accounts(0, 1000);
-            }
+            });
+            start_next_stream(
+                cmd_ctx.client,
+                stream_state,
+                cmd_ctx.tx_cmd_clone,
+                cmd_ctx.is_streaming,
+            );
         }
-    };
-
-    match cmd_ctx.rx_cmd.recv_timeout(Duration::from_millis(100)) {
-        Ok(cmd) => {
-            handle_command(cmd_ctx, stream_state, shutdown, cmd);
-            while let Ok(cmd) = cmd_ctx.rx_cmd.try_recv() {
-                handle_command(cmd_ctx, stream_state, shutdown, cmd);
-                if *shutdown {
-                    break;
-                }
-            }
+        TtCommand::StopStreamingIf { stream_id } => {
+            stop_stream_if_current(
+                cmd_ctx.client,
+                stream_state,
+                stream_id,
+                cmd_ctx.tx_cmd_clone,
+                cmd_ctx.is_streaming,
+            );
         }
-        Err(RecvTimeoutError::Timeout) => {}
-        Err(RecvTimeoutError::Disconnected) => {
-            *shutdown = true;
+        TtCommand::SkipStream => {
+            skip_stream(
+                cmd_ctx.client,
+                stream_state,
+                cmd_ctx.tx_cmd_clone,
+                cmd_ctx.is_streaming,
+            );
+        }
+        TtCommand::SetStreamingStatus { streaming } => {
+            if !streaming {
+                cmd_ctx
+                    .is_streaming
+                    .store(false, std::sync::atomic::Ordering::Relaxed);
+            }
+            apply_streaming_status(
+                cmd_ctx.client,
+                cmd_ctx.status_gender,
+                cmd_ctx.status_text,
+                streaming,
+            );
+        }
+        TtCommand::KickUser { user_id } => {
+            cmd_ctx
+                .client
+                .kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
+        }
+        TtCommand::BanUser { user_id } => {
+            cmd_ctx
+                .client
+                .ban_user(UserId(user_id), cmd_ctx.client.my_channel_id());
+        }
+        TtCommand::Who { chat_id, lang } => {
+            reports::handle_who_command(cmd_ctx.client, cmd_ctx.worker, chat_id, lang);
+        }
+        TtCommand::LoadAccounts => {
+            tracing::info!(
+                component = "tt_worker",
+                "Requesting full user accounts list"
+            );
+            cmd_ctx.client.list_user_accounts(0, 1000);
         }
     }
+}
+
+fn apply_streaming_status(client: &Client, gender: UserGender, status_text: &str, streaming: bool) {
+    let status = UserStatus {
+        gender,
+        streaming,
+        ..UserStatus::default()
+    };
+    client.set_status(status, status_text);
 }
 
 fn start_next_stream(
@@ -408,7 +474,7 @@ fn start_next_stream(
         let tx_cmd_for_stop = tx_cmd.clone();
         std::thread::spawn(move || {
             std::thread::sleep(Duration::from_millis(u64::from(duration_ms)));
-            let _ = tx_cmd_for_stop.send(TtCommand::StopStreamingIf { stream_id });
+            let _ = tx_cmd_for_stop.blocking_send(TtCommand::StopStreamingIf { stream_id });
             std::thread::sleep(Duration::from_millis(10_000));
             let mut attempts = 0;
             loop {
@@ -475,61 +541,11 @@ fn stop_current_stream(
     std::thread::spawn(move || {
         std::thread::sleep(Duration::from_secs(2));
         if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
-            let _ = tx_cmd_for_stop.send(TtCommand::SetStreamingStatus { streaming: false });
+            let _ =
+                tx_cmd_for_stop.blocking_send(TtCommand::SetStreamingStatus { streaming: false });
         }
     });
     stream_state.current = None;
-}
-
-fn poll_events(
-    client: &Client,
-    ctx: &WorkerContext,
-    is_connected: &mut bool,
-    reconnect_handler: &mut ReconnectHandler,
-    ready_time: &mut Option<std::time::Instant>,
-    stream_state: &StreamState,
-) {
-    let mut events_processed = 0usize;
-    while let Some((event, msg)) = client.poll(0) {
-        if stream_state.current.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing)
-        {
-            events_processed += 1;
-            if events_processed >= 50 {
-                break;
-            }
-            continue;
-        }
-        events::handle_sdk_event(
-            client,
-            ctx,
-            event,
-            &msg,
-            is_connected,
-            reconnect_handler,
-            ready_time,
-        );
-        events_processed += 1;
-        if events_processed >= 50 {
-            break;
-        }
-    }
-    if events_processed == 0
-        && let Some((event, msg)) = client.poll(0)
-    {
-        if stream_state.current.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing)
-        {
-            return;
-        }
-        events::handle_sdk_event(
-            client,
-            ctx,
-            event,
-            &msg,
-            is_connected,
-            reconnect_handler,
-            ready_time,
-        );
-    }
 }
 
 fn shutdown_teamtalk(client: &Client, has_stream: bool) {

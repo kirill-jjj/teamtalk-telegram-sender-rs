@@ -4,7 +4,6 @@ use crate::infra::db::Database;
 use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::mpsc as std_mpsc;
 use std::sync::{Arc, RwLock};
 use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
@@ -37,8 +36,8 @@ struct TeamtalkWorkerConfig {
     online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
     user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     tx_bridge: tokio_mpsc::Sender<crate::core::types::BridgeEvent>,
-    rx_tt_cmd: std_mpsc::Receiver<crate::core::types::TtCommand>,
-    tx_tt_cmd: std_mpsc::Sender<crate::core::types::TtCommand>,
+    rx_tt_cmd: tokio_mpsc::Receiver<crate::core::types::TtCommand>,
+    tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
     db: Database,
     rt_handle: tokio::runtime::Handle,
     bot_username: Option<String>,
@@ -49,7 +48,7 @@ struct TelegramRunContext {
     message_bot: Option<Bot>,
     db: Database,
     shared: SharedState,
-    tx_tt_cmd: std_mpsc::Sender<crate::core::types::TtCommand>,
+    tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
     config: Arc<Config>,
     cancel_token: CancellationToken,
     bridge_handle: tokio::task::JoinHandle<()>,
@@ -107,7 +106,7 @@ impl Application {
 
         let shared = init_shared_state();
         let (tx_bridge, rx_bridge) = tokio_mpsc::channel::<crate::core::types::BridgeEvent>(100);
-        let (tx_tt_cmd, rx_tt_cmd) = std_mpsc::channel::<crate::core::types::TtCommand>();
+        let (tx_tt_cmd, rx_tt_cmd) = tokio_mpsc::channel::<crate::core::types::TtCommand>(100);
 
         let bots = init_bots(&config).await?;
         let tt_handle = start_teamtalk_worker(TeamtalkWorkerConfig {
@@ -364,9 +363,11 @@ async fn wait_for_termination_signal() {
 
 async fn wait_for_shutdown_signal(
     cancel_token: CancellationToken,
-    tx_tt_cmd: std_mpsc::Sender<crate::core::types::TtCommand>,
+    tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
 ) {
     wait_for_termination_signal().await;
-    let _ = tx_tt_cmd.send(crate::core::types::TtCommand::Shutdown);
+    let _ = tx_tt_cmd
+        .send(crate::core::types::TtCommand::Shutdown)
+        .await;
     cancel_token.cancel();
 }
