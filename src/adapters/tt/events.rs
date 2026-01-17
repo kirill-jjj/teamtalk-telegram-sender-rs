@@ -236,7 +236,7 @@ fn on_user_logged_in(
             let real_name = client.get_server_properties().map(|p| p.name);
             let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
-            if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
+            if let Err(e) = ctx.tx_bridge.try_send(BridgeEvent::Broadcast {
                 event_type: NotificationType::Join,
                 nickname,
                 server_name,
@@ -297,7 +297,7 @@ fn on_user_logged_out(
                     let real_name = client.get_server_properties().map(|p| p.name);
                     let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
-                    if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
+                    if let Err(e) = ctx.tx_bridge.try_send(BridgeEvent::Broadcast {
                         event_type: NotificationType::Leave,
                         nickname: u.nickname.clone(),
                         server_name,

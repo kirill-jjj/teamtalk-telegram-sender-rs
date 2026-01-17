@@ -1,6 +1,6 @@
 [package]
 name = "teamtalk-telegram-sender-rs"
-version = "0.7.0"
+version = "0.7.1"
 edition = "2024"
 license = "MIT"
 description = "TeamTalk 5 to Telegram bridge bot"

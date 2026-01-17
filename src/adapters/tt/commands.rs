@@ -76,7 +76,7 @@ fn handle_channel_message(client: &Client, ctx: &TtTextCtx, msg: &TextMessage) {
         }
         let channel_name = resolve_channel_name(client, msg.channel_id, LanguageCode::En);
         let server_name = resolve_server_name(&ctx.tt_config, ctx.real_name_from_client.as_deref());
-        if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::ToAdminChannel {
+        if let Err(e) = ctx.tx_bridge.try_send(BridgeEvent::ToAdminChannel {
             channel_id: msg.channel_id.0,
             channel_name,
             server_name,
@@ -110,7 +110,7 @@ fn handle_channel_skip(ctx: &TtTextCtx, msg: &TextMessage) {
         let is_admin = is_tt_admin(&db, admin_username.as_deref(), &username).await;
 
         let text_key = if is_admin {
-            if let Err(e) = tx_tt_cmd.blocking_send(TtCommand::SkipStream) {
+            if let Err(e) = tx_tt_cmd.try_send(TtCommand::SkipStream) {
                 tracing::error!(
                     tt_username = %username,
                     error = %e,
@@ -124,7 +124,7 @@ fn handle_channel_skip(ctx: &TtTextCtx, msg: &TextMessage) {
             "cmd-unauth"
         };
         let text = locales::get_text(reply_lang.as_str(), text_key, None);
-        if let Err(e) = tx_tt_cmd.blocking_send(TtCommand::SendToChannel { channel_id, text }) {
+        if let Err(e) = tx_tt_cmd.try_send(TtCommand::SendToChannel { channel_id, text }) {
             tracing::error!(channel_id, error = %e, "Failed to send TT channel reply");
         }
     });
@@ -280,7 +280,7 @@ async fn handle_user_skip(ctx: &TtTextCtx, username: &str, lang: LanguageCode, u
         send_user_reply(&ctx.tx_tt_cmd, user_id, username, text);
         return;
     }
-    if let Err(e) = ctx.tx_tt_cmd.blocking_send(TtCommand::SkipStream) {
+    if let Err(e) = ctx.tx_tt_cmd.try_send(TtCommand::SkipStream) {
         tracing::error!(tt_username = %username, error = %e, "Failed to send TT skip command");
         let text = locales::get_text(lang.as_str(), "tt-error-generic", None);
         send_user_reply(&ctx.tx_tt_cmd, user_id, username, text);
@@ -440,7 +440,7 @@ fn send_user_reply(
     username: &str,
     text: String,
 ) {
-    if let Err(e) = tx_tt_cmd.blocking_send(TtCommand::ReplyToUser { user_id, text }) {
+    if let Err(e) = tx_tt_cmd.try_send(TtCommand::ReplyToUser { user_id, text }) {
         tracing::error!(
             user_id,
             tt_username = %username,

@@ -15,6 +15,10 @@ All notable changes to this project will be documented in this file.
 - Removed proxy-only app services in favor of direct database calls.
 - Simplified callback serialization helpers and keyboard usage.
 
+## [0.7.1]
+### Fixed
+- Avoid blocking sends in TeamTalk async runtime (prevents `/who` panic).
+
 ## [0.7.0]
 ### Added
 - Reply-to behavior for command responses (bot replies to the command message).

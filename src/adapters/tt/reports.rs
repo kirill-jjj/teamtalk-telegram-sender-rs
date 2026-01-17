@@ -81,7 +81,7 @@ pub(super) fn handle_who_command(
         }
     }
 
-    if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::WhoReport {
+    if let Err(e) = ctx.tx_bridge.try_send(BridgeEvent::WhoReport {
         chat_id,
         text: report.trim_end().to_string(),
         reply_to,
