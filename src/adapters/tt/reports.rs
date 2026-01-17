@@ -12,6 +12,7 @@ pub(super) fn handle_who_command(
     ctx: &WorkerContext,
     chat_id: i64,
     lang: LanguageCode,
+    reply_to: Option<i32>,
 ) {
     let tt_config = &ctx.config.teamtalk;
 
@@ -83,6 +84,7 @@ pub(super) fn handle_who_command(
     if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::WhoReport {
         chat_id,
         text: report.trim_end().to_string(),
+        reply_to,
     }) {
         tracing::error!(chat_id, error = %e, "Failed to send who report to bridge");
     }

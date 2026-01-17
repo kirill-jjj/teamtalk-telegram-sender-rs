@@ -246,7 +246,7 @@ async fn handle_unban_list(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     if should_send_page(msg, page) {
-        send_unban_list(bot, msg.chat.id, &state.db, lang, 0).await?;
+        send_unban_list(bot, msg.chat.id, &state.db, lang, 0, None).await?;
     } else {
         edit_unban_list(bot, msg, &state.db, lang, page).await?;
     }
@@ -294,7 +294,7 @@ async fn handle_subs_list(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     if should_send_page(msg, page) {
-        send_subscribers_list(bot, msg.chat.id, &state.db, lang, 0).await?;
+        send_subscribers_list(bot, msg.chat.id, &state.db, lang, 0, None).await?;
     } else {
         edit_subscribers_list(bot, msg, &state.db, lang, page).await?;
     }

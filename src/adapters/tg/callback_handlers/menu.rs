@@ -26,6 +26,7 @@ pub async fn handle_menu(
                 .send(TtCommand::Who {
                     chat_id: chat_id.0,
                     lang,
+                    reply_to: None,
                 })
                 .await
             {

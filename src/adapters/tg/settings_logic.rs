@@ -9,19 +9,26 @@ use crate::infra::db::Database;
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
+use teloxide::sugar::request::RequestReplyExt;
 use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 
 pub async fn send_main_settings(
     bot: &Bot,
     chat_id: teloxide::types::ChatId,
     lang: LanguageCode,
+    reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
     let text = locales::get_text(lang.as_str(), "settings-title", None);
     let keyboard = main_settings_keyboard(lang);
-    bot.send_message(chat_id, text)
+    let req = bot
+        .send_message(chat_id, text)
         .reply_markup(keyboard)
-        .parse_mode(ParseMode::Html)
-        .await?;
+        .parse_mode(ParseMode::Html);
+    if let Some(reply_to) = reply_to {
+        req.reply_to(reply_to).await?;
+    } else {
+        req.await?;
+    }
     Ok(())
 }
 

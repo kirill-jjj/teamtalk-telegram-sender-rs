@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::sync::RwLock;
 use teloxide::ApiError;
 use teloxide::RequestError;
+use teloxide::sugar::request::RequestReplyExt;
 use teloxide::{prelude::*, utils::html};
 use tokio::task::JoinSet;
 
@@ -47,6 +48,7 @@ struct AdminChannelData {
 struct WhoReportData {
     chat_id: i64,
     text: String,
+    reply_to: Option<i32>,
 }
 
 struct BroadcastTaskCtx {
@@ -108,63 +110,79 @@ pub async fn run_bridge(
             }
         };
 
-        match event {
-            types::BridgeEvent::Broadcast {
-                event_type,
-                nickname,
-                server_name,
-                related_tt_username,
-            } => {
-                handle_broadcast(
-                    &deps,
-                    BroadcastData {
-                        event_type,
-                        nickname,
-                        server_name,
-                        related_tt_username,
-                    },
-                )
-                .await;
-            }
-            types::BridgeEvent::ToAdmin {
-                user_id,
-                nick,
-                tt_username,
-                msg_content,
-                server_name,
-            } => {
-                handle_to_admin(
-                    &deps,
-                    AdminData {
-                        user_id,
-                        nick,
-                        tt_username,
-                        msg_content,
-                        server_name,
-                    },
-                )
-                .await;
-            }
-            types::BridgeEvent::ToAdminChannel {
-                channel_id,
-                channel_name,
-                server_name,
-                msg_content,
-            } => {
-                handle_to_admin_channel(
-                    &deps,
-                    AdminChannelData {
-                        channel_id,
-                        channel_name,
-                        server_name,
-                        msg_content,
-                    },
-                )
-                .await;
-            }
-            types::BridgeEvent::WhoReport { chat_id, text } => {
-                handle_who_report(&deps, WhoReportData { chat_id, text }).await;
-            }
+        handle_bridge_event(&deps, event).await;
+    }
+}
+
+async fn handle_bridge_event(deps: &BridgeDeps<'_>, event: BridgeEvent) {
+    match event {
+        types::BridgeEvent::Broadcast {
+            event_type,
+            nickname,
+            server_name,
+            related_tt_username,
+        } => {
+            handle_broadcast(
+                deps,
+                BroadcastData {
+                    event_type,
+                    nickname,
+                    server_name,
+                    related_tt_username,
+                },
+            )
+            .await;
+        }
+        types::BridgeEvent::ToAdmin {
+            user_id,
+            nick,
+            tt_username,
+            msg_content,
+            server_name,
+        } => {
+            handle_to_admin(
+                deps,
+                AdminData {
+                    user_id,
+                    nick,
+                    tt_username,
+                    msg_content,
+                    server_name,
+                },
+            )
+            .await;
+        }
+        types::BridgeEvent::ToAdminChannel {
+            channel_id,
+            channel_name,
+            server_name,
+            msg_content,
+        } => {
+            handle_to_admin_channel(
+                deps,
+                AdminChannelData {
+                    channel_id,
+                    channel_name,
+                    server_name,
+                    msg_content,
+                },
+            )
+            .await;
+        }
+        types::BridgeEvent::WhoReport {
+            chat_id,
+            text,
+            reply_to,
+        } => {
+            handle_who_report(
+                deps,
+                WhoReportData {
+                    chat_id,
+                    text,
+                    reply_to,
+                },
+            )
+            .await;
         }
     }
 }
@@ -462,10 +480,16 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
 
 async fn handle_who_report(deps: &BridgeDeps<'_>, data: WhoReportData) {
     if let Some(bot) = deps.event_bot
-        && let Err(e) = bot
-            .send_message(teloxide::types::ChatId(data.chat_id), &data.text)
-            .parse_mode(teloxide::types::ParseMode::Html)
-            .await
+        && let Err(e) = {
+            let req = bot
+                .send_message(teloxide::types::ChatId(data.chat_id), &data.text)
+                .parse_mode(teloxide::types::ParseMode::Html);
+            if let Some(reply_to) = data.reply_to {
+                req.reply_to(teloxide::types::MessageId(reply_to)).await
+            } else {
+                req.await
+            }
+        }
     {
         tracing::error!(
             component = "bridge",

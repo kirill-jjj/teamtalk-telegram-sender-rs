@@ -94,24 +94,25 @@ impl<'a> CommandCtx<'a> {
         let config = &state.config;
         let default_lang =
             LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
-        let settings =
-            match user_settings_service::get_or_create(db, telegram_id, default_lang).await {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::error!(telegram_id, error = %e, "Failed to get or create user");
-                    notify_admin_error(
-                        bot,
-                        config,
-                        telegram_id,
-                        AdminErrorContext::Command,
-                        &e.to_string(),
-                        default_lang,
-                    )
-                    .await;
-                    send_text_key(bot, msg.chat.id, default_lang, "cmd-error").await?;
-                    return Ok(None);
-                }
-            };
+        let settings = match user_settings_service::get_or_create(db, telegram_id, default_lang)
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!(telegram_id, error = %e, "Failed to get or create user");
+                notify_admin_error(
+                    bot,
+                    config,
+                    telegram_id,
+                    AdminErrorContext::Command,
+                    &e.to_string(),
+                    default_lang,
+                )
+                .await;
+                send_text_key(bot, msg.chat.id, default_lang, "cmd-error", Some(msg.id)).await?;
+                return Ok(None);
+            }
+        };
         let lang = LanguageCode::from_str_or_default(&settings.language_code, default_lang);
         let is_admin = if telegram_id == config.telegram.admin_chat_id {
             true
@@ -156,7 +157,14 @@ impl<'a> CommandCtx<'a> {
 
     async fn start(&self, token: String) -> ResponseResult<()> {
         if token.is_empty() {
-            return send_text_key(self.bot, self.msg.chat.id, self.lang, "hello-start").await;
+            return send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "hello-start",
+                Some(self.msg.id),
+            )
+            .await;
         }
         match deeplink_service::resolve_for_user(self.db, &token, self.telegram_id).await {
             Ok(Some(deeplink)) => match deeplink.action {
@@ -169,6 +177,7 @@ impl<'a> CommandCtx<'a> {
                     self.msg.chat.id,
                     self.lang,
                     "cmd-invalid-deeplink",
+                    Some(self.msg.id),
                 )
                 .await
             }
@@ -183,7 +192,14 @@ impl<'a> CommandCtx<'a> {
                     self.lang,
                 )
                 .await;
-                send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-error").await
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    "cmd-error",
+                    Some(self.msg.id),
+                )
+                .await
             }
         }
     }
@@ -192,7 +208,14 @@ impl<'a> CommandCtx<'a> {
         match subscription_service::subscribe_via_deeplink(self.db, self.telegram_id, payload).await
         {
             Ok(subscription_service::SubscribeOutcome::BannedUser) => {
-                send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-user-banned").await
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    "cmd-user-banned",
+                    Some(self.msg.id),
+                )
+                .await
             }
             Ok(subscription_service::SubscribeOutcome::BannedTeamTalk { username }) => {
                 let args = args!(name = username);
@@ -201,11 +224,19 @@ impl<'a> CommandCtx<'a> {
                         self.msg.chat.id,
                         locales::get_text(self.lang.as_str(), "cmd-tt-banned", args.as_ref()),
                     )
+                    .reply_to(self.msg.id)
                     .await?;
                 Ok(())
             }
             Ok(subscription_service::SubscribeOutcome::SubscribedLinked) => {
-                send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-success-sub").await
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    "cmd-success-sub",
+                    Some(self.msg.id),
+                )
+                .await
             }
             Ok(subscription_service::SubscribeOutcome::SubscribedGuest) => {
                 self.bot
@@ -214,6 +245,7 @@ impl<'a> CommandCtx<'a> {
                         locales::get_text(self.lang.as_str(), "cmd-success-sub-guest", None),
                     )
                     .parse_mode(ParseMode::Html)
+                    .reply_to(self.msg.id)
                     .await?;
                 Ok(())
             }
@@ -228,7 +260,14 @@ impl<'a> CommandCtx<'a> {
                     self.lang,
                 )
                 .await;
-                send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-error").await
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    "cmd-error",
+                    Some(self.msg.id),
+                )
+                .await
             }
         }
     }
@@ -245,9 +284,23 @@ impl<'a> CommandCtx<'a> {
                 self.lang,
             )
             .await;
-            return send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-error").await;
+            return send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-error",
+                Some(self.msg.id),
+            )
+            .await;
         }
-        send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-success-unsub").await
+        send_text_key(
+            self.bot,
+            self.msg.chat.id,
+            self.lang,
+            "cmd-success-unsub",
+            Some(self.msg.id),
+        )
+        .await
     }
 
     async fn menu(&self) -> ResponseResult<()> {
@@ -261,6 +314,7 @@ impl<'a> CommandCtx<'a> {
                 locales::get_text(self.lang.as_str(), "menu-title", None),
             )
             .parse_mode(ParseMode::Html)
+            .reply_to(self.msg.id)
             .reply_markup(keyboard)
             .await?;
         Ok(())
@@ -276,6 +330,7 @@ impl<'a> CommandCtx<'a> {
                 locales::get_text(self.lang.as_str(), "help-text", None),
             )
             .parse_mode(ParseMode::Html)
+            .reply_to(self.msg.id)
             .await?;
         Ok(())
     }
@@ -289,6 +344,7 @@ impl<'a> CommandCtx<'a> {
             .send(TtCommand::Who {
                 chat_id: self.msg.chat.id.0,
                 lang: self.lang,
+                reply_to: Some(self.msg.id.0),
             })
             .await
         {
@@ -310,7 +366,7 @@ impl<'a> CommandCtx<'a> {
         if !ensure_subscribed(self.bot, self.msg, self.db, self.config, self.lang).await {
             return Ok(());
         }
-        send_main_settings(self.bot, self.msg.chat.id, self.lang).await
+        send_main_settings(self.bot, self.msg.chat.id, self.lang, Some(self.msg.id)).await
     }
 
     async fn unsub(&self) -> ResponseResult<()> {
@@ -327,6 +383,7 @@ impl<'a> CommandCtx<'a> {
         );
         self.bot
             .send_message(self.msg.chat.id, text)
+            .reply_to(self.msg.id)
             .reply_markup(keyboard)
             .await?;
         Ok(())
@@ -334,7 +391,14 @@ impl<'a> CommandCtx<'a> {
 
     async fn kick_or_ban(&self, cmd: Command) -> ResponseResult<()> {
         if !self.is_admin {
-            send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-unauth").await?;
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-unauth",
+                Some(self.msg.id),
+            )
+            .await?;
             return Ok(());
         }
         let mut users: Vec<LiteUser> = self
@@ -381,6 +445,7 @@ impl<'a> CommandCtx<'a> {
 
         self.bot
             .send_message(self.msg.chat.id, title)
+            .reply_to(self.msg.id)
             .reply_markup(keyboard)
             .await?;
         Ok(())
@@ -388,23 +453,60 @@ impl<'a> CommandCtx<'a> {
 
     async fn unban(&self) -> ResponseResult<()> {
         if !self.is_admin {
-            send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-unauth").await?;
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-unauth",
+                Some(self.msg.id),
+            )
+            .await?;
             return Ok(());
         }
-        send_unban_list(self.bot, self.msg.chat.id, self.db, self.lang, 0).await
+        send_unban_list(
+            self.bot,
+            self.msg.chat.id,
+            self.db,
+            self.lang,
+            0,
+            Some(self.msg.id),
+        )
+        .await
     }
 
     async fn subscribers(&self) -> ResponseResult<()> {
         if !self.is_admin {
-            send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-unauth").await?;
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-unauth",
+                Some(self.msg.id),
+            )
+            .await?;
             return Ok(());
         }
-        send_subscribers_list(self.bot, self.msg.chat.id, self.db, self.lang, 0).await
+        send_subscribers_list(
+            self.bot,
+            self.msg.chat.id,
+            self.db,
+            self.lang,
+            0,
+            Some(self.msg.id),
+        )
+        .await
     }
 
     async fn exit(&self) -> ResponseResult<()> {
         if !self.is_admin {
-            send_text_key(self.bot, self.msg.chat.id, self.lang, "cmd-unauth").await?;
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-unauth",
+                Some(self.msg.id),
+            )
+            .await?;
             return Ok(());
         }
         self.bot
@@ -412,6 +514,7 @@ impl<'a> CommandCtx<'a> {
                 self.msg.chat.id,
                 locales::get_text(self.lang.as_str(), "cmd-shutting-down", None),
             )
+            .reply_to(self.msg.id)
             .await?;
         let _ = self.state.tx_tt.send(TtCommand::Shutdown).await;
         self.state.cancel_token.cancel();

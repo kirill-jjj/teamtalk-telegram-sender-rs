@@ -4,6 +4,7 @@ use crate::core::types::LanguageCode;
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teloxide::prelude::*;
+use teloxide::sugar::request::RequestReplyExt;
 
 pub async fn send_unban_list(
     bot: &Bot,
@@ -11,6 +12,7 @@ pub async fn send_unban_list(
     db: &Database,
     lang: LanguageCode,
     page: usize,
+    reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
     let entries = match db.get_banned_users().await {
         Ok(list) => list,
@@ -21,11 +23,15 @@ pub async fn send_unban_list(
     };
 
     if entries.is_empty() {
-        bot.send_message(
+        let req = bot.send_message(
             chat_id,
             locales::get_text(lang.as_str(), "list-ban-empty", None),
-        )
-        .await?;
+        );
+        if let Some(reply_to) = reply_to {
+            req.reply_to(reply_to).await?;
+        } else {
+            req.await?;
+        }
         return Ok(());
     }
 
@@ -58,12 +64,17 @@ pub async fn send_unban_list(
         lang,
     );
 
-    bot.send_message(
-        chat_id,
-        locales::get_text(lang.as_str(), "list-unban-title", None),
-    )
-    .reply_markup(keyboard)
-    .await?;
+    let req = bot
+        .send_message(
+            chat_id,
+            locales::get_text(lang.as_str(), "list-unban-title", None),
+        )
+        .reply_markup(keyboard);
+    if let Some(reply_to) = reply_to {
+        req.reply_to(reply_to).await?;
+    } else {
+        req.await?;
+    }
     Ok(())
 }
 

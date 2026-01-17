@@ -4,6 +4,7 @@ use crate::core::types::{AdminErrorContext, LanguageCode};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teloxide::prelude::*;
+use teloxide::sugar::request::RequestReplyExt;
 use teloxide::types::ParseMode;
 
 pub async fn ensure_subscribed(
@@ -22,6 +23,7 @@ pub async fn ensure_subscribed(
                     locales::get_text(lang.as_str(), "cmd-not-subscribed", None),
                 )
                 .parse_mode(ParseMode::Html)
+                .reply_to(msg.id)
                 .await
             {
                 tracing::error!(
@@ -53,6 +55,7 @@ pub async fn ensure_subscribed(
                     locales::get_text(lang.as_str(), "cmd-error", None),
                 )
                 .parse_mode(ParseMode::Html)
+                .reply_to(msg.id)
                 .await
             {
                 tracing::error!(
@@ -139,8 +142,13 @@ pub async fn send_text_key(
     chat_id: teloxide::types::ChatId,
     lang: LanguageCode,
     key: &str,
+    reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
-    bot.send_message(chat_id, locales::get_text(lang.as_str(), key, None))
-        .await?;
+    let req = bot.send_message(chat_id, locales::get_text(lang.as_str(), key, None));
+    if let Some(reply_to) = reply_to {
+        req.reply_to(reply_to).await?;
+    } else {
+        req.await?;
+    }
     Ok(())
 }

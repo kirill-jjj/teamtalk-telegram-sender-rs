@@ -208,6 +208,7 @@ pub enum BridgeEvent {
     WhoReport {
         chat_id: i64,
         text: String,
+        reply_to: Option<i32>,
     },
 }
 
@@ -250,6 +251,7 @@ pub enum TtCommand {
     Who {
         chat_id: i64,
         lang: LanguageCode,
+        reply_to: Option<i32>,
     },
     LoadAccounts,
 }

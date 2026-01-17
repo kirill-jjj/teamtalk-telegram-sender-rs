@@ -413,8 +413,12 @@ fn handle_command(
                 .client
                 .ban_user(UserId(user_id), cmd_ctx.client.my_channel_id());
         }
-        TtCommand::Who { chat_id, lang } => {
-            reports::handle_who_command(cmd_ctx.client, cmd_ctx.worker, chat_id, lang);
+        TtCommand::Who {
+            chat_id,
+            lang,
+            reply_to,
+        } => {
+            reports::handle_who_command(cmd_ctx.client, cmd_ctx.worker, chat_id, lang, reply_to);
         }
         TtCommand::LoadAccounts => {
             tracing::info!(

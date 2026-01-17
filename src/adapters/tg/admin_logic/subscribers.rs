@@ -10,6 +10,7 @@ use crate::infra::db::Database;
 use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
 use teloxide::prelude::*;
+use teloxide::sugar::request::RequestReplyExt;
 use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 
 struct SubDisplayInfo {
@@ -24,6 +25,7 @@ pub async fn send_subscribers_list(
     db: &Database,
     lang: LanguageCode,
     page: usize,
+    reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
     let subs = match db.get_subscribers().await {
         Ok(list) => list,
@@ -34,11 +36,15 @@ pub async fn send_subscribers_list(
     };
 
     if subs.is_empty() {
-        bot.send_message(
+        let req = bot.send_message(
             chat_id,
             locales::get_text(lang.as_str(), "list-subs-empty", None),
-        )
-        .await?;
+        );
+        if let Some(reply_to) = reply_to {
+            req.reply_to(reply_to).await?;
+        } else {
+            req.await?;
+        }
         return Ok(());
     }
 
@@ -70,12 +76,17 @@ pub async fn send_subscribers_list(
         lang,
     );
 
-    bot.send_message(
-        chat_id,
-        locales::get_text(lang.as_str(), "list-subs-title", None),
-    )
-    .reply_markup(keyboard)
-    .await?;
+    let req = bot
+        .send_message(
+            chat_id,
+            locales::get_text(lang.as_str(), "list-subs-title", None),
+        )
+        .reply_markup(keyboard);
+    if let Some(reply_to) = reply_to {
+        req.reply_to(reply_to).await?;
+    } else {
+        req.await?;
+    }
     Ok(())
 }
 
