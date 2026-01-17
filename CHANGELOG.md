@@ -15,6 +15,27 @@ All notable changes to this project will be documented in this file.
 - Removed proxy-only app services in favor of direct database calls.
 - Simplified callback serialization helpers and keyboard usage.
 
+## [0.7.0]
+### Added
+- Reply-to behavior for command responses (bot replies to the command message).
+- Docker Compose file for local runs.
+- Expanded unit test coverage and added `cargo test` to pre-commit/CI.
+
+### Changed
+- TeamTalk worker now uses async stream API for event handling.
+- Reduced TeamTalk worker spin to lower idle CPU usage.
+- Docker build cache optimized for faster rebuilds.
+- Clippy flags aligned with `-D warnings` in hooks/CI.
+- Added `.gitattributes` to normalize line endings (LF).
+- AGENTS contributor guidance refreshed.
+
+### Fixed
+- Language selection buttons normalized (fixed mojibake).
+
+### Dependencies
+- Updated `actions/checkout` to v6.
+- Updated `chrono` to 0.4.43.
+
 ## [0.6.1]
 ### Added
 - Configurable log level via `general.log_level` in `config.toml`.
