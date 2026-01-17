@@ -14,11 +14,44 @@ on:
 env:
   CARGO_TERM_COLOR: always
   SQLX_OFFLINE: true
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: sccache
 
 jobs:
+  checks:
+    name: Lint & Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Rust Cache
+        uses: swatinem/rust-cache@v2
+
+      - name: sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
+      - name: Cargo Check
+        run: cargo check
+
+      - name: Cargo Clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Cargo Test
+        run: cargo test
+
+      - name: Cargo Fmt
+        run: cargo fmt --check
+
   build:
     name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs: checks
     strategy:
       fail-fast: false
       matrix:
@@ -55,20 +88,11 @@ jobs:
       - name: Rust Cache
         uses: swatinem/rust-cache@v2
 
+      - name: sccache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Build Release
         run: cargo build --release --verbose
-
-      - name: Cargo Check
-        run: cargo check
-
-      - name: Cargo Clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-      - name: Cargo Test
-        run: cargo test
-
-      - name: Cargo Fmt
-        run: cargo fmt --check
 
       - name: Prepare Artifacts
         shell: bash
