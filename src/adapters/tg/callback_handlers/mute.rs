@@ -241,7 +241,7 @@ struct MuteCtx<'a> {
 }
 
 async fn request_accounts(bot: &Bot, state: &AppState, telegram_id: i64, lang: LanguageCode) {
-    if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts).await {
+    if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts) {
         tracing::error!(error = %e, "Failed to request TT accounts");
         notify_admin_error(
             bot,

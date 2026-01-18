@@ -4,8 +4,8 @@ use crate::infra::db::Database;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
+use std::sync::mpsc::Sender;
 use teamtalk::types::UserAccount;
-use tokio::sync::mpsc::Sender;
 
 #[derive(Clone)]
 pub struct AppState {

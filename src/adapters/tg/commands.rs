@@ -77,7 +77,7 @@ struct CommandCtx<'a> {
     db: &'a crate::infra::db::Database,
     config: &'a crate::bootstrap::config::Config,
     online_users: &'a std::sync::Arc<std::sync::RwLock<std::collections::HashMap<i32, LiteUser>>>,
-    tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
+    tx_tt: &'a std::sync::mpsc::Sender<TtCommand>,
     telegram_id: i64,
     lang: LanguageCode,
     is_admin: bool,
@@ -339,15 +339,11 @@ impl<'a> CommandCtx<'a> {
         if !ensure_subscribed(self.bot, self.msg, self.db, self.config, self.lang).await {
             return Ok(());
         }
-        if let Err(e) = self
-            .tx_tt
-            .send(TtCommand::Who {
-                chat_id: self.msg.chat.id.0,
-                lang: self.lang,
-                reply_to: Some(self.msg.id.0),
-            })
-            .await
-        {
+        if let Err(e) = self.tx_tt.send(TtCommand::Who {
+            chat_id: self.msg.chat.id.0,
+            lang: self.lang,
+            reply_to: Some(self.msg.id.0),
+        }) {
             tracing::error!(error = %e, "Failed to send TT who command");
             notify_admin_error(
                 self.bot,
@@ -516,7 +512,7 @@ impl<'a> CommandCtx<'a> {
             )
             .reply_to(self.msg.id)
             .await?;
-        let _ = self.state.tx_tt.send(TtCommand::Shutdown).await;
+        let _ = self.state.tx_tt.send(TtCommand::Shutdown);
         self.state.cancel_token.cancel();
         Ok(())
     }
@@ -679,15 +675,10 @@ async fn handle_channel_reply(
                 "tt-channel-reply-text",
                 args.as_ref(),
             );
-            if let Err(e) = ctx
-                .state
-                .tx_tt
-                .send(TtCommand::SendToChannel {
-                    channel_id,
-                    text: channel_text,
-                })
-                .await
-            {
+            if let Err(e) = ctx.state.tx_tt.send(TtCommand::SendToChannel {
+                channel_id,
+                text: channel_text,
+            }) {
                 tracing::error!(channel_id, error = %e, "Failed to send TT channel reply");
                 notify_admin_error(
                     ctx.bot,
@@ -759,13 +750,10 @@ async fn handle_user_reply(
         .unwrap_or_else(std::sync::PoisonError::into_inner)
         .contains_key(&tt_user_id);
     let reply_key = if is_online {
-        let send_res = state
-            .tx_tt
-            .send(TtCommand::ReplyToUser {
-                user_id: tt_user_id,
-                text: text.to_string(),
-            })
-            .await;
+        let send_res = state.tx_tt.send(TtCommand::ReplyToUser {
+            user_id: tt_user_id,
+            text: text.to_string(),
+        });
         if let Err(e) = send_res {
             tracing::error!(tt_user_id, error = %e, "Failed to send TT reply command");
             notify_admin_error(
@@ -834,7 +822,6 @@ async fn stream_voice(
             duration_ms,
             announce_text,
         })
-        .await
         .map_err(|e| e.to_string())?;
     Ok(())
 }

@@ -112,7 +112,7 @@ async fn handle_kick_perform(
     user_id: i32,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }).await {
+    if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }) {
         tracing::error!(user_id, error = %e, "Failed to send kick command");
         notify_admin_error(
             bot,
@@ -211,7 +211,7 @@ async fn handle_ban_perform(
             );
         }
     }
-    if let Err(e) = state.tx_tt.send(TtCommand::BanUser { user_id }).await {
+    if let Err(e) = state.tx_tt.send(TtCommand::BanUser { user_id }) {
         tracing::error!(
             user_id,
             tt_username = %u.username,

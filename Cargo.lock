@@ -3120,7 +3120,6 @@ checksum = "770a6c2fbf8f91e8ed965676b5d39bea6cc6ba05e62cae6125b1e59130e295d5"
 dependencies = [
  "dirs",
  "evalexpr",
- "futures",
  "once_cell",
  "rand 0.8.5",
  "regex",
@@ -3149,7 +3148,6 @@ dependencies = [
  "chrono",
  "derive_more 2.1.1",
  "fluent-templates",
- "futures",
  "postcard",
  "self_update",
  "serde",
