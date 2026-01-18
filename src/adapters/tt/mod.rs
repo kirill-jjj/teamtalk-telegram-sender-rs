@@ -174,7 +174,8 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     );
 
     let async_client = client.into_async_with_config(AsyncConfig::new().poll_timeout_ms(100));
-    let rt = tokio::runtime::Builder::new_current_thread()
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .worker_threads(2)
         .enable_time()
         .build()
         .expect("failed to build TT runtime");
