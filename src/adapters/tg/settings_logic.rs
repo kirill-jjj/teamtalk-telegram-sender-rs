@@ -238,13 +238,19 @@ pub async fn send_mute_menu(
     msg: &Message,
     lang: LanguageCode,
     current_mode: MuteListMode,
+    has_guest: bool,
 ) -> ResponseResult<()> {
     let mode_desc_key = match current_mode {
         MuteListMode::Blacklist => "mute-mode-blacklist",
         MuteListMode::Whitelist => "mute-mode-whitelist",
     };
     let mode_desc = locales::get_text(lang.as_str(), mode_desc_key, None);
-    let args = args!(mode_desc = mode_desc);
+    let guest_note = if has_guest {
+        locales::get_text(lang.as_str(), "mute-guest-note", None)
+    } else {
+        String::new()
+    };
+    let args = args!(mode_desc = mode_desc, guest_note = guest_note);
     let text = locales::get_text(lang.as_str(), "mute-title", args.as_ref());
 
     let icon_checked = locales::get_text(lang.as_str(), "icon-checked", None);

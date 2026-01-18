@@ -64,8 +64,9 @@ resp-noon-updated = NOON status updated: { $status }
 mute-title = <b>Manage Mute List</b>
 
     { $mode_desc }
+    { $guest_note }
 
-    ⚠️ <b>Note on Guests:</b> This server allows shared guest accounts. You cannot mute a specific guest individually. Adding a guest account to the blacklist will mute <b>ALL</b> users logged in as guests.
+mute-guest-note = ⚠️ <b>Note on Guests:</b> This server allows shared guest accounts. You cannot mute a specific guest individually. Adding a guest account to the blacklist will mute <b>ALL</b> users logged in as guests.
 
 mute-mode-blacklist = Current mode is Blacklist. You receive notifications from everyone except those on the list.
 mute-mode-whitelist = Current mode is Whitelist. You only receive notifications from users on the list.

@@ -37,7 +37,8 @@ pub async fn handle_mute(
             handle_mode_set(&bot, &q, &state, msg, telegram_id, lang, mode).await?;
         }
         MuteAction::Menu { mode } => {
-            send_mute_menu(&bot, msg, lang, mode).await?;
+            let has_guest = state.config.teamtalk.guest_username.is_some();
+            send_mute_menu(&bot, msg, lang, mode, has_guest).await?;
         }
         MuteAction::List { page } => {
             handle_list(&bot, msg, &state, telegram_id, lang, page).await?;
@@ -89,7 +90,8 @@ async fn handle_mode_set(
         false,
     )
     .await?;
-    send_mute_menu(bot, msg, lang, mode).await
+    let has_guest = state.config.teamtalk.guest_username.is_some();
+    send_mute_menu(bot, msg, lang, mode, has_guest).await
 }
 
 async fn handle_list(
