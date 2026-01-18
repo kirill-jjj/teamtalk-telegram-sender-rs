@@ -118,12 +118,30 @@ pub enum SubAction {
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum MuteAction {
-    ModeSet { mode: MuteListMode },
-    Menu { mode: MuteListMode },
-    List { page: usize },
-    ServerList { page: usize },
-    Toggle { username: TtUsername, page: usize },
-    ServerToggle { username: TtUsername, page: usize },
+    ModeSet {
+        mode: MuteListMode,
+    },
+    Menu {
+        mode: MuteListMode,
+    },
+    List {
+        mode: MuteListMode,
+        page: usize,
+    },
+    ServerList {
+        mode: MuteListMode,
+        page: usize,
+    },
+    Toggle {
+        mode: MuteListMode,
+        username: TtUsername,
+        page: usize,
+    },
+    ServerToggle {
+        mode: MuteListMode,
+        username: TtUsername,
+        page: usize,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]

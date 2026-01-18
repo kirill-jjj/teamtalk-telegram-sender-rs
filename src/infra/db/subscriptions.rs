@@ -66,7 +66,9 @@ impl Database {
                 us.not_on_online_confirmed as "not_on_online_confirmed!"
             FROM user_settings us
             JOIN subscribed_users su ON us.telegram_id = su.telegram_id
-            LEFT JOIN muted_users mu ON us.telegram_id = mu.user_settings_telegram_id AND mu.muted_teamtalk_username = ?
+            LEFT JOIN muted_users mu ON us.telegram_id = mu.user_settings_telegram_id
+                AND mu.muted_teamtalk_username = ?
+                AND mu.list_mode = us.mute_list_mode
             WHERE us.notification_settings != 'none'
             AND (
                 (? = 'join' AND us.notification_settings != 'join_off')

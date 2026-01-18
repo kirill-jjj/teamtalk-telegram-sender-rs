@@ -278,16 +278,12 @@ pub async fn send_mute_menu(
         args!(marker = wl_marker).as_ref(),
     );
 
-    let current_mode_display = match current_mode {
-        MuteListMode::Blacklist => locales::get_text(lang.as_str(), "mode-blacklist", None),
-        MuteListMode::Whitelist => locales::get_text(lang.as_str(), "mode-whitelist", None),
-    };
-
-    let btn_manage_text = locales::get_text(
-        lang.as_str(),
-        "btn-manage-list",
-        args!(mode = current_mode_display).as_ref(),
-    );
+    let btn_manage_blacklist = locales::get_text(lang.as_str(), "btn-manage-blacklist", None);
+    let btn_manage_whitelist = locales::get_text(lang.as_str(), "btn-manage-whitelist", None);
+    let btn_server_blacklist =
+        locales::get_text(lang.as_str(), "btn-mute-server-list-blacklist", None);
+    let btn_server_whitelist =
+        locales::get_text(lang.as_str(), "btn-mute-server-list-whitelist", None);
 
     let keyboard = InlineKeyboardMarkup::new(vec![
         vec![
@@ -305,12 +301,32 @@ pub async fn send_mute_menu(
             ),
         ],
         vec![callback_button(
-            btn_manage_text,
-            CallbackAction::Mute(MuteAction::List { page: 0 }),
+            btn_manage_blacklist,
+            CallbackAction::Mute(MuteAction::List {
+                mode: MuteListMode::Blacklist,
+                page: 0,
+            }),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-mute-server-list", None),
-            CallbackAction::Mute(MuteAction::ServerList { page: 0 }),
+            btn_manage_whitelist,
+            CallbackAction::Mute(MuteAction::List {
+                mode: MuteListMode::Whitelist,
+                page: 0,
+            }),
+        )],
+        vec![callback_button(
+            btn_server_blacklist,
+            CallbackAction::Mute(MuteAction::ServerList {
+                mode: MuteListMode::Blacklist,
+                page: 0,
+            }),
+        )],
+        vec![callback_button(
+            btn_server_whitelist,
+            CallbackAction::Mute(MuteAction::ServerList {
+                mode: MuteListMode::Whitelist,
+                page: 0,
+            }),
         )],
         vec![back_button(
             lang,
@@ -351,7 +367,11 @@ pub struct RenderMuteListStringsArgs<'a> {
 }
 
 pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()> {
-    let muted_users: Vec<String> = match args.db.get_muted_users_list(args.telegram_id).await {
+    let muted_users: Vec<String> = match args
+        .db
+        .get_muted_users_list(args.telegram_id, args.mode.clone())
+        .await
+    {
         Ok(list) => list,
         Err(e) => {
             tracing::error!(
@@ -372,10 +392,11 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
                 MuteListMode::Blacklist => muted_set.contains(&acc.username),
                 MuteListMode::Whitelist => !muted_set.contains(&acc.username),
             };
-            let icon_key = if is_muted {
-                "item-status-muted"
-            } else {
-                "item-status-unmuted"
+            let icon_key = match (args.mode.clone(), is_muted) {
+                (MuteListMode::Blacklist, true) => "item-status-blacklist-in",
+                (MuteListMode::Blacklist, false) => "item-status-blacklist-out",
+                (MuteListMode::Whitelist, true) => "item-status-whitelist-in",
+                (MuteListMode::Whitelist, false) => "item-status-whitelist-out",
             };
 
             let display_name = if Some(acc.username.as_str()) == args.guest_username {
@@ -389,12 +410,18 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::ServerToggle {
+                    mode: args.mode.clone(),
                     username: TtUsername::new(acc.username.clone()),
                     page: args.page,
                 }),
             )
         },
-        |p| CallbackAction::Mute(MuteAction::ServerList { page: p }),
+        |p| {
+            CallbackAction::Mute(MuteAction::ServerList {
+                mode: args.mode.clone(),
+                page: p,
+            })
+        },
         Some(back_btn(
             args.lang,
             "btn-back-mute",
@@ -441,19 +468,25 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
 
             let fmt_args = args!(name = display_name);
             let icon_key = match args.mode {
-                MuteListMode::Blacklist => "item-status-muted",
-                MuteListMode::Whitelist => "item-status-unmuted",
+                MuteListMode::Blacklist => "item-status-blacklist-in",
+                MuteListMode::Whitelist => "item-status-whitelist-in",
             };
             let display_text = locales::get_text(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {
+                    mode: args.mode.clone(),
                     username: TtUsername::new(username.clone()),
                     page: args.page,
                 }),
             )
         },
-        |p| CallbackAction::Mute(MuteAction::List { page: p }),
+        |p| {
+            CallbackAction::Mute(MuteAction::List {
+                mode: args.mode.clone(),
+                page: p,
+            })
+        },
         Some(back_btn(
             args.lang,
             "btn-back-mute",

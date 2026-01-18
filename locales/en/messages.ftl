@@ -78,13 +78,20 @@ btn-mode-blacklist = { $marker } Blacklist Mode
 btn-mode-whitelist = { $marker } Whitelist Mode
 btn-manage-list = Manage { $mode }
 btn-mute-server-list = Mute/Unmute from Server List
+btn-manage-blacklist = Manage Blacklist
+btn-manage-whitelist = Manage Whitelist
+btn-mute-server-list-blacklist = Mute/Unmute from Server List (Blacklist)
+btn-mute-server-list-whitelist = Mute/Unmute from Server List (Whitelist)
+
 
 mode-blacklist = Blacklist
 mode-whitelist = Whitelist
 
 # User List Item Status
-item-status-muted = { $name } (Status: Muted)
-item-status-unmuted = { $name } (Status: Not Muted)
+item-status-blacklist-in = 🚫 { $name } (in blacklist)
+item-status-blacklist-out = ✅ { $name } (not in blacklist)
+item-status-whitelist-in = ✅ { $name } (in whitelist)
+item-status-whitelist-out = 🚫 { $name } (not in whitelist)
 
 # Pagination / Lists
 list-kick-title = Select a user to kick from { $server }:

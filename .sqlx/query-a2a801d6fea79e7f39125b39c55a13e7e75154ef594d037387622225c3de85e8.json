@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                us.telegram_id as \"telegram_id!\",\n                us.language_code as \"language_code!\",\n                us.notification_settings as \"notification_settings!\",\n                us.mute_list_mode as \"mute_list_mode!\",\n                us.teamtalk_username,\n                us.not_on_online_enabled as \"not_on_online_enabled!\",\n                us.not_on_online_confirmed as \"not_on_online_confirmed!\"\n            FROM user_settings us\n            JOIN subscribed_users su ON us.telegram_id = su.telegram_id\n            LEFT JOIN muted_users mu ON us.telegram_id = mu.user_settings_telegram_id\n                AND mu.muted_teamtalk_username = ?\n                AND mu.list_mode = us.mute_list_mode\n            WHERE us.notification_settings != 'none'\n            AND (\n                (? = 'join' AND us.notification_settings != 'join_off')\n                OR\n                (? = 'leave' AND us.notification_settings != 'leave_off')\n            )\n            AND (\n                (us.mute_list_mode = 'blacklist' AND mu.id IS NULL)\n                OR\n                (us.mute_list_mode = 'whitelist' AND mu.id IS NOT NULL)\n            )\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "language_code!",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notification_settings!",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "mute_list_mode!",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "teamtalk_username",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "not_on_online_enabled!",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "not_on_online_confirmed!",
+        "ordinal": 6,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      true,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "a2a801d6fea79e7f39125b39c55a13e7e75154ef594d037387622225c3de85e8"
+}

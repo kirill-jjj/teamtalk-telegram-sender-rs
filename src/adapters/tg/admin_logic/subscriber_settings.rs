@@ -278,7 +278,13 @@ pub async fn send_sub_mute_list(
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
-    let muted: Vec<String> = match db.get_muted_users_list(target_id).await {
+    let settings = user_settings_service::get_or_create(db, target_id, lang).await;
+    let mode = settings
+        .as_ref()
+        .map(|s| user_settings_service::parse_mute_list_mode(&s.mute_list_mode))
+        .unwrap_or(MuteListMode::Blacklist);
+
+    let muted: Vec<String> = match db.get_muted_users_list(target_id, mode.clone()).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!(

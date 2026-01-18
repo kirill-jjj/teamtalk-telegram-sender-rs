@@ -78,13 +78,20 @@ btn-mode-blacklist = { $marker } Черный список
 btn-mode-whitelist = { $marker } Белый список
 btn-manage-list = Управлять { $mode }
 btn-mute-server-list = Добавить/убрать из списка сервера
+btn-manage-blacklist = Управлять черным списком
+btn-manage-whitelist = Управлять белым списком
+btn-mute-server-list-blacklist = Добавить/убрать из списка сервера (черный список)
+btn-mute-server-list-whitelist = Добавить/убрать из списка сервера (белый список)
+
 
 mode-blacklist = Черным списком
 mode-whitelist = Белым списком
 
 # User List Item Status
-item-status-muted = { $name } (Статус: в игноре)
-item-status-unmuted = { $name } (Статус: не в игноре)
+item-status-blacklist-in = 🚫 { $name } (в чёрном списке)
+item-status-blacklist-out = ✅ { $name } (не в чёрном списке)
+item-status-whitelist-in = ✅ { $name } (в белом списке)
+item-status-whitelist-out = 🚫 { $name } (не в белом списке)
 
 # Pagination / Lists
 list-kick-title = Выберите пользователя для кика с сервера { $server }:

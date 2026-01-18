@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT muted_teamtalk_username FROM muted_users WHERE user_settings_telegram_id = ?",
+  "query": "SELECT muted_teamtalk_username FROM muted_users WHERE user_settings_telegram_id = ? AND list_mode = ?",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false
     ]
   },
-  "hash": "8d39cd1619f28b7347fb0c94bf58c68821fc915e320860f4bcb6bab93d90967f"
+  "hash": "055628907bbeed93571e21ef7d32632314012052136032091ccfd2ba856bd3c2"
 }

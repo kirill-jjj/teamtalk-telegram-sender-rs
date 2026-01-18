@@ -1,5 +1,5 @@
 use super::Database;
-use crate::core::types::{LanguageCode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
 
 #[tokio::test]
 async fn subscriptions_basic_flow() {
@@ -62,7 +62,9 @@ async fn recipients_respect_mute_modes() {
         .unwrap();
 
     // blacklist + muted user => excluded
-    db.toggle_muted_user(30, "bob").await.unwrap();
+    db.toggle_muted_user(30, MuteListMode::Blacklist, "bob")
+        .await
+        .unwrap();
     let join = db
         .get_recipients_for_event("bob", crate::core::types::NotificationType::Join)
         .await
@@ -70,7 +72,10 @@ async fn recipients_respect_mute_modes() {
     assert!(join.is_empty());
 
     // whitelist + muted user => included
-    db.update_mute_mode(30, crate::core::types::MuteListMode::Whitelist)
+    db.update_mute_mode(30, MuteListMode::Whitelist)
+        .await
+        .unwrap();
+    db.toggle_muted_user(30, MuteListMode::Whitelist, "bob")
         .await
         .unwrap();
     let join = db

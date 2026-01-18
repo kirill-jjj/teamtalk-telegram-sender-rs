@@ -1,5 +1,5 @@
 use super::Database;
-use crate::core::types::{LanguageCode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
 
 #[tokio::test]
 async fn get_or_create_and_updates() {
@@ -56,12 +56,19 @@ async fn delete_user_profile_clears_relations() {
     db.get_or_create_user(3, LanguageCode::En).await.unwrap();
     db.add_subscriber(3).await.unwrap();
     db.add_admin(3).await.unwrap();
-    db.toggle_muted_user(3, "user").await.unwrap();
+    db.toggle_muted_user(3, MuteListMode::Blacklist, "user")
+        .await
+        .unwrap();
     db.delete_user_profile(3).await.unwrap();
 
     assert!(!db.is_subscribed(3).await.unwrap());
     assert!(!db.get_all_admins().await.unwrap().contains(&3));
-    assert!(db.get_muted_users_list(3).await.unwrap().is_empty());
+    assert!(
+        db.get_muted_users_list(3, MuteListMode::Blacklist)
+            .await
+            .unwrap()
+            .is_empty()
+    );
 
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM user_settings WHERE telegram_id = ?")
         .bind(3_i64)
