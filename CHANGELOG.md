@@ -15,6 +15,10 @@ All notable changes to this project will be documented in this file.
 - Removed proxy-only app services in favor of direct database calls.
 - Simplified callback serialization helpers and keyboard usage.
 
+## [0.7.2]
+### Changed
+- Reverted TeamTalk async API back to synchronous polling to avoid sporadic delays.
+
 ## [0.7.1]
 ### Fixed
 - Avoid blocking sends in TeamTalk async runtime (prevents `/who` panic).
