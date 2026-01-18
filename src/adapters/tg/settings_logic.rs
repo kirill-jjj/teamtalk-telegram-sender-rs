@@ -330,6 +330,7 @@ pub struct RenderMuteListArgs<'a> {
     pub page: usize,
     pub title_key: &'a str,
     pub guest_username: Option<&'a str>,
+    pub mode: MuteListMode,
 }
 
 pub struct RenderMuteListStringsArgs<'a> {
@@ -340,6 +341,7 @@ pub struct RenderMuteListStringsArgs<'a> {
     pub page: usize,
     pub title_key: &'a str,
     pub guest_username: Option<&'a str>,
+    pub mode: MuteListMode,
 }
 
 pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()> {
@@ -360,7 +362,10 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
         args.accounts,
         args.page,
         |acc| {
-            let is_muted = muted_set.contains(&acc.username);
+            let is_muted = match args.mode {
+                MuteListMode::Blacklist => muted_set.contains(&acc.username),
+                MuteListMode::Whitelist => !muted_set.contains(&acc.username),
+            };
             let icon_key = if is_muted {
                 "item-status-muted"
             } else {
@@ -429,8 +434,11 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
             };
 
             let fmt_args = args!(name = display_name);
-            let display_text =
-                locales::get_text(args.lang.as_str(), "item-status-muted", fmt_args.as_ref());
+            let icon_key = match args.mode {
+                MuteListMode::Blacklist => "item-status-muted",
+                MuteListMode::Whitelist => "item-status-unmuted",
+            };
+            let display_text = locales::get_text(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {

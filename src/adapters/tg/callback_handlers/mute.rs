@@ -4,9 +4,10 @@ use crate::adapters::tg::settings_logic::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err, notify_admin_error};
+use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::MuteAction;
-use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TtCommand};
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -100,6 +101,7 @@ async fn handle_list(
     page: usize,
 ) -> ResponseResult<()> {
     let muted = load_muted_users(&state.db, telegram_id).await;
+    let mode = load_mute_mode(&state.db, telegram_id, lang).await;
     let guest_username = state.config.teamtalk.guest_username.as_deref();
     render_mute_list_strings(RenderMuteListStringsArgs {
         bot,
@@ -109,6 +111,7 @@ async fn handle_list(
         page,
         title_key: "list-mute-title",
         guest_username,
+        mode,
     })
     .await
 }
@@ -143,6 +146,7 @@ async fn handle_toggle(ctx: &MuteCtx<'_>, username: String, page: usize) -> Resp
     .await?;
 
     let muted = load_muted_users(&ctx.state.db, ctx.telegram_id).await;
+    let mode = load_mute_mode(&ctx.state.db, ctx.telegram_id, ctx.lang).await;
     let guest_username = ctx.state.config.teamtalk.guest_username.as_deref();
     render_mute_list_strings(RenderMuteListStringsArgs {
         bot: ctx.bot,
@@ -152,6 +156,7 @@ async fn handle_toggle(ctx: &MuteCtx<'_>, username: String, page: usize) -> Resp
         page,
         title_key: "list-mute-title",
         guest_username,
+        mode,
     })
     .await
 }
@@ -168,6 +173,7 @@ async fn handle_server_list(
 
     let accounts = load_accounts(&state.user_accounts);
     let guest_username = state.config.teamtalk.guest_username.as_deref();
+    let mode = load_mute_mode(&state.db, telegram_id, lang).await;
     render_mute_list(RenderMuteListArgs {
         bot,
         msg,
@@ -178,6 +184,7 @@ async fn handle_server_list(
         page,
         title_key: "list-all-accs-title",
         guest_username,
+        mode,
     })
     .await
 }
@@ -217,6 +224,7 @@ async fn handle_server_toggle(
 
     let accounts = load_accounts(&ctx.state.user_accounts);
     let guest_username = ctx.state.config.teamtalk.guest_username.as_deref();
+    let mode = load_mute_mode(&ctx.state.db, ctx.telegram_id, ctx.lang).await;
     render_mute_list(RenderMuteListArgs {
         bot: ctx.bot,
         msg: ctx.msg,
@@ -227,6 +235,7 @@ async fn handle_server_toggle(
         page,
         title_key: "list-all-accs-title",
         guest_username,
+        mode,
     })
     .await
 }
@@ -262,6 +271,17 @@ async fn load_muted_users(db: &crate::infra::db::Database, telegram_id: i64) -> 
             tracing::error!(telegram_id, error = %e, "Failed to load muted users");
             Vec::new()
         })
+}
+
+async fn load_mute_mode(
+    db: &crate::infra::db::Database,
+    telegram_id: i64,
+    lang: LanguageCode,
+) -> MuteListMode {
+    let settings = user_settings_service::get_or_create(db, telegram_id, lang).await;
+    settings
+        .map(|s| user_settings_service::parse_mute_list_mode(&s.mute_list_mode))
+        .unwrap_or(MuteListMode::Blacklist)
 }
 
 fn load_accounts(
