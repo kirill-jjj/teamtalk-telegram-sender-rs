@@ -93,7 +93,7 @@ impl Database {
         .fetch_optional(&self.pool)
         .await
         {
-            Ok(res) => res.flatten(),
+            Ok(res) => res,
             Err(e) => {
                 tracing::error!(
                     tt_username = %tt_username,
