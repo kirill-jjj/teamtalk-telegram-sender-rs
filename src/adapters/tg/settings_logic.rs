@@ -39,10 +39,15 @@ pub async fn send_main_settings_edit(
 ) -> ResponseResult<()> {
     let text = locales::get_text(lang.as_str(), "settings-title", None);
     let keyboard = main_settings_keyboard(lang);
-    bot.edit_message_text(msg.chat.id, msg.id, text)
+    if let Err(e) = bot
+        .edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)
         .parse_mode(ParseMode::Html)
-        .await?;
+        .await
+        && !e.to_string().contains("message is not modified")
+    {
+        return Err(e);
+    }
     Ok(())
 }
 
@@ -431,10 +436,15 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
     );
 
     let text = locales::get_text(args.lang.as_str(), args.title_key, None);
-    args.bot
+    if let Err(e) = args
+        .bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
-        .await?;
+        .await
+        && !e.to_string().contains("message is not modified")
+    {
+        return Err(e);
+    }
     Ok(())
 }
 
@@ -446,10 +456,15 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
             "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         );
-        args.bot
+        if let Err(e) = args
+            .bot
             .edit_message_text(args.msg.chat.id, args.msg.id, text)
             .reply_markup(keyboard)
-            .await?;
+            .await
+            && !e.to_string().contains("message is not modified")
+        {
+            return Err(e);
+        }
         return Ok(());
     }
 
@@ -497,9 +512,14 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
 
     let text = locales::get_text(args.lang.as_str(), args.title_key, None);
 
-    args.bot
+    if let Err(e) = args
+        .bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
-        .await?;
+        .await
+        && !e.to_string().contains("message is not modified")
+    {
+        return Err(e);
+    }
     Ok(())
 }

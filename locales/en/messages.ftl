@@ -3,7 +3,7 @@ hello-start = Hello! Use /help to see available commands.
 help-text =
     <b>Available Commands:</b>
     /who - Show online users.
-    /settings - Access the interactive settings menu (language, notifications, mute lists, NOON feature).
+    /settings - Access the interactive settings menu (language, notifications, mute lists, Offline-only feature).
     /unsub - Unsubscribe from notifications.
     /help - Show this help message.
     (Note: <code>/start</code> is used to initiate the bot and process deeplinks.)
@@ -17,11 +17,11 @@ help-text =
 
 cmd-invalid-deeplink = Invalid or expired deeplink.
 cmd-success-sub = You have successfully subscribed to notifications.
-cmd-success-sub-guest = You have subscribed as a GUEST. Note: "NOON" mode is unavailable.
+cmd-success-sub-guest = Subscribed as GUEST. Note: Offline-only is unavailable.
 cmd-success-unsub = You have successfully unsubscribed from notifications.
 cmd-relink = TeamTalk account linked successfully!
 cmd-fail-account = Your TeamTalk account must have a username to subscribe.
-cmd-fail-noon-guest = Feature unavailable. You must have a linked TeamTalk account to use NOON mode. Please subscribe from a registered account.
+cmd-fail-noon-guest = Offline-only requires a linked TeamTalk account.
 cmd-error = An error occurred. Please try again later.
 admin-error-user = User {user_id} error in {context}: {error}
 admin-error-context-command = command handling
@@ -31,7 +31,7 @@ admin-error-context-subscription = subscription check
 admin-error-context-update-listener = Telegram update listener
 cmd-no-users = No users found online.
 cmd-unauth = You are not authorized to perform this action.
-cmd-not-subscribed = You are not subscribed. Please request a link from the bot in TeamTalk via <code>/sub</code> command.
+cmd-not-subscribed = You are not subscribed. Request a link via <code>/sub</code> in TeamTalk.
 cmd-user-banned = Your Telegram account is banned from using this service.
 cmd-tt-banned = The TeamTalk username '{ $name }' is banned.
 cmd-shutting-down = Shutting down...
@@ -56,9 +56,9 @@ btn-notif-settings = Notification Settings
 
 # Notification Settings
 notif-settings-title = <b>Notification Settings</b>
-btn-noon = NOON (Not on Online): { $status }
+btn-noon = Offline-only: { $status }
 btn-mute-manage = Manage Mute List
-resp-noon-updated = NOON status updated: { $status }
+resp-noon-updated = Offline-only updated: { $status }
 
 # Mute Management
 mute-title = <b>Manage Mute List</b>
@@ -128,7 +128,7 @@ toast-user-unbanned = User has been successfully unbanned.
 toast-subscriber-deleted = Subscriber deleted successfully.
 toast-account-unlinked = Account { $user } has been unlinked.
 toast-account-linked = Successfully linked TeamTalk account: { $user }.
-toast-noon-toggled = NOON for subscriber { $id } set to: { $status }.
+toast-noon-toggled = Offline-only for subscriber { $id } set to: { $status }.
 toast-lang-set = Language for subscriber { $id } changed to { $lang }.
 toast-notif-set = Notification preference for subscriber { $id } set to: { $val }.
 toast-mute-mode-sub-set = Mute list mode for subscriber { $id } set to: { $val }.
@@ -237,7 +237,7 @@ btn-menu-unsub = 🚪 Unsubscribe
 sub-details-title = <b>Subscriber: { $name }</b>
     Linked TT Account: { $tt_user }
     Language: { $lang }
-    NOON (Not on Online): { $noon }
+    Offline-only: { $noon }
     Notifications: { $notif }
     Mute Mode: { $mode }
 
@@ -250,7 +250,7 @@ btn-sub-delete = 🗑️ Delete Subscriber
 btn-sub-ban = 🚫 Ban User (TG & TT)
 btn-sub-manage-tt = 🔗 Manage TeamTalk Account
 btn-sub-lang = 🗣️ Change Language
-btn-sub-noon = 🌞 Toggle NOON
+btn-sub-noon = 🌞 Toggle Offline-only
 btn-sub-notif = 🔔 Set Notification Prefs
 btn-sub-mute-mode = 🔇 Set Mute Mode
 btn-sub-view-mute = 📜 View Mute List
