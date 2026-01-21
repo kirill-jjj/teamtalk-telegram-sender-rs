@@ -39,15 +39,10 @@ pub async fn send_main_settings_edit(
 ) -> ResponseResult<()> {
     let text = locales::get_text(lang.as_str(), "settings-title", None);
     let keyboard = main_settings_keyboard(lang);
-    if let Err(e) = bot
-        .edit_message_text(msg.chat.id, msg.id, text)
+    bot.edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)
         .parse_mode(ParseMode::Html)
-        .await
-        && !e.to_string().contains("message is not modified")
-    {
-        return Err(e);
-    }
+        .await?;
     Ok(())
 }
 
@@ -436,15 +431,10 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
     );
 
     let text = locales::get_text(args.lang.as_str(), args.title_key, None);
-    if let Err(e) = args
-        .bot
+    args.bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
-        .await
-        && !e.to_string().contains("message is not modified")
-    {
-        return Err(e);
-    }
+        .await?;
     Ok(())
 }
 
@@ -456,15 +446,10 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
             "btn-back-mute",
             CallbackAction::Settings(SettingsAction::MuteManage),
         );
-        if let Err(e) = args
-            .bot
+        args.bot
             .edit_message_text(args.msg.chat.id, args.msg.id, text)
             .reply_markup(keyboard)
-            .await
-            && !e.to_string().contains("message is not modified")
-        {
-            return Err(e);
-        }
+            .await?;
         return Ok(());
     }
 
@@ -512,14 +497,9 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
 
     let text = locales::get_text(args.lang.as_str(), args.title_key, None);
 
-    if let Err(e) = args
-        .bot
+    args.bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
-        .await
-        && !e.to_string().contains("message is not modified")
-    {
-        return Err(e);
-    }
+        .await?;
     Ok(())
 }

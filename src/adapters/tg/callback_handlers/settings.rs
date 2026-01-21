@@ -226,11 +226,7 @@ async fn handle_noon_toggle(
                 tracing::error!(error = %e, "Failed to send noon update callback");
             }
 
-            if let Err(e) = send_notif_settings(bot, msg, &state.db, telegram_id, lang).await
-                && !e.to_string().contains("message is not modified")
-            {
-                return Err(e);
-            }
+            send_notif_settings(bot, msg, &state.db, telegram_id, lang).await?;
         }
         Err(e) => {
             check_db_err(

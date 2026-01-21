@@ -98,7 +98,9 @@ fn make_error_handler(
         let admin_config = admin_config.clone();
         async move {
             let err_str = err.to_string();
-            if !err_str.contains("TerminatedByOtherGetUpdates") {
+            if !err_str.contains("TerminatedByOtherGetUpdates")
+                && !err_str.contains("message is not modified")
+            {
                 tracing::error!(
                     component = "telegram",
                     error = %err,
