@@ -14,6 +14,7 @@ help-text =
     /unban - Unban a user from the server (shows a list of banned users).
     /subscribers - View and manage subscribed users.
     /broadcast - Send a broadcast to all TeamTalk users.
+    /message - Send a Telegram message to all subscribers.
     /exit - Shut down the bot.
 
 cmd-invalid-deeplink = Invalid or expired deeplink.
@@ -34,6 +35,8 @@ cmd-no-users = No users found online.
 cmd-unauth = You are not authorized to perform this action.
 cmd-broadcast-empty = Usage: /broadcast <text>
 cmd-broadcast-sent = Broadcast sent to TeamTalk.
+cmd-message-empty = Usage: /message <text>
+cmd-message-sent = Sent to { $sent } subscribers (failed: { $failed }).
 cmd-not-subscribed = You are not subscribed. Request a link via <code>/sub</code> in TeamTalk.
 cmd-user-banned = Your Telegram account is banned from using this service.
 cmd-tt-banned = The TeamTalk username '{ $name }' is banned.
@@ -272,4 +275,5 @@ cmd-desc-unban = Unban user (shows a list of banned users)
 cmd-desc-subscribers = View and manage subscribed users
 cmd-desc-exit = Shut down the bot
 cmd-desc-broadcast = Send a TeamTalk broadcast message
+cmd-desc-message = Send a Telegram message to subscribers
 val-none = None

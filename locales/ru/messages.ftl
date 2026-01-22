@@ -14,6 +14,7 @@ help-text =
     /unban - Разбанить пользователя (показывает список забаненных).
     /subscribers - Просмотр и управление подписчиками.
     /broadcast - Отправить объявление всем пользователям TeamTalk.
+    /message - Отправить сообщение всем подписчикам в Telegram.
     /exit - Выключить бота.
 
 cmd-invalid-deeplink = Недействительная или истекшая ссылка.
@@ -34,6 +35,8 @@ cmd-no-users = Пользователей онлайн не найдено.
 cmd-unauth = У вас нет прав для этого действия.
 cmd-broadcast-empty = Использование: /broadcast <текст>
 cmd-broadcast-sent = Сообщение отправлено в TeamTalk.
+cmd-message-empty = Использование: /message <текст>
+cmd-message-sent = Отправлено подписчикам: { $sent } (ошибки: { $failed }).
 cmd-not-subscribed = Вы не подписаны. Запросите ссылку командой <code>/sub</code> в TeamTalk.
 cmd-user-banned = Ваш Telegram аккаунт заблокирован и не может использовать этот сервис.
 cmd-tt-banned = Имя пользователя TeamTalk '{ $name }' забанено.
@@ -277,4 +280,5 @@ cmd-desc-unban = Разбанить пользователя (показывае
 cmd-desc-subscribers = Просмотр и управление подписанными пользователями
 cmd-desc-exit = Выключить бота
 cmd-desc-broadcast = Отправить объявление в TeamTalk
+cmd-desc-message = Отправить сообщение подписчикам в Telegram
 val-none = Нет

@@ -49,6 +49,8 @@ pub enum Command {
     Exit,
     #[command(description = "Broadcast (Admin)")]
     Broadcast(String),
+    #[command(description = "Message (Admin)")]
+    Message(String),
 }
 
 pub async fn answer_command(
@@ -155,6 +157,7 @@ impl<'a> CommandCtx<'a> {
             Command::Subscribers => self.subscribers().await,
             Command::Exit => self.exit().await,
             Command::Broadcast(text) => self.broadcast(text).await,
+            Command::Message(text) => self.message(text).await,
         }
     }
 
@@ -576,6 +579,83 @@ impl<'a> CommandCtx<'a> {
             Some(self.msg.id),
         )
         .await
+    }
+
+    async fn message(&self, text: String) -> ResponseResult<()> {
+        if !self.is_admin {
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-unauth",
+                Some(self.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+
+        let text = text.trim().to_string();
+        if text.is_empty() {
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-message-empty",
+                Some(self.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+
+        let subs = match self.db.get_subscribers().await {
+            Ok(subs) => subs,
+            Err(e) => {
+                tracing::error!(error = %e, "Failed to load subscribers");
+                notify_admin_error(
+                    self.bot,
+                    self.config,
+                    self.telegram_id,
+                    AdminErrorContext::Command,
+                    &e.to_string(),
+                    self.lang,
+                )
+                .await;
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    "cmd-error",
+                    Some(self.msg.id),
+                )
+                .await?;
+                return Ok(());
+            }
+        };
+
+        let mut sent = 0usize;
+        let mut failed = 0usize;
+        for sub in subs {
+            let chat_id = ChatId(sub.telegram_id);
+            match self.bot.send_message(chat_id, text.clone()).await {
+                Ok(_) => sent += 1,
+                Err(e) => {
+                    failed += 1;
+                    tracing::warn!(
+                        telegram_id = sub.telegram_id,
+                        error = %e,
+                        "Failed to send broadcast message"
+                    );
+                }
+            }
+        }
+
+        let args = args!(sent = sent, failed = failed);
+        let reply = locales::get_text(self.lang.as_str(), "cmd-message-sent", args.as_ref());
+        self.bot
+            .send_message(self.msg.chat.id, reply)
+            .reply_to(self.msg.id)
+            .await?;
+        Ok(())
     }
 }
 

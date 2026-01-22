@@ -311,6 +311,10 @@ fn get_admin_commands(lang: LanguageCode) -> Vec<BotCommand> {
             "broadcast",
             locales::get_text(lang.as_str(), "cmd-desc-broadcast", None),
         ),
+        BotCommand::new(
+            "message",
+            locales::get_text(lang.as_str(), "cmd-desc-message", None),
+        ),
     ]);
     cmds
 }
