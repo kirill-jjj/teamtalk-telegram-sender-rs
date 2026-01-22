@@ -47,6 +47,8 @@ pub enum Command {
     Subscribers,
     #[command(description = "Exit (Admin)")]
     Exit,
+    #[command(description = "Broadcast (Admin)")]
+    Broadcast(String),
 }
 
 pub async fn answer_command(
@@ -152,6 +154,7 @@ impl<'a> CommandCtx<'a> {
             Command::Unban => self.unban().await,
             Command::Subscribers => self.subscribers().await,
             Command::Exit => self.exit().await,
+            Command::Broadcast(text) => self.broadcast(text).await,
         }
     }
 
@@ -515,6 +518,64 @@ impl<'a> CommandCtx<'a> {
         let _ = self.state.tx_tt.send(TtCommand::Shutdown);
         self.state.cancel_token.cancel();
         Ok(())
+    }
+
+    async fn broadcast(&self, text: String) -> ResponseResult<()> {
+        if !self.is_admin {
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-unauth",
+                Some(self.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+
+        let text = text.trim().to_string();
+        if text.is_empty() {
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-broadcast-empty",
+                Some(self.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+
+        if let Err(e) = self.tx_tt.send(TtCommand::Broadcast { text }) {
+            tracing::error!(error = %e, "Failed to send broadcast command");
+            notify_admin_error(
+                self.bot,
+                self.config,
+                self.telegram_id,
+                AdminErrorContext::Command,
+                &e.to_string(),
+                self.lang,
+            )
+            .await;
+            send_text_key(
+                self.bot,
+                self.msg.chat.id,
+                self.lang,
+                "cmd-error",
+                Some(self.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+
+        send_text_key(
+            self.bot,
+            self.msg.chat.id,
+            self.lang,
+            "cmd-broadcast-sent",
+            Some(self.msg.id),
+        )
+        .await
     }
 }
 

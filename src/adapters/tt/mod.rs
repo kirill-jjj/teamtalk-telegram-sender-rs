@@ -270,6 +270,9 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                     shutdown = true;
                     break;
                 }
+                TtCommand::Broadcast { text } => {
+                    client.send_to_all(&text);
+                }
                 TtCommand::ReplyToUser { user_id, text } => {
                     client.send_to_user(UserId(user_id), &text);
                 }

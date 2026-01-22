@@ -307,6 +307,10 @@ fn get_admin_commands(lang: LanguageCode) -> Vec<BotCommand> {
             "exit",
             locales::get_text(lang.as_str(), "cmd-desc-exit", None),
         ),
+        BotCommand::new(
+            "broadcast",
+            locales::get_text(lang.as_str(), "cmd-desc-broadcast", None),
+        ),
     ]);
     cmds
 }

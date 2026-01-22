@@ -221,6 +221,9 @@ pub enum NotificationType {
 #[derive(Debug)]
 pub enum TtCommand {
     Shutdown,
+    Broadcast {
+        text: String,
+    },
     ReplyToUser {
         user_id: i32,
         text: String,
