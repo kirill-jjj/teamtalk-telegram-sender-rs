@@ -635,6 +635,9 @@ impl<'a> CommandCtx<'a> {
         let mut sent = 0usize;
         let mut failed = 0usize;
         for sub in subs {
+            if sub.telegram_id == self.telegram_id {
+                continue;
+            }
             let chat_id = ChatId(sub.telegram_id);
             match self.bot.send_message(chat_id, text.clone()).await {
                 Ok(_) => sent += 1,
