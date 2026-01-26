@@ -27,7 +27,7 @@ toml = "0.9"
 derive_more = { version = "2.1", features = ["from"] }
 anyhow = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
-uuid = { version = "1.7", features = ["fast-rng", "v7"] }
+uuid = { version = "1.20", features = ["fast-rng", "v7"] }
 teamtalk = "1.0"
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
