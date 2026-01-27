@@ -2700,9 +2700,9 @@ dependencies = [
 
 [[package]]
 name = "sevenz-rust2"
-version = "0.19.4"
+version = "0.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "414256b6bb303a2a38ad800096664c3b332295c17b7ef0674bf0acf44284036c"
+checksum = "65126b94d6f5a6d727b1e35b0a796685a79062ceaf5fa45321315e62b65251a2"
 dependencies = [
  "aes",
  "bzip2",
@@ -3114,9 +3114,9 @@ dependencies = [
 
 [[package]]
 name = "teamtalk"
-version = "1.1.0"
+version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "770a6c2fbf8f91e8ed965676b5d39bea6cc6ba05e62cae6125b1e59130e295d5"
+checksum = "d413f2477e6fc6c447997d4a0473038238d766bd03a62c8b359284dc5347304c"
 dependencies = [
  "dirs",
  "evalexpr",
