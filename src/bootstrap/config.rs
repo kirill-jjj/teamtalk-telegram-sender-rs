@@ -1,4 +1,6 @@
+use crate::core::types::LanguageCode;
 use serde::Deserialize;
+use teamtalk::types::UserGender;
 
 #[derive(Deserialize, Clone)]
 pub struct Config {
@@ -14,26 +16,64 @@ pub struct Config {
 #[derive(Deserialize, Clone)]
 pub struct GeneralConfig {
     #[serde(default = "default_lang")]
-    pub default_lang: String,
+    pub default_lang: LanguageCode,
     #[serde(default = "default_log_level")]
-    pub log_level: String,
+    pub log_level: LogLevelConfig,
 
     pub admin_username: Option<String>,
 
-    #[serde(default = "default_gender")]
-    pub gender: String,
+    #[serde(default)]
+    pub gender: GenderConfig,
 }
 
-fn default_lang() -> String {
-    "en".to_string()
+const fn default_lang() -> LanguageCode {
+    LanguageCode::En
 }
 
-fn default_log_level() -> String {
-    "info".to_string()
+const fn default_log_level() -> LogLevelConfig {
+    LogLevelConfig::Info
 }
 
-fn default_gender() -> String {
-    "None".to_string()
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum GenderConfig {
+    Male,
+    Female,
+    #[default]
+    #[serde(alias = "none")]
+    Neutral,
+}
+
+impl GenderConfig {
+    pub const fn to_user_gender(self) -> UserGender {
+        match self {
+            Self::Male => UserGender::Male,
+            Self::Female => UserGender::Female,
+            Self::Neutral => UserGender::Neutral,
+        }
+    }
+}
+
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum LogLevelConfig {
+    Trace,
+    Debug,
+    Info,
+    Warn,
+    Error,
+}
+
+impl LogLevelConfig {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Trace => "trace",
+            Self::Debug => "debug",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
+        }
+    }
 }
 
 const fn default_deeplink_cleanup_interval_seconds() -> u64 {

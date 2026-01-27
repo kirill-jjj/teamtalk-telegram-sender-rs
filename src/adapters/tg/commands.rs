@@ -96,8 +96,7 @@ impl<'a> CommandCtx<'a> {
     ) -> ResponseResult<Option<Self>> {
         let db = &state.db;
         let config = &state.config;
-        let default_lang =
-            LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
+        let default_lang = config.general.default_lang;
         let settings = match user_settings_service::get_or_create(db, telegram_id, default_lang)
             .await
         {
@@ -674,8 +673,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
         return Ok(());
     }
 
-    let default_lang =
-        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
+    let default_lang = config.general.default_lang;
     let admin_lang = user_settings_service::get_or_create(db, telegram_id, default_lang)
         .await
         .map(|u| LanguageCode::from_str_or_default(&u.language_code, default_lang))
@@ -881,7 +879,7 @@ async fn handle_user_reply(
                 telegram_id,
                 AdminErrorContext::Command,
                 &e.to_string(),
-                LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En),
+                config.general.default_lang,
             )
             .await;
             return Ok(());

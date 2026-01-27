@@ -15,7 +15,7 @@ use std::time::Duration;
 use teamtalk::Client;
 use teamtalk::client::media::MediaPlayback;
 use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
-use teamtalk::types::{AudioPreprocessor, ChannelId, UserGender, UserStatus};
+use teamtalk::types::{AudioPreprocessor, ChannelId, UserStatus};
 use teamtalk::types::{UserAccount, UserId};
 
 pub(super) fn resolve_server_name(
@@ -138,12 +138,7 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
     let mut stream_queue: VecDeque<StreamItem> = VecDeque::new();
     let mut current_stream: Option<StreamItem> = None;
     let mut stream_seq: u64 = 0;
-    let status_gender = match config.general.gender.trim().to_lowercase().as_str() {
-        "male" => UserGender::Male,
-        "female" => UserGender::Female,
-        "neutral" | "none" => UserGender::Neutral,
-        _ => UserGender::Neutral,
-    };
+    let status_gender = config.general.gender.to_user_gender();
     let set_streaming_status = |client: &Client, streaming: bool| {
         let status = UserStatus {
             gender: status_gender,

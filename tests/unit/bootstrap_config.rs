@@ -93,9 +93,9 @@ fn defaults_are_applied() {
             "#,
     );
 
-    assert_eq!(cfg.general.default_lang, "en");
-    assert_eq!(cfg.general.log_level, "info");
-    assert_eq!(cfg.general.gender, "None");
+    assert_eq!(cfg.general.default_lang, LanguageCode::En);
+    assert_eq!(cfg.general.log_level.as_str(), "info");
+    assert_eq!(cfg.general.gender, GenderConfig::Neutral);
     assert_eq!(cfg.operational_parameters.deeplink_ttl, 300);
     assert_eq!(cfg.operational_parameters.tt_reconnect_retry, 10);
 }

@@ -17,8 +17,7 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
 
     let db = &state.db;
     let config = &state.config;
-    let default_lang =
-        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
+    let default_lang = config.general.default_lang;
 
     let Some(MaybeInaccessibleMessage::Regular(_msg)) = &q.message else {
         return Ok(());

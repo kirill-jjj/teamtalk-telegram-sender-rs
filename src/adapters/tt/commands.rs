@@ -19,8 +19,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
     let db = ctx.db.clone();
     let online_users = ctx.online_users.clone();
 
-    let default_lang =
-        LanguageCode::from_str_or_default(&ctx.config.general.default_lang, LanguageCode::En);
+    let default_lang = ctx.config.general.default_lang;
     let admin_username = ctx.config.general.admin_username.clone();
     let tt_config = ctx.config.teamtalk.clone();
     let deeplink_ttl = ctx.config.operational_parameters.deeplink_ttl;

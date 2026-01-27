@@ -82,8 +82,7 @@ pub async fn run_bridge(
         tx_tt_cmd,
         cancel_token,
     } = ctx;
-    let default_lang =
-        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
+    let default_lang = config.general.default_lang;
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
     let deps = BridgeDeps {
         db: &db_clone,

@@ -2,6 +2,7 @@
 
 use crate::adapters::tt::commands;
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
+use crate::bootstrap::config::GenderConfig;
 use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, NotificationType};
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
@@ -46,7 +47,7 @@ pub(super) fn handle_sdk_event(
             );
         }
         Event::MySelfLoggedIn => {
-            let gender = parse_gender(&ctx.config.general.gender);
+            let gender = parse_gender(ctx.config.general.gender);
             let status = UserStatus {
                 gender,
                 ..UserStatus::default()
@@ -120,7 +121,7 @@ pub(super) fn handle_sdk_event(
             let raw = msg.raw();
             let info =
                 unsafe { teamtalk::types::MediaFileInfo::from(raw.__bindgen_anon_1.mediafileinfo) };
-            let gender = parse_gender(&ctx.config.general.gender);
+            let gender = parse_gender(ctx.config.general.gender);
             match info.status {
                 ffi::MediaFileStatus::MFS_CLOSED
                 | ffi::MediaFileStatus::MFS_ERROR
@@ -281,11 +282,6 @@ pub(super) fn handle_sdk_event(
     }
 }
 
-fn parse_gender(raw: &str) -> UserGender {
-    match raw.trim().to_lowercase().as_str() {
-        "male" => UserGender::Male,
-        "female" => UserGender::Female,
-        "neutral" | "none" => UserGender::Neutral,
-        _ => UserGender::Neutral,
-    }
+fn parse_gender(cfg: GenderConfig) -> UserGender {
+    cfg.to_user_gender()
 }

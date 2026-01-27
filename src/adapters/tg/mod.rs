@@ -106,10 +106,7 @@ fn make_error_handler(
                     error = %err,
                     "Update listener error"
                 );
-                let default_lang = LanguageCode::from_str_or_default(
-                    &admin_config.general.default_lang,
-                    LanguageCode::En,
-                );
+                let default_lang = admin_config.general.default_lang;
                 notify_admin_error(
                     &admin_bot,
                     &admin_config,
@@ -188,8 +185,7 @@ async fn set_bot_commands(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let languages = vec![LanguageCode::En, LanguageCode::Ru];
 
-    let default_lang =
-        LanguageCode::from_str_or_default(&config.general.default_lang, LanguageCode::En);
+    let default_lang = config.general.default_lang;
     let global_commands = get_user_commands(default_lang);
     bot.set_my_commands(global_commands)
         .scope(BotCommandScope::AllPrivateChats)

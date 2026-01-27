@@ -43,7 +43,7 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|| "config.toml".to_string());
 
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        let level = read_log_level(&config_path).unwrap_or_else(|| "info".to_string());
+        let level = read_log_level(&config_path).unwrap_or("info");
         EnvFilter::new(level)
     });
     tracing_subscriber::fmt().with_env_filter(filter).init();
@@ -55,8 +55,8 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-fn read_log_level(config_path: &str) -> Option<String> {
+fn read_log_level(config_path: &str) -> Option<&'static str> {
     let content = std::fs::read_to_string(config_path).ok()?;
     let config: bootstrap::config::Config = toml::from_str(&content).ok()?;
-    Some(config.general.log_level)
+    Some(config.general.log_level.as_str())
 }
