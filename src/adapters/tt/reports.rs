@@ -83,11 +83,18 @@ pub(super) fn handle_who_command(
         }
     }
 
-    if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::WhoReport {
-        chat_id,
-        text: report.trim_end().to_string(),
-        reply_to,
-    }) {
-        tracing::error!(chat_id, error = %e, "Failed to send who report to bridge");
-    }
+    let tx_bridge = ctx.tx_bridge.clone();
+    let text = report.trim_end().to_string();
+    tokio::task::spawn_local(async move {
+        if let Err(e) = tx_bridge
+            .send(BridgeEvent::WhoReport {
+                chat_id,
+                text,
+                reply_to,
+            })
+            .await
+        {
+            tracing::error!(chat_id, error = %e, "Failed to send who report to bridge");
+        }
+    });
 }

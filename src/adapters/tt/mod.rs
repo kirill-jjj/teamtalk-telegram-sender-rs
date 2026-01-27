@@ -207,7 +207,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                     "Failed to start streaming"
                 );
                 let delete_path = item.file_path.clone();
-                std::thread::spawn(move || {
+                tokio::task::spawn_blocking(move || {
                     let _ = std::fs::remove_file(&delete_path);
                 });
                 continue;
@@ -217,15 +217,24 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
             let delete_path = item.file_path.clone();
             let duration_ms = item.duration_ms;
             let tx_cmd_for_stop = tx_cmd.clone();
-            std::thread::spawn(move || {
-                std::thread::sleep(Duration::from_millis(duration_ms as u64));
-                let _ = tx_cmd_for_stop.blocking_send(TtCommand::StopStreamingIf { stream_id });
-                std::thread::sleep(Duration::from_millis(10_000));
+            tokio::task::spawn_local(async move {
+                tokio::time::sleep(Duration::from_millis(duration_ms as u64)).await;
+                let _ = tx_cmd_for_stop
+                    .send(TtCommand::StopStreamingIf { stream_id })
+                    .await;
+
+                tokio::time::sleep(Duration::from_millis(10_000)).await;
                 let mut attempts = 0;
                 loop {
-                    match std::fs::remove_file(&delete_path) {
-                        Ok(_) => break,
-                        Err(e) => {
+                    let delete_path_attempt = delete_path.clone();
+                    let res = tokio::task::spawn_blocking(move || {
+                        std::fs::remove_file(delete_path_attempt)
+                    })
+                    .await;
+
+                    match res {
+                        Ok(Ok(())) => break,
+                        Ok(Err(e)) => {
                             attempts += 1;
                             if attempts >= 10 {
                                 tracing::error!(
@@ -235,7 +244,15 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                                 );
                                 break;
                             }
-                            std::thread::sleep(Duration::from_secs(30));
+                            tokio::time::sleep(Duration::from_secs(30)).await;
+                        }
+                        Err(e) => {
+                            tracing::error!(
+                                file_path = %delete_path,
+                                error = %e,
+                                "Failed to join blocking file delete task"
+                            );
+                            break;
                         }
                     }
                 }
@@ -305,11 +322,12 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                             });
                             let is_streaming = is_streaming.clone();
                             let tx_cmd_for_stop = tx_cmd_clone.clone();
-                            std::thread::spawn(move || {
-                                std::thread::sleep(Duration::from_secs(2));
+                            tokio::task::spawn_local(async move {
+                                tokio::time::sleep(Duration::from_secs(2)).await;
                                 if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
                                     let _ = tx_cmd_for_stop
-                                        .blocking_send(TtCommand::SetStreamingStatus { streaming: false });
+                                        .send(TtCommand::SetStreamingStatus { streaming: false })
+                                        .await;
                                 }
                             });
                             current_stream = None;
@@ -330,11 +348,12 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                             });
                             let is_streaming = is_streaming.clone();
                             let tx_cmd_for_stop = tx_cmd_clone.clone();
-                            std::thread::spawn(move || {
-                                std::thread::sleep(Duration::from_secs(2));
+                            tokio::task::spawn_local(async move {
+                                tokio::time::sleep(Duration::from_secs(2)).await;
                                 if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
                                     let _ = tx_cmd_for_stop
-                                        .blocking_send(TtCommand::SetStreamingStatus { streaming: false });
+                                        .send(TtCommand::SetStreamingStatus { streaming: false })
+                                        .await;
                                 }
                             });
                             current_stream = None;

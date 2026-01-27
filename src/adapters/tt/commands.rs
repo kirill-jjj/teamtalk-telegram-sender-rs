@@ -108,16 +108,22 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             }
             let channel_name = resolve_channel_name(client, msg.channel_id, LanguageCode::En);
             let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());
-            if let Err(e) =
-                tx_bridge.blocking_send(crate::core::types::BridgeEvent::ToAdminChannel {
-                    channel_id: msg.channel_id.0,
-                    channel_name,
-                    server_name,
-                    msg_content: pm_text.to_string(),
-                })
-            {
-                tracing::error!(error = %e, "Failed to send channel PM event");
-            }
+            let tx_bridge = tx_bridge.clone();
+            let msg_content = pm_text.to_string();
+            let channel_id = msg.channel_id.0;
+            spawn_local(async move {
+                if let Err(e) = tx_bridge
+                    .send(crate::core::types::BridgeEvent::ToAdminChannel {
+                        channel_id,
+                        channel_name,
+                        server_name,
+                        msg_content,
+                    })
+                    .await
+                {
+                    tracing::error!(error = %e, "Failed to send channel PM event");
+                }
+            });
         }
         return;
     }

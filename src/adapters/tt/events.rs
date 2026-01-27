@@ -191,14 +191,21 @@ pub(super) fn handle_sdk_event(
                     let real_name = client.get_server_properties().map(|p| p.name);
                     let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
-                    if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
-                        event_type: NotificationType::Join,
-                        nickname,
-                        server_name,
-                        related_tt_username: user.username.clone(),
-                    }) {
-                        tracing::error!(error = %e, "Failed to send join broadcast");
-                    }
+                    let tx_bridge = ctx.tx_bridge.clone();
+                    let related_tt_username = user.username.clone();
+                    tokio::task::spawn_local(async move {
+                        if let Err(e) = tx_bridge
+                            .send(BridgeEvent::Broadcast {
+                                event_type: NotificationType::Join,
+                                nickname,
+                                server_name,
+                                related_tt_username,
+                            })
+                            .await
+                        {
+                            tracing::error!(error = %e, "Failed to send join broadcast");
+                        }
+                    });
                 }
             }
         }
@@ -247,14 +254,22 @@ pub(super) fn handle_sdk_event(
                             let real_name = client.get_server_properties().map(|p| p.name);
                             let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
-                            if let Err(e) = ctx.tx_bridge.blocking_send(BridgeEvent::Broadcast {
-                                event_type: NotificationType::Leave,
-                                nickname: u.nickname.clone(),
-                                server_name,
-                                related_tt_username: u.username.clone(),
-                            }) {
-                                tracing::error!(error = %e, "Failed to send leave broadcast");
-                            }
+                            let tx_bridge = ctx.tx_bridge.clone();
+                            let nickname = u.nickname.clone();
+                            let related_tt_username = u.username.clone();
+                            tokio::task::spawn_local(async move {
+                                if let Err(e) = tx_bridge
+                                    .send(BridgeEvent::Broadcast {
+                                        event_type: NotificationType::Leave,
+                                        nickname,
+                                        server_name,
+                                        related_tt_username,
+                                    })
+                                    .await
+                                {
+                                    tracing::error!(error = %e, "Failed to send leave broadcast");
+                                }
+                            });
                         }
                     }
                 }
