@@ -26,7 +26,14 @@ impl Database {
     pub async fn get_banned_users(&self) -> Result<Vec<BanEntry>> {
         let rows = sqlx::query_as!(
             BanEntry,
-            "SELECT id, telegram_id, teamtalk_username FROM ban_list ORDER BY banned_at DESC"
+            r#"
+            SELECT
+                id as "id!",
+                telegram_id as "telegram_id?",
+                teamtalk_username as "teamtalk_username?"
+            FROM ban_list
+            ORDER BY banned_at DESC
+            "#
         )
         .fetch_all(&self.pool)
         .await?;

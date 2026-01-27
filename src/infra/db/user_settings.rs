@@ -87,7 +87,11 @@ impl Database {
 
     pub async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64> {
         match sqlx::query_scalar!(
-            "SELECT telegram_id FROM user_settings WHERE teamtalk_username = ?",
+            r#"
+            SELECT telegram_id as "telegram_id!"
+            FROM user_settings
+            WHERE teamtalk_username = ?
+            "#,
             tt_username
         )
         .fetch_optional(&self.pool)
