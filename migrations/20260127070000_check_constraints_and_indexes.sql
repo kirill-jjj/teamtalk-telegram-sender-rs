@@ -3,6 +3,10 @@
 
 PRAGMA foreign_keys = OFF;
 
+-- Clean up orphaned mute rows before rebuilding FK-constrained tables.
+DELETE FROM muted_users
+WHERE user_settings_telegram_id NOT IN (SELECT telegram_id FROM user_settings);
+
 -- 1) user_settings: constrain enums and booleans.
 CREATE TABLE user_settings_new (
     telegram_id INTEGER PRIMARY KEY,
