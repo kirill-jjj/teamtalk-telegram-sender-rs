@@ -25,7 +25,7 @@ struct SubCtx<'a> {
     user_accounts: &'a std::sync::Arc<
         std::sync::RwLock<std::collections::HashMap<String, teamtalk::types::UserAccount>>,
     >,
-    tx_tt: &'a std::sync::mpsc::Sender<TtCommand>,
+    tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
     lang: LanguageCode,
     q_id: &'a teloxide::types::CallbackQueryId,
     admin_chat_id: i64,
@@ -216,7 +216,7 @@ impl SubCtx<'_> {
     }
 
     async fn link_list(&self, sub_id: i64, page: usize, list_page: usize) -> ResponseResult<()> {
-        if let Err(e) = self.tx_tt.send(TtCommand::LoadAccounts) {
+        if let Err(e) = self.tx_tt.send(TtCommand::LoadAccounts).await {
             tracing::error!(error = %e, "Failed to request TT accounts");
             notify_admin_error(
                 self.bot,

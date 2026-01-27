@@ -29,6 +29,7 @@ fn update_bot() -> Result<()> {
 }
 
 #[tokio::main]
+#[allow(clippy::large_futures)]
 async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--update") {

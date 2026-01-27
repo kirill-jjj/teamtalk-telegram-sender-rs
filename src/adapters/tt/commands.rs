@@ -6,6 +6,7 @@ use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
+use tokio::task::spawn_local;
 use uuid::Uuid;
 
 pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: TextMessage) {
@@ -40,7 +41,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let db = db.clone();
             let online_users = online_users.clone();
             let tx_tt_cmd = tx_tt_cmd.clone();
-            ctx.rt.spawn(async move {
+            spawn_local(async move {
                 let username = if let Ok(users) = online_users.read() {
                     users
                         .get(&from_uid)
@@ -73,7 +74,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     false
                 };
                 let text_key = if is_admin {
-                    if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream) {
+                    if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream).await {
                         tracing::error!(
                             tt_username = %username,
                             error = %e,
@@ -87,7 +88,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     "cmd-unauth"
                 };
                 let text = locales::get_text(reply_lang.as_str(), text_key, None);
-                if let Err(e) = tx_tt_cmd.send(TtCommand::SendToChannel { channel_id, text }) {
+                if let Err(e) = tx_tt_cmd
+                    .send(TtCommand::SendToChannel { channel_id, text })
+                    .await
+                {
                     tracing::error!(
                         channel_id,
                         error = %e,
@@ -118,7 +122,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
         return;
     }
 
-    ctx.rt.spawn(async move {
+    spawn_local(async move {
         if msg.msg_type == teamtalk::client::ffi::TextMsgType::MSGTYPE_USER {
             let content = msg.text.trim();
             let from_uid = msg.from_id.0;
@@ -153,11 +157,14 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             }
             let cmd = parts[0].to_lowercase();
 
-            let send_reply = |text: String| {
-                if let Err(e) = tx_tt_cmd.send(TtCommand::ReplyToUser {
-                    user_id: from_uid,
-                    text,
-                }) {
+            let send_reply = |text: String| async {
+                if let Err(e) = tx_tt_cmd
+                    .send(TtCommand::ReplyToUser {
+                        user_id: from_uid,
+                        text,
+                    })
+                    .await
+                {
                     tracing::error!(
                         user_id = from_uid,
                         tt_username = %username,
@@ -206,19 +213,20 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                                 "tt-sub-link",
                                 args!(link = link).as_ref(),
                             );
-                            send_reply(text);
+                            send_reply(text).await;
                         }
                         Err(_) => {
                             let text =
                                 locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
-                            send_reply(text);
+                            send_reply(text).await;
                         }
                     }
                 } else {
                     send_reply(
                         "Telegram integration is currently disabled (Event Token missing)."
                             .to_string(),
-                    );
+                    )
+                    .await;
                 }
             } else if cmd == "/unsub" {
                 if let Some(bot_user) = &bot_username {
@@ -246,19 +254,20 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                                 "tt-unsub-link",
                                 args!(link = link).as_ref(),
                             );
-                            send_reply(text);
+                            send_reply(text).await;
                         }
                         Err(_) => {
                             let text =
                                 locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
-                            send_reply(text);
+                            send_reply(text).await;
                         }
                     }
                 } else {
                     send_reply(
                         "Telegram integration is currently disabled (Event Token missing)."
                             .to_string(),
-                    );
+                    )
+                    .await;
                 }
             } else if cmd == "/help" {
                 let is_main_admin = admin_username
@@ -273,7 +282,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     help_msg.push_str(&header);
                     help_msg.push_str(&cmds);
                 }
-                send_reply(help_msg);
+                send_reply(help_msg).await;
             } else if cmd == "/skip" {
                 let is_admin = if username.is_empty() {
                     false
@@ -293,21 +302,21 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 };
                 if !is_admin {
                     let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
-                    send_reply(text);
+                    send_reply(text).await;
                     return;
                 }
-                if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream) {
+                if let Err(e) = tx_tt_cmd.send(TtCommand::SkipStream).await {
                     tracing::error!(
                         tt_username = %username,
                         error = %e,
                         "Failed to send TT skip command"
                     );
                     let text = locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
-                    send_reply(text);
+                    send_reply(text).await;
                     return;
                 }
                 let text = locales::get_text(reply_lang.as_str(), "tt-skip-sent", None);
-                send_reply(text);
+                send_reply(text).await;
             } else if cmd == "/add_admin" {
                 let is_main_admin = admin_username
                     .as_ref()
@@ -315,12 +324,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false);
                 if !is_main_admin {
                     let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
-                    send_reply(text);
+                    send_reply(text).await;
                     return;
                 }
                 if parts.len() < 2 {
                     let text = locales::get_text(reply_lang.as_str(), "tt-admin-no-ids", None);
-                    send_reply(text);
+                    send_reply(text).await;
                     return;
                 }
                 let mut added_count = 0;
@@ -349,13 +358,13 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     let args = args!(count = added_count);
                     let text =
                         locales::get_text(reply_lang.as_str(), "tt-admin-added", args.as_ref());
-                    send_reply(text);
+                    send_reply(text).await;
                 }
                 if failed_count > 0 {
                     let args = args!(count = failed_count);
                     let text =
                         locales::get_text(reply_lang.as_str(), "tt-admin-add-fail", args.as_ref());
-                    send_reply(text);
+                    send_reply(text).await;
                 }
             } else if cmd == "/remove_admin" {
                 let is_main_admin = admin_username
@@ -364,12 +373,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false);
                 if !is_main_admin {
                     let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
-                    send_reply(text);
+                    send_reply(text).await;
                     return;
                 }
                 if parts.len() < 2 {
                     let text = locales::get_text(reply_lang.as_str(), "tt-admin-no-ids", None);
-                    send_reply(text);
+                    send_reply(text).await;
                     return;
                 }
                 let mut removed_count = 0;
@@ -400,7 +409,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     let args = args!(count = removed_count);
                     let text =
                         locales::get_text(reply_lang.as_str(), "tt-admin-removed", args.as_ref());
-                    send_reply(text);
+                    send_reply(text).await;
                 }
                 if failed_count > 0 {
                     let args = args!(count = failed_count);
@@ -409,7 +418,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         "tt-admin-remove-fail",
                         args.as_ref(),
                     );
-                    send_reply(text);
+                    send_reply(text).await;
                 }
             } else {
                 let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());

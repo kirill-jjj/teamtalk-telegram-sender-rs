@@ -16,13 +16,13 @@ use crate::infra::locales;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
-use std::sync::mpsc::Sender;
 use teamtalk::types::UserAccount;
 use teloxide::error_handlers::ErrorHandler;
 use teloxide::{
     prelude::*,
     types::{BotCommand, BotCommandScope, Recipient},
 };
+use tokio::sync::mpsc::Sender;
 
 use self::commands::Command;
 use self::state::AppState;

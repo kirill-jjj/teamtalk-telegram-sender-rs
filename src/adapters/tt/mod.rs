@@ -8,8 +8,8 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, TtCommand};
 use crate::infra::db::Database;
 use crate::infra::locales;
+use futures_util::StreamExt;
 use std::collections::{HashMap, VecDeque};
-use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use teamtalk::Client;
@@ -17,6 +17,8 @@ use teamtalk::client::media::MediaPlayback;
 use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
 use teamtalk::types::{AudioPreprocessor, ChannelId, UserStatus};
 use teamtalk::types::{UserAccount, UserId};
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::sync::oneshot;
 
 pub(super) fn resolve_server_name(
     tt_config: &crate::bootstrap::config::TeamTalkConfig,
@@ -54,7 +56,6 @@ pub struct WorkerContext {
     pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub db: Database,
-    pub rt: tokio::runtime::Handle,
     pub bot_username: Option<String>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
 }
@@ -68,9 +69,8 @@ pub struct RunTeamtalkArgs {
     pub rx_cmd: Receiver<TtCommand>,
     pub tx_cmd_clone: Sender<TtCommand>,
     pub db: Database,
-    pub rt: tokio::runtime::Handle,
     pub bot_username: Option<String>,
-    pub tx_init: std::sync::mpsc::Sender<Result<(), String>>,
+    pub tx_init: oneshot::Sender<Result<(), String>>,
 }
 
 struct StreamItem {
@@ -81,17 +81,16 @@ struct StreamItem {
     announce_text: Option<String>,
 }
 
-pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
+pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
     let RunTeamtalkArgs {
         config,
         online_users,
         online_users_by_username,
         user_accounts,
         tx_bridge,
-        rx_cmd,
+        mut rx_cmd,
         tx_cmd_clone,
         db,
-        rt,
         bot_username,
         tx_init,
     } = args;
@@ -108,7 +107,6 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         tx_bridge,
         tx_tt_cmd: tx_cmd_clone.clone(),
         db,
-        rt,
         bot_username,
         is_streaming: Arc::new(std::sync::atomic::AtomicBool::new(false)),
     };
@@ -116,20 +114,13 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
 
     let client = match Client::new() {
         Ok(c) => {
-            if let Err(e) = tx_init.send(Ok(())) {
-                tracing::error!(error = %e, "Failed to signal TT init success");
-            }
+            let _ = tx_init.send(Ok(()));
             c
         }
         Err(e) => {
             let err_msg = format!("Failed to initialize TeamTalk SDK: {}", e);
             tracing::error!(error = %e, "Failed to initialize TeamTalk SDK");
-            if let Err(send_err) = tx_init.send(Err(err_msg)) {
-                tracing::error!(
-                    error = %send_err,
-                    "Failed to signal TT init failure"
-                );
-            }
+            let _ = tx_init.send(Err(err_msg));
             return;
         }
     };
@@ -187,6 +178,7 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         );
     }
 
+    let is_streaming_for_start = is_streaming.clone();
     let start_next = |client: &Client,
                       queue: &mut VecDeque<StreamItem>,
                       current: &mut Option<StreamItem>,
@@ -220,14 +212,14 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
                 });
                 continue;
             }
-            is_streaming.store(true, std::sync::atomic::Ordering::Relaxed);
+            is_streaming_for_start.store(true, std::sync::atomic::Ordering::Relaxed);
             let stream_id = item.stream_id;
             let delete_path = item.file_path.clone();
             let duration_ms = item.duration_ms;
             let tx_cmd_for_stop = tx_cmd.clone();
             std::thread::spawn(move || {
                 std::thread::sleep(Duration::from_millis(duration_ms as u64));
-                let _ = tx_cmd_for_stop.send(TtCommand::StopStreamingIf { stream_id });
+                let _ = tx_cmd_for_stop.blocking_send(TtCommand::StopStreamingIf { stream_id });
                 std::thread::sleep(Duration::from_millis(10_000));
                 let mut attempts = 0;
                 loop {
@@ -253,173 +245,193 @@ pub fn run_teamtalk_thread(args: RunTeamtalkArgs) {
         }
     };
 
-    let mut shutdown = false;
-    loop {
-        if !is_connected {
-            client.handle_reconnect(&connect_params, &mut reconnect_handler);
-        }
-
-        while let Ok(cmd) = rx_cmd.try_recv() {
-            match cmd {
-                TtCommand::Shutdown => {
-                    shutdown = true;
-                    break;
-                }
-                TtCommand::Broadcast { text } => {
-                    client.send_to_all(&text);
-                }
-                TtCommand::ReplyToUser { user_id, text } => {
-                    client.send_to_user(UserId(user_id), &text);
-                }
-                TtCommand::SendToChannel { channel_id, text } => {
-                    client.send_to_channel(ChannelId(channel_id), &text);
-                }
-                TtCommand::EnqueueStream {
-                    channel_id,
-                    file_path,
-                    duration_ms,
-                    announce_text,
-                } => {
-                    stream_seq = stream_seq.wrapping_add(1);
-                    stream_queue.push_back(StreamItem {
-                        stream_id: stream_seq,
+    let mut async_client = client.into_async_with_config(teamtalk::AsyncConfig::new().buffer(256));
+    let shutdown = loop {
+        tokio::select! {
+            maybe_cmd = rx_cmd.recv() => {
+                let Some(cmd) = maybe_cmd else {
+                    break true;
+                };
+                match cmd {
+                    TtCommand::Shutdown => {
+                        break true;
+                    }
+                    TtCommand::Broadcast { text } => {
+                        async_client.with_client_mut(|client_ref| {
+                            client_ref.send_to_all(&text);
+                        });
+                    }
+                    TtCommand::ReplyToUser { user_id, text } => {
+                        async_client.with_client_mut(|client_ref| {
+                            client_ref.send_to_user(UserId(user_id), &text);
+                        });
+                    }
+                    TtCommand::SendToChannel { channel_id, text } => {
+                        async_client.with_client_mut(|client_ref| {
+                            client_ref.send_to_channel(ChannelId(channel_id), &text);
+                        });
+                    }
+                    TtCommand::EnqueueStream {
                         channel_id,
                         file_path,
                         duration_ms,
                         announce_text,
-                    });
-                    start_next(
-                        &client,
-                        &mut stream_queue,
-                        &mut current_stream,
-                        &tx_cmd_clone,
-                    );
-                }
-                TtCommand::StopStreamingIf { stream_id } => {
-                    if current_stream
-                        .as_ref()
-                        .map(|s| s.stream_id == stream_id)
-                        .unwrap_or(false)
-                    {
-                        client.stop_streaming();
-                        let is_streaming = is_streaming.clone();
-                        let tx_cmd_for_stop = tx_cmd_clone.clone();
-                        std::thread::spawn(move || {
-                            std::thread::sleep(Duration::from_secs(2));
-                            if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
-                                let _ = tx_cmd_for_stop
-                                    .send(TtCommand::SetStreamingStatus { streaming: false });
-                            }
+                    } => {
+                        stream_seq = stream_seq.wrapping_add(1);
+                        stream_queue.push_back(StreamItem {
+                            stream_id: stream_seq,
+                            channel_id,
+                            file_path,
+                            duration_ms,
+                            announce_text,
                         });
-                        current_stream = None;
-                        start_next(
-                            &client,
-                            &mut stream_queue,
-                            &mut current_stream,
-                            &tx_cmd_clone,
+                        async_client.with_client_mut(|client_ref| {
+                            start_next(
+                                client_ref,
+                                &mut stream_queue,
+                                &mut current_stream,
+                                &tx_cmd_clone,
+                            );
+                        });
+                    }
+                    TtCommand::StopStreamingIf { stream_id } => {
+                        if current_stream
+                            .as_ref()
+                            .map(|s| s.stream_id == stream_id)
+                            .unwrap_or(false)
+                        {
+                            async_client.with_client_mut(|client_ref| {
+                                client_ref.stop_streaming();
+                            });
+                            let is_streaming = is_streaming.clone();
+                            let tx_cmd_for_stop = tx_cmd_clone.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(Duration::from_secs(2));
+                                if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
+                                    let _ = tx_cmd_for_stop
+                                        .blocking_send(TtCommand::SetStreamingStatus { streaming: false });
+                                }
+                            });
+                            current_stream = None;
+                            async_client.with_client_mut(|client_ref| {
+                                start_next(
+                                    client_ref,
+                                    &mut stream_queue,
+                                    &mut current_stream,
+                                    &tx_cmd_clone,
+                                );
+                            });
+                        }
+                    }
+                    TtCommand::SkipStream => {
+                        if current_stream.is_some() {
+                            async_client.with_client_mut(|client_ref| {
+                                client_ref.stop_streaming();
+                            });
+                            let is_streaming = is_streaming.clone();
+                            let tx_cmd_for_stop = tx_cmd_clone.clone();
+                            std::thread::spawn(move || {
+                                std::thread::sleep(Duration::from_secs(2));
+                                if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
+                                    let _ = tx_cmd_for_stop
+                                        .blocking_send(TtCommand::SetStreamingStatus { streaming: false });
+                                }
+                            });
+                            current_stream = None;
+                        }
+                        async_client.with_client_mut(|client_ref| {
+                            start_next(
+                                client_ref,
+                                &mut stream_queue,
+                                &mut current_stream,
+                                &tx_cmd_clone,
+                            );
+                        });
+                    }
+                    TtCommand::SetStreamingStatus { streaming } => {
+                        if !streaming {
+                            is_streaming.store(false, std::sync::atomic::Ordering::Relaxed);
+                        }
+                        async_client.with_client_mut(|client_ref| {
+                            set_streaming_status(client_ref, streaming);
+                        });
+                    }
+                    TtCommand::KickUser { user_id } => {
+                        async_client.with_client_mut(|client_ref| {
+                            client_ref.kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
+                        });
+                    }
+                    TtCommand::BanUser { user_id } => {
+                        async_client.with_client_mut(|client_ref| {
+                            client_ref.ban_user(UserId(user_id), client_ref.my_channel_id());
+                        });
+                    }
+                    TtCommand::Who {
+                        chat_id,
+                        lang,
+                        reply_to,
+                    } => {
+                        async_client.with_client(|client_ref| {
+                            reports::handle_who_command(client_ref, &ctx, chat_id, lang, reply_to);
+                        });
+                    }
+                    TtCommand::LoadAccounts => {
+                        tracing::info!(
+                            component = "tt_worker",
+                            "Requesting full user accounts list"
                         );
-                    }
-                }
-                TtCommand::SkipStream => {
-                    if current_stream.is_some() {
-                        client.stop_streaming();
-                        let is_streaming = is_streaming.clone();
-                        let tx_cmd_for_stop = tx_cmd_clone.clone();
-                        std::thread::spawn(move || {
-                            std::thread::sleep(Duration::from_secs(2));
-                            if is_streaming.load(std::sync::atomic::Ordering::Relaxed) {
-                                let _ = tx_cmd_for_stop
-                                    .send(TtCommand::SetStreamingStatus { streaming: false });
-                            }
+                        async_client.with_client_mut(|client_ref| {
+                            client_ref.list_user_accounts(0, 1000);
                         });
-                        current_stream = None;
                     }
-                    start_next(
-                        &client,
-                        &mut stream_queue,
-                        &mut current_stream,
-                        &tx_cmd_clone,
-                    );
-                }
-                TtCommand::SetStreamingStatus { streaming } => {
-                    if !streaming {
-                        is_streaming.store(false, std::sync::atomic::Ordering::Relaxed);
-                    }
-                    set_streaming_status(&client, streaming);
-                }
-                TtCommand::KickUser { user_id } => {
-                    client.kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
-                }
-                TtCommand::BanUser { user_id } => {
-                    client.ban_user(UserId(user_id), client.my_channel_id());
-                }
-                TtCommand::Who {
-                    chat_id,
-                    lang,
-                    reply_to,
-                } => {
-                    reports::handle_who_command(&client, &ctx, chat_id, lang, reply_to);
-                }
-                TtCommand::LoadAccounts => {
-                    tracing::info!(
-                        component = "tt_worker",
-                        "Requesting full user accounts list"
-                    );
-                    client.list_user_accounts(0, 1000);
                 }
             }
-        }
-        if shutdown {
-            tracing::info!(component = "tt_worker", "Shutdown requested");
-            if current_stream.is_some() {
-                tracing::info!(component = "tt_worker", "Stopping active stream");
-                client.stop_streaming();
-            }
-            tracing::info!(component = "tt_worker", "Logging out");
-            client.logout();
-            break;
-        }
+            maybe_event = async_client.next() => {
+                let Some((event, msg)) = maybe_event else {
+                    break true;
+                };
 
-        let mut events_processed = 0usize;
-        while let Some((event, msg)) = client.poll(0) {
-            if current_stream.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing) {
-                events_processed += 1;
-                if events_processed >= 50 {
-                    break;
+                if current_stream.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing) {
+                    continue;
                 }
-                continue;
-            }
-            events::handle_sdk_event(
-                &client,
-                &ctx,
-                event,
-                msg,
-                &mut is_connected,
-                &mut reconnect_handler,
-                &mut ready_time,
-            );
-            events_processed += 1;
-            if events_processed >= 50 {
-                break;
+
+                async_client.with_client(|client_ref| {
+                    events::handle_sdk_event(
+                        client_ref,
+                        &ctx,
+                        event,
+                        msg,
+                        &mut is_connected,
+                        &mut reconnect_handler,
+                        &mut ready_time,
+                    );
+                });
+
+                if !is_connected {
+                    async_client.with_client_mut(|client_ref| {
+                        client_ref.handle_reconnect(&connect_params, &mut reconnect_handler);
+                    });
+                }
             }
         }
-        if events_processed == 0
-            && let Some((event, msg)) = client.poll(100)
-        {
-            if current_stream.is_some() && matches!(event, teamtalk::events::Event::CmdProcessing) {
-                continue;
-            }
-            events::handle_sdk_event(
-                &client,
-                &ctx,
-                event,
-                msg,
-                &mut is_connected,
-                &mut reconnect_handler,
-                &mut ready_time,
-            );
+    };
+
+    if shutdown {
+        tracing::info!(component = "tt_worker", "Shutdown requested");
+        if current_stream.is_some() {
+            tracing::info!(component = "tt_worker", "Stopping active stream");
+            async_client.with_client_mut(|client_ref| {
+                client_ref.stop_streaming();
+            });
         }
+        tracing::info!(component = "tt_worker", "Logging out");
+        async_client.with_client_mut(|client_ref| {
+            client_ref.logout();
+        });
     }
-    tracing::info!(component = "tt_worker", "Disconnecting");
-    let _ = client.disconnect();
+
+    if let Some(client) = async_client.into_client() {
+        tracing::info!(component = "tt_worker", "Disconnecting");
+        let _ = client.disconnect();
+    }
 }

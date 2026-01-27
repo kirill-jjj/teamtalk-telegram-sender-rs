@@ -3115,11 +3115,11 @@ dependencies = [
 [[package]]
 name = "teamtalk"
 version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d413f2477e6fc6c447997d4a0473038238d766bd03a62c8b359284dc5347304c"
+source = "git+https://github.com/BlindMaster24/TeamTalkRust.git?branch=main#64d7488eb610b3cb24c27ddfb5987558ad0cbec3"
 dependencies = [
  "dirs",
  "evalexpr",
+ "futures",
  "once_cell",
  "rand 0.8.5",
  "regex",
@@ -3127,6 +3127,7 @@ dependencies = [
  "sevenz-rust2",
  "teamtalk-sys",
  "thiserror",
+ "tokio",
 ]
 
 [[package]]
@@ -3148,6 +3149,7 @@ dependencies = [
  "chrono",
  "derive_more 2.1.1",
  "fluent-templates",
+ "futures-util",
  "postcard",
  "self_update",
  "serde",
