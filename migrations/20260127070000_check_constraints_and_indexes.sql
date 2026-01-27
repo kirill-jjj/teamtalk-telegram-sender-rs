@@ -1,11 +1,31 @@
 -- Strengthen data integrity with CHECK constraints and add missing indexes.
 -- This migration rebuilds affected tables and preserves existing data.
 
-PRAGMA foreign_keys = OFF;
+-- SQLite runs migrations in a transaction, so PRAGMA foreign_keys = OFF would
+-- be ignored. Instead, detach the dependent table first to avoid FK failures
+-- when rebuilding user_settings.
+CREATE TABLE muted_users_tmp (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    muted_teamtalk_username TEXT NOT NULL,
+    user_settings_telegram_id INTEGER NOT NULL,
+    list_mode TEXT NOT NULL DEFAULT 'blacklist'
+);
 
--- Clean up orphaned mute rows before rebuilding FK-constrained tables.
-DELETE FROM muted_users
-WHERE user_settings_telegram_id NOT IN (SELECT telegram_id FROM user_settings);
+INSERT INTO muted_users_tmp (id, muted_teamtalk_username, user_settings_telegram_id, list_mode)
+SELECT
+    mu.id,
+    mu.muted_teamtalk_username,
+    mu.user_settings_telegram_id,
+    CASE mu.list_mode
+        WHEN 'blacklist' THEN 'blacklist'
+        WHEN 'whitelist' THEN 'whitelist'
+        ELSE COALESCE(us.mute_list_mode, 'blacklist')
+    END AS list_mode
+FROM muted_users mu
+LEFT JOIN user_settings us ON us.telegram_id = mu.user_settings_telegram_id
+WHERE mu.user_settings_telegram_id IN (SELECT telegram_id FROM user_settings);
+
+DROP TABLE muted_users;
 
 -- 1) user_settings: constrain enums and booleans.
 CREATE TABLE user_settings_new (
@@ -96,9 +116,9 @@ SELECT
         WHEN 'whitelist' THEN 'whitelist'
         ELSE 'blacklist'
     END AS list_mode
-FROM muted_users;
+FROM muted_users_tmp;
 
-DROP TABLE muted_users;
+DROP TABLE muted_users_tmp;
 ALTER TABLE muted_users_new RENAME TO muted_users;
 
 CREATE INDEX IF NOT EXISTS idx_muted_users_telegram_id ON muted_users(user_settings_telegram_id);
@@ -137,5 +157,3 @@ CREATE INDEX IF NOT EXISTS idx_deeplinks_action ON deeplinks(action);
 
 -- 4) ban_list: add helpful index for cleanup/reporting.
 CREATE INDEX IF NOT EXISTS idx_ban_list_banned_at ON ban_list(banned_at);
-
-PRAGMA foreign_keys = ON;
