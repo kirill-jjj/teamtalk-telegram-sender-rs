@@ -2,8 +2,11 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum LanguageCode {
+    #[serde(alias = "EN", alias = "En")]
     En,
+    #[serde(alias = "RU", alias = "Ru")]
     Ru,
 }
 
