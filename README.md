@@ -151,7 +151,7 @@ If you message the bot inside the TeamTalk client:
 
 - Install lefthook (see the official guide): [https://lefthook.dev/installation/](https://lefthook.dev/installation/)
 - Enable hooks: `lefthook install`
-- Hooks run: `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test`, `cargo sqlx prepare`.
+- Hooks run: `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test`, `cargo sqlx prepare --check`.
 - If you are on Windows or need a local override for `DATABASE_URL`, copy
   `lefthook-local.example.yml` to `lefthook-local.yml` and adjust the command.
 
