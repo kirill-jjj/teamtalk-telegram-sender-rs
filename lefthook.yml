@@ -1,0 +1,10 @@
+pre-commit:
+  commands:
+    fmt:
+      run: cargo fmt
+    clippy:
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    test:
+      run: cargo test
+    sqlx-prepare:
+      run: DATABASE_URL=sqlite://data.db cargo sqlx prepare

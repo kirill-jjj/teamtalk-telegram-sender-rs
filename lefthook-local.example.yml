@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    sqlx-prepare:
+      run: pwsh -Command "$env:SQLX_OFFLINE='false'; $env:DATABASE_URL='sqlite://data.db'; cargo sqlx prepare"
