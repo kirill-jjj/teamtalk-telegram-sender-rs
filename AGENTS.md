@@ -18,6 +18,10 @@
 - `cargo fmt` formats Rust code with rustfmt.
 - `cargo clippy --all-targets --all-features -- -D warnings` runs lint checks.
 - After changes, run `cargo check`, then `cargo clippy --all-targets --all-features -- -D warnings`, then `cargo fmt`.
+
+## Local Run (Typical)
+- Copy `config.toml.example` to `config.toml`.
+- Run `cargo run -- --config config.toml`.
 ## Verification and Delivery Sequence
 - Pre-commit runs `cargo fmt`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test`, and `cargo sqlx prepare`.
 - In CI, the workflow runs `cargo check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test`, and `cargo fmt --check`.
