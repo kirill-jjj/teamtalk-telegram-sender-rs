@@ -13,6 +13,7 @@ use sqlx::{
     Pool, Sqlite,
     sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous},
 };
+use std::time::Duration;
 
 #[derive(Clone)]
 pub struct Database {
@@ -25,9 +26,13 @@ impl Database {
             .filename(db_file)
             .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Wal)
-            .synchronous(SqliteSynchronous::Normal);
+            .synchronous(SqliteSynchronous::Normal)
+            .busy_timeout(Duration::from_secs(30));
 
         let pool = SqlitePoolOptions::new()
+            .max_connections(20)
+            .min_connections(2)
+            .acquire_timeout(Duration::from_secs(30))
             .connect_with(connect_options)
             .await?;
 

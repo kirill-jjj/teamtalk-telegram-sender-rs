@@ -5,6 +5,7 @@ use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
+use teamtalk::Client;
 use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
@@ -42,6 +43,7 @@ struct TeamtalkWorkerConfig {
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
     db: Database,
     bot_username: Option<String>,
+    client: Client,
 }
 
 struct TelegramRunContext {
@@ -107,6 +109,9 @@ impl Application {
         spawn_pending_cleanup_task(db.clone(), 3600, 3600, cancel_token.clone());
 
         let local = LocalSet::new();
+        let client = tokio::task::block_in_place(Client::new)
+            .map_err(|e| anyhow!("Failed to initialize TeamTalk SDK: {e}"))?;
+
         local
             .run_until(async move {
                 let shared = init_shared_state();
@@ -126,6 +131,7 @@ impl Application {
                     tx_tt_cmd: tx_tt_cmd.clone(),
                     db: db.clone(),
                     bot_username: bots.bot_username.clone(),
+                    client,
                 })
                 .await?;
 
@@ -293,22 +299,38 @@ async fn init_bots(config: &Arc<Config>) -> Result<BotInit> {
     })
 }
 
+#[allow(clippy::future_not_send)]
 async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task::JoinHandle<()>> {
     let (tx_init, rx_init) = oneshot::channel();
-    let tt_handle = spawn_local(adapters::tt::run_teamtalk_worker(
-        adapters::tt::RunTeamtalkArgs {
-            config: cfg.config,
-            online_users: cfg.online_users,
-            online_users_by_username: cfg.online_users_by_username,
-            user_accounts: cfg.user_accounts,
-            tx_bridge: cfg.tx_bridge,
-            rx_cmd: cfg.rx_tt_cmd,
-            tx_cmd_clone: cfg.tx_tt_cmd,
-            db: cfg.db,
-            bot_username: cfg.bot_username,
-            tx_init,
-        },
-    ));
+    let tt_handle = {
+        let TeamtalkWorkerConfig {
+            config,
+            online_users,
+            online_users_by_username,
+            user_accounts,
+            tx_bridge,
+            rx_tt_cmd,
+            tx_tt_cmd,
+            db,
+            bot_username,
+            client,
+        } = cfg;
+        spawn_local(adapters::tt::run_teamtalk_worker(
+            adapters::tt::RunTeamtalkArgs {
+                config,
+                online_users,
+                online_users_by_username,
+                user_accounts,
+                tx_bridge,
+                rx_cmd: rx_tt_cmd,
+                tx_cmd_clone: tx_tt_cmd,
+                db,
+                bot_username,
+                client,
+                tx_init,
+            },
+        ))
+    };
 
     match rx_init.await {
         Ok(Ok(())) => tracing::info!("TeamTalk worker started successfully"),

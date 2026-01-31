@@ -27,6 +27,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
 
     let bot_username = ctx.bot_username.clone();
     let tx_bridge = ctx.tx_bridge.clone();
+    let tt_msg_sem = ctx.tt_msg_sem.clone();
+    let tt_lang_cache = ctx.tt_lang_cache.clone();
+    let tt_tg_cache = ctx.tt_tg_cache.clone();
+    let tt_cache_stats = ctx.tt_cache_stats.clone();
 
     if msg.msg_type == teamtalk::client::ffi::TextMsgType::MSGTYPE_CHANNEL {
         let content = msg.text.trim();
@@ -41,7 +45,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let db = db.clone();
             let online_users = online_users.clone();
             let tx_tt_cmd = tx_tt_cmd.clone();
+            let tt_lang_cache = tt_lang_cache.clone();
+            let tt_tg_cache = tt_tg_cache.clone();
             spawn_local(async move {
+                let _permit = tt_msg_sem.acquire_owned().await;
                 let username = if let Ok(users) = online_users.read() {
                     users
                         .get(&from_uid)
@@ -50,12 +57,30 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 } else {
                     String::new()
                 };
-                let reply_lang = if !username.is_empty() {
-                    db.get_user_lang_by_tt_user(&username)
-                        .await
-                        .unwrap_or(default_lang)
-                } else {
+                let reply_lang = if username.is_empty() {
                     default_lang
+                } else if let Ok(cache) = tt_lang_cache.read()
+                    && let Some(lang) = cache.get(&username)
+                {
+                    tt_cache_stats
+                        .lang_hits
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    *lang
+                } else {
+                    let lang = db
+                        .get_user_lang_by_tt_user(&username)
+                        .await
+                        .unwrap_or(default_lang);
+                    if let Ok(mut cache) = tt_lang_cache.write() {
+                        if cache.len() > 5000 {
+                            cache.clear();
+                        }
+                        cache.insert(username.clone(), lang);
+                    }
+                    tt_cache_stats
+                        .lang_misses
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    lang
                 };
                 let is_admin = if username.is_empty() {
                     false
@@ -65,12 +90,36 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false)
                 {
                     true
+                } else if let Some(tg_id) = if let Ok(cache) = tt_tg_cache.read() {
+                    cache.get(&username).copied()
+                } else {
+                    None
+                } {
+                    tt_cache_stats
+                        .tg_hits
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    db.get_all_admins()
+                        .await
+                        .map(|admins| admins.contains(&tg_id))
+                        .unwrap_or(false)
                 } else if let Some(tg_id) = db.get_telegram_id_by_tt_user(&username).await {
+                    if let Ok(mut cache) = tt_tg_cache.write() {
+                        if cache.len() > 5000 {
+                            cache.clear();
+                        }
+                        cache.insert(username.clone(), tg_id);
+                    }
+                    tt_cache_stats
+                        .tg_misses
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     db.get_all_admins()
                         .await
                         .map(|admins| admins.contains(&tg_id))
                         .unwrap_or(false)
                 } else {
+                    tt_cache_stats
+                        .tg_misses
+                        .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     false
                 };
                 let text_key = if is_admin {
@@ -112,6 +161,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let msg_content = pm_text.to_string();
             let channel_id = msg.channel_id.0;
             spawn_local(async move {
+                let _permit = tt_msg_sem.acquire_owned().await;
                 if let Err(e) = tx_bridge
                     .send(crate::core::types::BridgeEvent::ToAdminChannel {
                         channel_id,
@@ -128,6 +178,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
         return;
     }
 
+    let tt_lang_cache = tt_lang_cache.clone();
+    let tt_cache_stats = tt_cache_stats.clone();
     spawn_local(async move {
         if msg.msg_type == teamtalk::client::ffi::TextMsgType::MSGTYPE_USER {
             let content = msg.text.trim();
@@ -149,12 +201,30 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 "Received TT message"
             );
 
-            let reply_lang = if !username.is_empty() {
-                db.get_user_lang_by_tt_user(&username)
-                    .await
-                    .unwrap_or(default_lang)
-            } else {
+            let reply_lang = if username.is_empty() {
                 default_lang
+            } else if let Ok(cache) = tt_lang_cache.read()
+                && let Some(lang) = cache.get(&username)
+            {
+                tt_cache_stats
+                    .lang_hits
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                *lang
+            } else {
+                let lang = db
+                    .get_user_lang_by_tt_user(&username)
+                    .await
+                    .unwrap_or(default_lang);
+                if let Ok(mut cache) = tt_lang_cache.write() {
+                    if cache.len() > 5000 {
+                        cache.clear();
+                    }
+                    cache.insert(username.clone(), lang);
+                }
+                tt_cache_stats
+                    .lang_misses
+                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                lang
             };
 
             let parts: Vec<&str> = content.split_whitespace().collect();
@@ -162,6 +232,15 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 return;
             }
             let cmd = parts[0].to_lowercase();
+            let needs_heavy = matches!(
+                cmd.as_str(),
+                "/sub" | "/unsub" | "/skip" | "/help" | "/start"
+            );
+            let _permit = if needs_heavy {
+                Some(tt_msg_sem.acquire_owned().await)
+            } else {
+                None
+            };
 
             let send_reply = |text: String| async {
                 if let Err(e) = tx_tt_cmd

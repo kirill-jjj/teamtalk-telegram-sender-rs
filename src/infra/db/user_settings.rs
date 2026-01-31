@@ -1,5 +1,7 @@
 use crate::core::types::{LanguageCode, NotificationSetting};
 use anyhow::Result;
+use sqlx::Row;
+use std::collections::HashMap;
 
 use super::{Database, types::UserSettings};
 
@@ -129,6 +131,52 @@ impl Database {
         };
 
         Ok(res)
+    }
+
+    pub async fn load_tt_lang_cache(&self) -> Result<HashMap<String, LanguageCode>> {
+        let rows = sqlx::query(
+            r"
+            SELECT teamtalk_username, language_code
+            FROM user_settings
+            WHERE teamtalk_username IS NOT NULL
+            ",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut cache = HashMap::new();
+        for row in rows {
+            let username: Option<String> = row.try_get("teamtalk_username").ok();
+            let language_code: Option<String> = row.try_get("language_code").ok();
+            if let (Some(username), Some(language_code)) = (username, language_code)
+                && let Ok(lang) = LanguageCode::try_from(language_code.as_str())
+            {
+                cache.insert(username, lang);
+            }
+        }
+        Ok(cache)
+    }
+
+    pub async fn load_tt_tg_cache(&self) -> Result<HashMap<String, i64>> {
+        let rows = sqlx::query(
+            r"
+            SELECT teamtalk_username, telegram_id
+            FROM user_settings
+            WHERE teamtalk_username IS NOT NULL
+            ",
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut cache = HashMap::new();
+        for row in rows {
+            let username: Option<String> = row.try_get("teamtalk_username").ok();
+            let telegram_id: Option<i64> = row.try_get("telegram_id").ok();
+            if let (Some(username), Some(telegram_id)) = (username, telegram_id) {
+                cache.insert(username, telegram_id);
+            }
+        }
+        Ok(cache)
     }
 
     pub async fn update_notification_setting(
