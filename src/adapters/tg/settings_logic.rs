@@ -493,8 +493,9 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
         args.page,
         |acc| {
             let is_muted = match args.mode {
-                MuteListMode::Blacklist => muted_set.contains(&acc.username),
-                MuteListMode::Whitelist => !muted_set.contains(&acc.username),
+                MuteListMode::Blacklist | MuteListMode::Whitelist => {
+                    muted_set.contains(&acc.username)
+                }
             };
             let icon_key = match (args.mode.clone(), is_muted) {
                 (MuteListMode::Blacklist, true) => "item-status-blacklist-in",
