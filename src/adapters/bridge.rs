@@ -56,6 +56,8 @@ struct BroadcastTaskCtx {
     bot: Bot,
     online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
     db: Database,
+    admin_id: teloxide::types::ChatId,
+    related_tt_username: String,
 }
 
 pub struct BridgeContext {
@@ -227,6 +229,8 @@ async fn handle_broadcast(deps: &BridgeDeps<'_>, data: BroadcastData) {
             bot: bot.clone(),
             online_users: deps.online_users.clone(),
             db: deps.db.clone(),
+            admin_id: deps.admin_id,
+            related_tt_username: data.related_tt_username.clone(),
         };
 
         let lang = LanguageCode::from_str_or_default(&sub.language_code, deps.default_lang);
@@ -281,6 +285,27 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         .parse_mode(teloxide::types::ParseMode::Html)
         .disable_notification(send_silent)
         .await;
+
+    if let Ok(msg) = &res
+        && sub.telegram_id == ctx.admin_id.0
+        && !ctx.related_tt_username.is_empty()
+        && let Err(e) = ctx
+            .db
+            .add_pending_reply(
+                i64::from(msg.id.0),
+                0,
+                Some(ctx.related_tt_username.as_str()),
+            )
+            .await
+    {
+        tracing::error!(
+            component = "bridge",
+            message_id = msg.id.0,
+            tt_username = %ctx.related_tt_username,
+            error = %e,
+            "Failed to save pending reply for broadcast"
+        );
+    }
 
     if let Err(e) = res {
         tracing::warn!(
