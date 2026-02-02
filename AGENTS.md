@@ -18,6 +18,8 @@
 - `cargo fmt` formats Rust code with rustfmt.
 - `cargo clippy --all-targets --all-features -- -D warnings` runs lint checks.
 - After changes, run `cargo check`, then `cargo clippy --all-targets --all-features -- -D warnings`, then `cargo fmt`.
+- For migrations, the shell does not matter (bash or PowerShell are both fine).
+- When creating migration files, verify the timestamp in the filename is correct and current.
 
 ## Local Run (Typical)
 - Copy `config.toml.example` to `config.toml`.
