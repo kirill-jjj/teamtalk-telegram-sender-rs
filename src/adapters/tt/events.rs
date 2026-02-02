@@ -127,7 +127,7 @@ pub(super) fn handle_sdk_event(
                 | ffi::MediaFileStatus::MFS_ERROR
                 | ffi::MediaFileStatus::MFS_FINISHED
                 | ffi::MediaFileStatus::MFS_ABORTED => {
-                    client.stop_streaming();
+                    client.stop_streaming_media_file_to_channel();
                     ctx.is_streaming
                         .store(false, std::sync::atomic::Ordering::Relaxed);
                     let status = UserStatus {

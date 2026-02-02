@@ -14,9 +14,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use teamtalk::Client;
-use teamtalk::client::media::MediaPlayback;
+use teamtalk::client::media::MediaFilePlayback;
 use teamtalk::client::{ConnectParams, ReconnectConfig, ReconnectHandler};
-use teamtalk::types::{AudioPreprocessor, ChannelId, UserStatus};
+use teamtalk::types::{ChannelId, UserStatus};
 use teamtalk::types::{UserAccount, UserId};
 use tokio::sync::Semaphore;
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -158,7 +158,7 @@ fn handle_cmd(
                 .unwrap_or(false)
             {
                 async_client.with_client_mut(|client_ref| {
-                    client_ref.stop_streaming();
+                    client_ref.stop_streaming_media_file_to_channel();
                 });
                 let is_streaming = is_streaming.clone();
                 let tx_cmd_for_stop = tx_cmd_clone.clone();
@@ -179,7 +179,7 @@ fn handle_cmd(
         TtCommand::SkipStream => {
             if current_stream.is_some() {
                 async_client.with_client_mut(|client_ref| {
-                    client_ref.stop_streaming();
+                    client_ref.stop_streaming_media_file_to_channel();
                 });
                 let is_streaming = is_streaming.clone();
                 let tx_cmd_for_stop = tx_cmd_clone.clone();
@@ -397,12 +397,12 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
             if let Some(text) = item.announce_text.take() {
                 client.send_to_channel(ChannelId(channel_id), &text);
             }
-            let playback = MediaPlayback {
+            let playback = MediaFilePlayback {
                 offset_ms: 0,
                 paused: false,
-                preprocessor: AudioPreprocessor::None,
             };
-            let started = client.start_streaming_ex(&item.file_path, &playback, None);
+            let started =
+                client.start_streaming_media_file_to_channel_ex(&item.file_path, &playback, None);
             if !started {
                 tracing::error!(
                     file_path = %item.file_path,
@@ -558,7 +558,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
             if current_stream.is_some() {
                 tracing::info!(component = "tt_worker", "Stopping active stream");
                 async_client.with_client_mut(|client_ref| {
-                    client_ref.stop_streaming();
+                    client_ref.stop_streaming_media_file_to_channel();
                 });
             }
             tracing::info!(component = "tt_worker", "Logging out");
