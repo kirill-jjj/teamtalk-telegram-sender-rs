@@ -26,6 +26,14 @@ struct SubCtx<'a> {
         std::sync::RwLock<std::collections::HashMap<String, teamtalk::types::UserAccount>>,
     >,
     tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
+    search_contexts: &'a std::sync::Arc<
+        tokio::sync::Mutex<
+            std::collections::HashMap<
+                teloxide::types::ChatId,
+                crate::adapters::tg::search::SearchContext,
+            >,
+        >,
+    >,
     lang: LanguageCode,
     q_id: &'a teloxide::types::CallbackQueryId,
     admin_chat_id: i64,
@@ -54,6 +62,7 @@ pub async fn handle_subscriber_actions(
         config,
         user_accounts,
         tx_tt,
+        search_contexts: &state.search_contexts,
         lang,
         q_id: &q.id,
         admin_chat_id,
@@ -122,7 +131,15 @@ impl SubCtx<'_> {
             true,
         )
         .await?;
-        edit_subscribers_list(self.bot, self.msg, self.db, self.lang, page).await?;
+        edit_subscribers_list(
+            self.bot,
+            self.msg,
+            self.db,
+            self.search_contexts,
+            self.lang,
+            page,
+        )
+        .await?;
         Ok(())
     }
 
@@ -178,7 +195,15 @@ impl SubCtx<'_> {
             true,
         )
         .await?;
-        edit_subscribers_list(self.bot, self.msg, self.db, self.lang, page).await?;
+        edit_subscribers_list(
+            self.bot,
+            self.msg,
+            self.db,
+            self.search_contexts,
+            self.lang,
+            page,
+        )
+        .await?;
         Ok(())
     }
 
@@ -232,6 +257,7 @@ impl SubCtx<'_> {
             self.bot,
             self.msg,
             self.user_accounts,
+            self.search_contexts,
             self.lang,
             sub_id,
             page,
@@ -424,7 +450,14 @@ impl SubCtx<'_> {
 
     async fn mute_view(&self, sub_id: i64, page: usize, view_page: usize) -> ResponseResult<()> {
         send_sub_mute_list(
-            self.bot, self.msg, self.db, self.lang, sub_id, page, view_page,
+            self.bot,
+            self.msg,
+            self.db,
+            self.search_contexts,
+            self.lang,
+            sub_id,
+            page,
+            view_page,
         )
         .await
     }

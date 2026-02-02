@@ -111,6 +111,9 @@ list-empty = The list is empty.
 list-subs-empty = No subscribers found.
 list-ban-empty = The ban list is empty.
 list-mute-empty = The mute list is currently empty.
+list-search-hint = Type a username or nickname to search.
+list-search-empty = No matches for "{ $query }".
+list-search-title = Search results: "{ $query }"
 list-page = Page { $current }/{ $total }
 
 btn-prev = ⬅️ Prev
@@ -123,6 +126,7 @@ btn-back-menu = Back to Main Menu
 btn-back-subs = Back to Subscribers List
 btn-back-user-actions = Back to User Actions
 btn-back-manage-acc = Back to Manage Account
+btn-back-search = Back to list
 
 # Toast messages
 toast-mute-mode-set = Mute list mode set to { $mode }.

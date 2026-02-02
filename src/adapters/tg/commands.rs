@@ -3,6 +3,10 @@ use crate::adapters::tg::admin_logic::subscribers::send_subscribers_list;
 use crate::adapters::tg::keyboards::{
     confirm_cancel_keyboard, create_main_menu_keyboard, create_user_list_keyboard,
 };
+use crate::adapters::tg::search::{
+    SearchContext, SearchListType, append_search_hint, maybe_handle_search_message,
+    set_search_context,
+};
 use crate::adapters::tg::settings_logic::send_main_settings;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{ensure_subscribed, notify_admin_error, send_text_key};
@@ -427,7 +431,8 @@ impl<'a> CommandCtx<'a> {
         };
 
         let args = args!(server = self.config.teamtalk.display_name().to_string());
-        let title = locales::get_text(self.lang.as_str(), title_key, args.as_ref());
+        let base = locales::get_text(self.lang.as_str(), title_key, args.as_ref());
+        let title = append_search_hint(&base, self.lang);
 
         let keyboard = create_user_list_keyboard(
             &users,
@@ -452,11 +457,26 @@ impl<'a> CommandCtx<'a> {
             self.lang,
         );
 
-        self.bot
+        let sent = self
+            .bot
             .send_message(self.msg.chat.id, title)
             .reply_to(self.msg.id)
             .reply_markup(keyboard)
             .await?;
+        let list_type = if is_kick {
+            SearchListType::Kick
+        } else {
+            SearchListType::Ban
+        };
+        set_search_context(
+            self.state,
+            sent.chat.id,
+            SearchContext {
+                message_id: sent.id,
+                list_type,
+            },
+        )
+        .await;
         Ok(())
     }
 
@@ -476,6 +496,7 @@ impl<'a> CommandCtx<'a> {
             self.bot,
             self.msg.chat.id,
             self.db,
+            &self.state.search_contexts,
             self.lang,
             0,
             Some(self.msg.id),
@@ -499,6 +520,7 @@ impl<'a> CommandCtx<'a> {
             self.bot,
             self.msg.chat.id,
             self.db,
+            &self.state.search_contexts,
             self.lang,
             0,
             Some(self.msg.id),
@@ -1042,15 +1064,19 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
     let config = &state.config;
     let db = &state.db;
 
-    if !is_admin(db, config, telegram_id).await {
-        return Ok(());
-    }
-
     let default_lang = config.general.default_lang;
     let admin_lang = user_settings_service::get_or_create(db, telegram_id, default_lang)
         .await
         .map(|u| LanguageCode::from_str_or_default(&u.language_code, default_lang))
         .unwrap_or(default_lang);
+
+    if maybe_handle_search_message(&bot, &msg, &state, admin_lang).await? {
+        return Ok(());
+    }
+
+    if !is_admin(db, config, telegram_id).await {
+        return Ok(());
+    }
 
     handle_admin_reply(&bot, &msg, &state, telegram_id, admin_lang).await
 }

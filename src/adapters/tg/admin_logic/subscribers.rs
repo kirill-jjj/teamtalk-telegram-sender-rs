@@ -2,6 +2,9 @@ use crate::adapters::tg::admin_logic::utils::format_tg_user;
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, callback_button, create_user_list_keyboard,
 };
+use crate::adapters::tg::search::{
+    SearchContext, SearchListType, append_search_hint, set_search_context_raw,
+};
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
@@ -13,16 +16,25 @@ use teloxide::prelude::*;
 use teloxide::sugar::request::RequestReplyExt;
 use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 
-struct SubDisplayInfo {
-    telegram_id: i64,
-    display_name: String,
-    tt_username: Option<String>,
+#[derive(Clone)]
+pub struct SubDisplayInfo {
+    pub telegram_id: i64,
+    pub display_name: String,
+    pub tt_username: Option<String>,
 }
 
 pub async fn send_subscribers_list(
     bot: &Bot,
     chat_id: teloxide::types::ChatId,
     db: &Database,
+    search_contexts: &std::sync::Arc<
+        tokio::sync::Mutex<
+            std::collections::HashMap<
+                teloxide::types::ChatId,
+                crate::adapters::tg::search::SearchContext,
+            >,
+        >,
+    >,
     lang: LanguageCode,
     page: usize,
     reply_to: Option<teloxide::types::MessageId>,
@@ -76,16 +88,31 @@ pub async fn send_subscribers_list(
         lang,
     );
 
-    let req = bot
-        .send_message(
-            chat_id,
-            locales::get_text(lang.as_str(), "list-subs-title", None),
-        )
-        .reply_markup(keyboard);
+    let base = locales::get_text(lang.as_str(), "list-subs-title", None);
+    let text = append_search_hint(&base, lang);
+    let req = bot.send_message(chat_id, text).reply_markup(keyboard);
     if let Some(reply_to) = reply_to {
-        req.reply_to(reply_to).await?;
+        let msg = req.reply_to(reply_to).await?;
+        set_search_context_raw(
+            search_contexts,
+            msg.chat.id,
+            SearchContext {
+                message_id: msg.id,
+                list_type: SearchListType::Subscribers,
+            },
+        )
+        .await;
     } else {
-        req.await?;
+        let msg = req.await?;
+        set_search_context_raw(
+            search_contexts,
+            msg.chat.id,
+            SearchContext {
+                message_id: msg.id,
+                list_type: SearchListType::Subscribers,
+            },
+        )
+        .await;
     }
     Ok(())
 }
@@ -94,6 +121,14 @@ pub async fn edit_subscribers_list(
     bot: &Bot,
     msg: &Message,
     db: &Database,
+    search_contexts: &std::sync::Arc<
+        tokio::sync::Mutex<
+            std::collections::HashMap<
+                teloxide::types::ChatId,
+                crate::adapters::tg::search::SearchContext,
+            >,
+        >,
+    >,
     lang: LanguageCode,
     page: usize,
 ) -> ResponseResult<()> {
@@ -143,17 +178,24 @@ pub async fn edit_subscribers_list(
         lang,
     );
 
-    bot.edit_message_text(
+    let base = locales::get_text(lang.as_str(), "list-subs-title", None);
+    let text = append_search_hint(&base, lang);
+    bot.edit_message_text(msg.chat.id, msg.id, text)
+        .reply_markup(keyboard)
+        .await?;
+    set_search_context_raw(
+        search_contexts,
         msg.chat.id,
-        msg.id,
-        locales::get_text(lang.as_str(), "list-subs-title", None),
+        SearchContext {
+            message_id: msg.id,
+            list_type: SearchListType::Subscribers,
+        },
     )
-    .reply_markup(keyboard)
-    .await?;
+    .await;
     Ok(())
 }
 
-async fn prepare_display_list(
+pub async fn prepare_display_list(
     bot: &Bot,
     subs: Vec<crate::infra::db::types::SubscriberInfo>,
 ) -> Vec<SubDisplayInfo> {

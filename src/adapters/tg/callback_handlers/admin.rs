@@ -1,6 +1,9 @@
 use crate::adapters::tg::admin_logic::bans::{edit_unban_list, send_unban_list};
 use crate::adapters::tg::admin_logic::subscribers::{edit_subscribers_list, send_subscribers_list};
 use crate::adapters::tg::keyboards::create_user_list_keyboard;
+use crate::adapters::tg::search::{
+    SearchContext, SearchListType, append_search_hint, set_search_context,
+};
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
     answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
@@ -59,7 +62,8 @@ async fn handle_kick_list(
 ) -> ResponseResult<()> {
     let users = sorted_online_users(&state.online_users);
     let args = args!(server = state.config.teamtalk.display_name().to_string());
-    let title = locales::get_text(lang.as_str(), "list-kick-title", args.as_ref());
+    let base = locales::get_text(lang.as_str(), "list-kick-title", args.as_ref());
+    let title = append_search_hint(&base, lang);
     let keyboard = create_user_list_keyboard(
         &users,
         page,
@@ -73,7 +77,16 @@ async fn handle_kick_list(
         None,
         lang,
     );
-    send_or_edit_list(bot, msg, page, title, keyboard).await?;
+    let message_id = send_or_edit_list(bot, msg, page, title, keyboard).await?;
+    set_search_context(
+        state,
+        msg.chat.id,
+        SearchContext {
+            message_id,
+            list_type: SearchListType::Kick,
+        },
+    )
+    .await;
     answer_callback_empty(bot, &q.id).await
 }
 
@@ -87,7 +100,8 @@ async fn handle_ban_list(
 ) -> ResponseResult<()> {
     let users = sorted_online_users(&state.online_users);
     let args = args!(server = state.config.teamtalk.display_name().to_string());
-    let title = locales::get_text(lang.as_str(), "list-ban-title", args.as_ref());
+    let base = locales::get_text(lang.as_str(), "list-ban-title", args.as_ref());
+    let title = append_search_hint(&base, lang);
     let keyboard = create_user_list_keyboard(
         &users,
         page,
@@ -101,7 +115,16 @@ async fn handle_ban_list(
         None,
         lang,
     );
-    send_or_edit_list(bot, msg, page, title, keyboard).await?;
+    let message_id = send_or_edit_list(bot, msg, page, title, keyboard).await?;
+    set_search_context(
+        state,
+        msg.chat.id,
+        SearchContext {
+            message_id,
+            list_type: SearchListType::Ban,
+        },
+    )
+    .await;
     answer_callback_empty(bot, &q.id).await
 }
 
@@ -246,9 +269,18 @@ async fn handle_unban_list(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     if should_send_page(msg, page) {
-        send_unban_list(bot, msg.chat.id, &state.db, lang, 0, None).await?;
+        send_unban_list(
+            bot,
+            msg.chat.id,
+            &state.db,
+            &state.search_contexts,
+            lang,
+            0,
+            None,
+        )
+        .await?;
     } else {
-        edit_unban_list(bot, msg, &state.db, lang, page).await?;
+        edit_unban_list(bot, msg, &state.db, &state.search_contexts, lang, page).await?;
     }
     answer_callback_empty(bot, &q.id).await
 }
@@ -282,7 +314,7 @@ async fn handle_unban_perform(
         false,
     )
     .await?;
-    edit_unban_list(bot, msg, &state.db, lang, page).await
+    edit_unban_list(bot, msg, &state.db, &state.search_contexts, lang, page).await
 }
 
 async fn handle_subs_list(
@@ -294,9 +326,18 @@ async fn handle_subs_list(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     if should_send_page(msg, page) {
-        send_subscribers_list(bot, msg.chat.id, &state.db, lang, 0, None).await?;
+        send_subscribers_list(
+            bot,
+            msg.chat.id,
+            &state.db,
+            &state.search_contexts,
+            lang,
+            0,
+            None,
+        )
+        .await?;
     } else {
-        edit_subscribers_list(bot, msg, &state.db, lang, page).await?;
+        edit_subscribers_list(bot, msg, &state.db, &state.search_contexts, lang, page).await?;
     }
     answer_callback_empty(bot, &q.id).await
 }
@@ -320,17 +361,18 @@ async fn send_or_edit_list(
     page: usize,
     title: String,
     keyboard: teloxide::types::InlineKeyboardMarkup,
-) -> ResponseResult<()> {
+) -> ResponseResult<teloxide::types::MessageId> {
     if should_send_page(msg, page) {
-        bot.send_message(msg.chat.id, title)
+        let sent = bot
+            .send_message(msg.chat.id, title)
             .reply_markup(keyboard)
             .await?;
-    } else {
-        bot.edit_message_text(msg.chat.id, msg.id, title)
-            .reply_markup(keyboard)
-            .await?;
+        return Ok(sent.id);
     }
-    Ok(())
+    bot.edit_message_text(msg.chat.id, msg.id, title)
+        .reply_markup(keyboard)
+        .await?;
+    Ok(msg.id)
 }
 
 fn should_send_page(msg: &Message, page: usize) -> bool {

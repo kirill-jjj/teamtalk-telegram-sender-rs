@@ -3,6 +3,7 @@ pub mod callback_handlers;
 pub mod callbacks;
 pub mod commands;
 pub mod keyboards;
+pub mod search;
 pub mod settings_logic;
 pub mod state;
 pub mod utils;
@@ -88,6 +89,7 @@ fn build_state(
         online_users,
         online_users_by_username,
         user_accounts,
+        search_contexts: crate::adapters::tg::search::new_search_contexts(),
         tx_tt: tx_tt_cmd,
         config: config.clone(),
         cancel_token: cancel_token.clone(),

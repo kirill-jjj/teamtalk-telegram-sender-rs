@@ -111,6 +111,9 @@ list-empty = Список пуст.
 list-subs-empty = Подписчики не найдены.
 list-ban-empty = Список забаненных пуст.
 list-mute-empty = Список игнора пуст.
+list-search-hint = Введите имя или ник для поиска.
+list-search-empty = Ничего не найдено по "{ $query }".
+list-search-title = Результаты поиска: "{ $query }"
 list-page = Страница { $current }/{ $total }
 
 btn-prev = ⬅️ Назад
@@ -123,6 +126,7 @@ btn-back-menu = Назад в Главное меню
 btn-back-subs = Назад к списку подписчиков
 btn-back-user-actions = Назад к действиям пользователя
 btn-back-manage-acc = Назад к управлению аккаунтом
+btn-back-search = Назад к списку
 
 # Toast messages
 toast-mute-mode-set = Режим списка игнорирования изменен на { $mode }.

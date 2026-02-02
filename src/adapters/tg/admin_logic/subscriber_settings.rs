@@ -1,6 +1,9 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, callback_button, create_user_list_keyboard,
 };
+use crate::adapters::tg::search::{
+    SearchContext, SearchListType, append_search_hint, set_search_context_raw,
+};
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
@@ -75,11 +78,20 @@ pub async fn send_sub_manage_tt_menu(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn send_sub_link_account_list(
     bot: &Bot,
     msg: &Message,
     user_accounts: &std::sync::Arc<
         std::sync::RwLock<std::collections::HashMap<String, UserAccount>>,
+    >,
+    search_contexts: &std::sync::Arc<
+        tokio::sync::Mutex<
+            std::collections::HashMap<
+                teloxide::types::ChatId,
+                crate::adapters::tg::search::SearchContext,
+            >,
+        >,
     >,
     lang: LanguageCode,
     target_id: i64,
@@ -126,11 +138,24 @@ pub async fn send_sub_link_account_list(
     );
 
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(lang.as_str(), "list-link-title", args.as_ref());
+    let base = locales::get_text(lang.as_str(), "list-link-title", args.as_ref());
+    let text = append_search_hint(&base, lang);
 
     bot.edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)
         .await?;
+    set_search_context_raw(
+        search_contexts,
+        msg.chat.id,
+        SearchContext {
+            message_id: msg.id,
+            list_type: SearchListType::LinkList {
+                sub_id: target_id,
+                page: sub_page,
+            },
+        },
+    )
+    .await;
     Ok(())
 }
 
@@ -269,10 +294,19 @@ pub async fn send_sub_mute_mode_menu(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub async fn send_sub_mute_list(
     bot: &Bot,
     msg: &Message,
     db: &Database,
+    search_contexts: &std::sync::Arc<
+        tokio::sync::Mutex<
+            std::collections::HashMap<
+                teloxide::types::ChatId,
+                crate::adapters::tg::search::SearchContext,
+            >,
+        >,
+    >,
     lang: LanguageCode,
     target_id: i64,
     sub_page: usize,
@@ -298,7 +332,8 @@ pub async fn send_sub_mute_list(
 
     let user_name = format!("{target_id}");
     let args = args!(name = user_name);
-    let title = locales::get_text(lang.as_str(), "list-mute-title", args.as_ref());
+    let base = locales::get_text(lang.as_str(), "list-mute-title", args.as_ref());
+    let title = append_search_hint(&base, lang);
 
     let keyboard = create_user_list_keyboard(
         &muted,
@@ -325,5 +360,18 @@ pub async fn send_sub_mute_list(
     bot.edit_message_text(msg.chat.id, msg.id, title)
         .reply_markup(keyboard)
         .await?;
+    set_search_context_raw(
+        search_contexts,
+        msg.chat.id,
+        SearchContext {
+            message_id: msg.id,
+            list_type: SearchListType::SubMuteView {
+                sub_id: target_id,
+                sub_page,
+                view_page: page,
+            },
+        },
+    )
+    .await;
     Ok(())
 }

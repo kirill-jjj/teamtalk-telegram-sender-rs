@@ -1,3 +1,4 @@
+use crate::adapters::tg::search::{SearchContext, SearchListType, set_search_context};
 use crate::adapters::tg::settings_logic::{
     RenderMuteListArgs, RenderMuteListStringsArgs, render_mute_list, render_mute_list_strings,
     send_mute_menu,
@@ -120,9 +121,23 @@ async fn handle_list(
         page,
         title_key: "list-mute-title",
         guest_username,
-        mode,
+        mode: mode.clone(),
     })
-    .await
+    .await?;
+    set_search_context(
+        state,
+        msg.chat.id,
+        SearchContext {
+            message_id: msg.id,
+            list_type: SearchListType::MuteLocal {
+                telegram_id,
+                mode: mode.clone(),
+                page,
+            },
+        },
+    )
+    .await;
+    Ok(())
 }
 
 async fn handle_toggle(
@@ -197,9 +212,23 @@ async fn handle_server_list(
         page,
         title_key: "list-all-accs-title",
         guest_username,
-        mode,
+        mode: mode.clone(),
     })
-    .await
+    .await?;
+    set_search_context(
+        state,
+        msg.chat.id,
+        SearchContext {
+            message_id: msg.id,
+            list_type: SearchListType::MuteServer {
+                telegram_id,
+                mode: mode.clone(),
+                page,
+            },
+        },
+    )
+    .await;
+    Ok(())
 }
 
 async fn handle_server_toggle(

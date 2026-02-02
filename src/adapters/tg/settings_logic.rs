@@ -1,6 +1,7 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, back_button_keyboard, callback_button, create_user_list_keyboard,
 };
+use crate::adapters::tg::search::append_search_hint;
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
@@ -535,7 +536,8 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
         args.lang,
     );
 
-    let text = locales::get_text(args.lang.as_str(), args.title_key, None);
+    let base = locales::get_text(args.lang.as_str(), args.title_key, None);
+    let text = append_search_hint(&base, args.lang);
     args.bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
@@ -600,7 +602,8 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
         args.lang,
     );
 
-    let text = locales::get_text(args.lang.as_str(), args.title_key, None);
+    let base = locales::get_text(args.lang.as_str(), args.title_key, None);
+    let text = append_search_hint(&base, args.lang);
 
     args.bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
