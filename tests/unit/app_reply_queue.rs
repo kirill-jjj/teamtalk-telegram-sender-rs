@@ -5,6 +5,7 @@ use crate::app::services::reply_queue::{
 use crate::core::types::LanguageCode;
 use crate::infra::db::types::UserSettings;
 use anyhow::Result;
+use chrono::{Duration, Utc};
 
 #[derive(Default)]
 struct FakeReplyQueueRepo {
@@ -119,4 +120,55 @@ async fn reply_queue_enabled_when_global_and_user_on() {
             .await
             .unwrap()
     );
+}
+
+#[test]
+fn format_queue_message_minutes_en() {
+    let now = Utc::now();
+    let created = now - Duration::minutes(5);
+    let msg = super::format_queue_message(LanguageCode::En, created.naive_utc(), now, "hello");
+    assert!(msg.contains("5 minutes"));
+    assert!(msg.contains("hello"));
+}
+
+#[test]
+fn format_queue_message_hours_en() {
+    let now = Utc::now();
+    let created = now - Duration::hours(3);
+    let msg = super::format_queue_message(LanguageCode::En, created.naive_utc(), now, "hello");
+    assert!(msg.contains("3 hours"));
+    assert!(msg.contains("hello"));
+}
+
+#[test]
+fn format_queue_message_minutes_ru() {
+    let now = Utc::now();
+    let created = now - Duration::minutes(2);
+    let msg = super::format_queue_message(LanguageCode::Ru, created.naive_utc(), now, "привет");
+    assert!(msg.contains('2'));
+    assert!(msg.contains("привет"));
+}
+
+#[test]
+fn queue_items_sorted_orders_by_time_and_id() {
+    let mut items = vec![
+        crate::infra::db::reply_queue::ReplyQueueItem {
+            id: 2,
+            message_text: "b".to_string(),
+            created_at: chrono::DateTime::from_timestamp(10, 0).unwrap().naive_utc(),
+        },
+        crate::infra::db::reply_queue::ReplyQueueItem {
+            id: 1,
+            message_text: "a".to_string(),
+            created_at: chrono::DateTime::from_timestamp(10, 0).unwrap().naive_utc(),
+        },
+        crate::infra::db::reply_queue::ReplyQueueItem {
+            id: 3,
+            message_text: "c".to_string(),
+            created_at: chrono::DateTime::from_timestamp(5, 0).unwrap().naive_utc(),
+        },
+    ];
+    super::queue_items_sorted(&mut items);
+    let ids: Vec<i64> = items.iter().map(|item| item.id).collect();
+    assert_eq!(ids, vec![3, 1, 2]);
 }
