@@ -100,6 +100,24 @@ fn callback_fuzz_lite_inputs_do_not_panic() {
 }
 
 #[test]
+fn callback_handles_control_bytes() {
+    let s = "a\0b\0c";
+    let _ = CallbackAction::from_str(s);
+}
+
+#[test]
+fn callback_handles_unicode_noise() {
+    let s = "⚡️🔥🧪тест✓";
+    let _ = CallbackAction::from_str(s);
+}
+
+#[test]
+fn callback_handles_long_garbage() {
+    let s = "💥".repeat(256);
+    let _ = CallbackAction::from_str(&s);
+}
+
+#[test]
 fn callback_oversized_payload_encodes_as_noop() {
     let long_name = "x".repeat(200);
     let action = CallbackAction::Subscriber(SubAction::LinkPerform {
