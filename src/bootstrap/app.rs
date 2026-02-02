@@ -17,7 +17,6 @@ use tokio_util::sync::CancellationToken;
 pub struct Application {
     config: Arc<Config>,
     db: Database,
-    cancel_token: CancellationToken,
 }
 
 struct BotInit {
@@ -84,22 +83,12 @@ impl Application {
 
         let config = Arc::new(config);
         let db = Database::new(&db_path_str).await?;
-        let cancel_token = CancellationToken::new();
-
-        Ok(Self {
-            config,
-            db,
-            cancel_token,
-        })
+        Ok(Self { config, db })
     }
 
     #[allow(clippy::future_not_send, clippy::large_futures)]
-    pub async fn run(self) -> Result<()> {
-        let Self {
-            config,
-            db,
-            cancel_token,
-        } = self;
+    pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
+        let Self { config, db } = self;
 
         spawn_deeplink_cleanup_task(
             db.clone(),
@@ -148,6 +137,8 @@ impl Application {
                     },
                     rx_bridge,
                 ));
+
+                tokio::spawn(wait_for_cancel(cancel_token.clone(), tx_tt_cmd.clone()));
 
                 tokio::spawn(wait_for_shutdown_signal(
                     cancel_token.clone(),
@@ -403,4 +394,14 @@ async fn wait_for_shutdown_signal(
         .send(crate::core::types::TtCommand::Shutdown)
         .await;
     cancel_token.cancel();
+}
+
+async fn wait_for_cancel(
+    cancel_token: CancellationToken,
+    tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
+) {
+    cancel_token.cancelled().await;
+    let _ = tx_tt_cmd
+        .send(crate::core::types::TtCommand::Shutdown)
+        .await;
 }

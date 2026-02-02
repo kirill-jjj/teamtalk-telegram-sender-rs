@@ -108,6 +108,12 @@ Run the executable. You can optionally specify the config file path:
 ./target/release/teamtalk-telegram-sender-rs --config config.toml
 ```
 
+Multiple instances can be run in a single process by repeating `--config`:
+
+```bash
+./target/release/teamtalk-telegram-sender-rs --config a.toml --config b.toml
+```
+
 On the first run, the bot will automatically create the SQLite database file (`bot_data.db`) and apply all necessary migrations.
 
 ## 🐳 Docker

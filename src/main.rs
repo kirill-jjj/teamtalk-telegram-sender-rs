@@ -9,7 +9,10 @@ mod core;
 mod infra;
 
 use anyhow::Result;
+use tokio::task::{JoinSet, LocalSet};
+use tracing::Instrument;
 use tracing_subscriber::EnvFilter;
+use tracing_subscriber::prelude::*;
 
 fn update_bot() -> Result<()> {
     let target = if cfg!(windows) { "windows" } else { "linux" };
@@ -36,28 +39,72 @@ async fn main() -> Result<()> {
         update_bot()?;
         return Ok(());
     }
-    let config_path = args
-        .iter()
-        .position(|a| a == "--config")
-        .and_then(|idx| args.get(idx + 1))
-        .cloned()
-        .unwrap_or_else(|| "config.toml".to_string());
 
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        let level = read_log_level(&config_path).unwrap_or("info");
-        EnvFilter::new(level)
-    });
+    let config_paths = bootstrap::cli::collect_config_paths(&args)?;
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt().with_env_filter(filter).init();
-    tracing::info!(component = "main", "Starting application");
 
-    let app = bootstrap::app::Application::build(config_path).await?;
-    app.run().await?;
+    let cancel_token = tokio_util::sync::CancellationToken::new();
+
+    let local = LocalSet::new();
+    local
+        .run_until(async move {
+            let mut set = JoinSet::new();
+            for config_path in config_paths {
+                let instance_name = bootstrap::cli::instance_name_from_path(&config_path);
+                let level = bootstrap::cli::read_log_level(&config_path)
+                    .unwrap_or_else(|| "info".to_string());
+                let dispatch = build_dispatch(&level);
+                let token = cancel_token.clone();
+                set.spawn_local(async move {
+                    let _guard = tracing::dispatcher::set_default(&dispatch);
+                    let span = tracing::info_span!(
+                        "instance",
+                        instance = %instance_name,
+                        config = %config_path
+                    );
+                    async move {
+                        tracing::info!(component = "main", "Starting application");
+                        let app = bootstrap::app::Application::build(config_path).await?;
+                        app.run(token).await
+                    }
+                    .instrument(span)
+                    .await
+                });
+            }
+
+            let mut first_err: Option<anyhow::Error> = None;
+            while let Some(res) = set.join_next().await {
+                match res {
+                    Ok(Ok(())) => {}
+                    Ok(Err(e)) => {
+                        if first_err.is_none() {
+                            first_err = Some(e);
+                            cancel_token.cancel();
+                        }
+                    }
+                    Err(e) => {
+                        if first_err.is_none() {
+                            first_err = Some(anyhow::anyhow!(e));
+                            cancel_token.cancel();
+                        }
+                    }
+                }
+            }
+            if let Some(err) = first_err {
+                return Err(err);
+            }
+            Ok(())
+        })
+        .await?;
 
     Ok(())
 }
 
-fn read_log_level(config_path: &str) -> Option<&'static str> {
-    let content = std::fs::read_to_string(config_path).ok()?;
-    let config: bootstrap::config::Config = toml::from_str(&content).ok()?;
-    Some(config.general.log_level.as_str())
+fn build_dispatch(level: &str) -> tracing::Dispatch {
+    let subscriber = tracing_subscriber::registry()
+        .with(EnvFilter::new(level))
+        .with(tracing_subscriber::fmt::layer());
+    tracing::Dispatch::new(subscriber)
 }
