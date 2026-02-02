@@ -877,8 +877,8 @@ async fn handle_user_reply(
 ) -> ResponseResult<()> {
     let db = &state.db;
     let config = &state.config;
-    let tt_user_id = match pending_service::get_pending_reply_user_id(db, reply_id).await {
-        Ok(Some(id)) => id,
+    let (tt_user_id, tt_username) = match pending_service::get_pending_reply(db, reply_id).await {
+        Ok(Some(data)) => data,
         Ok(None) => return Ok(()),
         Err(e) => {
             tracing::error!(reply_id, error = %e, "Failed to load pending reply");
@@ -895,16 +895,33 @@ async fn handle_user_reply(
         }
     };
 
-    let is_online = state
-        .online_users
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .contains_key(&tt_user_id);
+    let current_tt_user_id = tt_username.as_deref().map_or(Some(tt_user_id), |username| {
+        state
+            .online_users_by_username
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .get(username)
+            .copied()
+            .or(Some(tt_user_id))
+    });
+    let is_online = current_tt_user_id
+        .and_then(|id| {
+            state
+                .online_users
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .contains_key(&id)
+                .then_some(id)
+        })
+        .is_some();
     let reply_key = if is_online {
+        let Some(target_id) = current_tt_user_id else {
+            return Ok(());
+        };
         let send_res = state
             .tx_tt
             .send(TtCommand::ReplyToUser {
-                user_id: tt_user_id,
+                user_id: target_id,
                 text: text.to_string(),
             })
             .await;

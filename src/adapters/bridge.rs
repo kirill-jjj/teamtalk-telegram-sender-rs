@@ -369,7 +369,11 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     if let Ok(msg) = &res
         && let Err(e) = deps
             .db
-            .add_pending_reply(i64::from(msg.id.0), data.user_id)
+            .add_pending_reply(
+                i64::from(msg.id.0),
+                data.user_id,
+                Some(&data.tt_username),
+            )
             .await
     {
         tracing::error!(

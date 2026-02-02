@@ -11,6 +11,7 @@ use tokio::sync::mpsc::Sender;
 pub struct AppState {
     pub db: Database,
     pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
     pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     pub tx_tt: Sender<TtCommand>,
     pub config: Arc<Config>,

@@ -3,20 +3,29 @@ use anyhow::Result;
 use super::Database;
 
 impl Database {
-    pub async fn add_pending_reply(&self, tg_message_id: i64, tt_user_id: i32) -> Result<()> {
+    pub async fn add_pending_reply(
+        &self,
+        tg_message_id: i64,
+        tt_user_id: i32,
+        tt_username: Option<&str>,
+    ) -> Result<()> {
         sqlx::query(
-            "INSERT OR IGNORE INTO pending_replies (tg_message_id, tt_user_id) VALUES (?, ?)",
+            "INSERT OR IGNORE INTO pending_replies (tg_message_id, tt_user_id, tt_username) VALUES (?, ?, ?)",
         )
         .bind(tg_message_id)
         .bind(tt_user_id)
+        .bind(tt_username)
         .execute(&self.pool)
         .await?;
         Ok(())
     }
 
-    pub async fn get_pending_reply_user_id(&self, tg_message_id: i64) -> Result<Option<i32>> {
-        let res = sqlx::query_scalar::<_, i32>(
-            "SELECT tt_user_id FROM pending_replies WHERE tg_message_id = ?",
+    pub async fn get_pending_reply(
+        &self,
+        tg_message_id: i64,
+    ) -> Result<Option<(i32, Option<String>)>> {
+        let res = sqlx::query_as::<_, (i32, Option<String>)>(
+            "SELECT tt_user_id, tt_username FROM pending_replies WHERE tg_message_id = ?",
         )
         .bind(tg_message_id)
         .fetch_optional(&self.pool)

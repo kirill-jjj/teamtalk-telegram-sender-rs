@@ -348,6 +348,7 @@ async fn run_telegram_or_wait(ctx: TelegramRunContext) -> Result<()> {
             message_bot: ctx.message_bot,
             db: ctx.db.clone(),
             online_users: ctx.shared.online_users,
+            online_users_by_username: ctx.shared.online_users_by_username,
             user_accounts: ctx.shared.all_user_accounts,
             tx_tt_cmd: ctx.tx_tt_cmd,
             config: ctx.config,

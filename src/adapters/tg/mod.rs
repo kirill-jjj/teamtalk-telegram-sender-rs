@@ -32,6 +32,7 @@ pub struct TgRunArgs {
     pub message_bot: Option<Bot>,
     pub db: Database,
     pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
     pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub config: Arc<Config>,
@@ -44,6 +45,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         message_bot,
         db,
         online_users,
+        online_users_by_username,
         user_accounts,
         tx_tt_cmd,
         config,
@@ -52,6 +54,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
     let state = build_state(
         db.clone(),
         online_users,
+        online_users_by_username,
         user_accounts,
         tx_tt_cmd,
         &config,
@@ -74,6 +77,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
 fn build_state(
     db: Database,
     online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
     user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
     tx_tt_cmd: Sender<TtCommand>,
     config: &Arc<Config>,
@@ -82,6 +86,7 @@ fn build_state(
     AppState {
         db,
         online_users,
+        online_users_by_username,
         user_accounts,
         tx_tt: tx_tt_cmd,
         config: config.clone(),
