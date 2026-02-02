@@ -1,35 +1,53 @@
-﻿use crate::core::types::LanguageCode;
-use crate::infra::db::Database;
+use crate::core::types::LanguageCode;
 use crate::infra::db::reply_queue::ReplyQueueItem;
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike, Utc};
 
 const REPLY_QUEUE_GLOBAL_KEY: &str = "reply_queue_enabled_global";
 
-pub async fn get_reply_queue_global_enabled(db: &Database) -> Result<bool> {
+#[allow(async_fn_in_trait)]
+pub trait ReplyQueueRepo: Sync {
+    async fn get_app_setting(&self, key: &str) -> Result<Option<String>>;
+    async fn set_app_setting(&self, key: &str, value: &str) -> Result<()>;
+    async fn get_or_create_user(
+        &self,
+        telegram_id: i64,
+        default_lang: LanguageCode,
+    ) -> Result<crate::infra::db::types::UserSettings>;
+    async fn update_reply_queue_enabled(&self, telegram_id: i64, enabled: bool) -> Result<()>;
+    async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64>;
+}
+
+pub async fn get_reply_queue_global_enabled(db: &impl ReplyQueueRepo) -> Result<bool> {
     let value = db.get_app_setting(REPLY_QUEUE_GLOBAL_KEY).await?;
     Ok(matches!(value.as_deref(), Some("1" | "true" | "on")))
 }
 
-pub async fn set_reply_queue_global_enabled(db: &Database, enabled: bool) -> Result<()> {
+pub async fn set_reply_queue_global_enabled(db: &impl ReplyQueueRepo, enabled: bool) -> Result<()> {
     let val = if enabled { "1" } else { "0" };
     db.set_app_setting(REPLY_QUEUE_GLOBAL_KEY, val).await
 }
 
-pub async fn get_reply_queue_user_enabled(db: &Database, telegram_id: i64) -> Result<bool> {
+pub async fn get_reply_queue_user_enabled(
+    db: &impl ReplyQueueRepo,
+    telegram_id: i64,
+) -> Result<bool> {
     let user = db.get_or_create_user(telegram_id, LanguageCode::En).await?;
     Ok(user.reply_queue_enabled)
 }
 
 pub async fn set_reply_queue_user_enabled(
-    db: &Database,
+    db: &impl ReplyQueueRepo,
     telegram_id: i64,
     enabled: bool,
 ) -> Result<()> {
     db.update_reply_queue_enabled(telegram_id, enabled).await
 }
 
-pub async fn is_reply_queue_enabled_for_tt_user(db: &Database, tt_username: &str) -> Result<bool> {
+pub async fn is_reply_queue_enabled_for_tt_user(
+    db: &impl ReplyQueueRepo,
+    tt_username: &str,
+) -> Result<bool> {
     if !get_reply_queue_global_enabled(db).await? {
         return Ok(false);
     }
@@ -38,6 +56,37 @@ pub async fn is_reply_queue_enabled_for_tt_user(db: &Database, tt_username: &str
     };
     get_reply_queue_user_enabled(db, tg_id).await
 }
+
+impl ReplyQueueRepo for crate::infra::db::Database {
+    async fn get_app_setting(&self, key: &str) -> Result<Option<String>> {
+        self.get_app_setting(key).await
+    }
+
+    async fn set_app_setting(&self, key: &str, value: &str) -> Result<()> {
+        self.set_app_setting(key, value).await
+    }
+
+    async fn get_or_create_user(
+        &self,
+        telegram_id: i64,
+        default_lang: LanguageCode,
+    ) -> Result<crate::infra::db::types::UserSettings> {
+        self.get_or_create_user(telegram_id, default_lang).await
+    }
+
+    async fn update_reply_queue_enabled(&self, telegram_id: i64, enabled: bool) -> Result<()> {
+        self.update_reply_queue_enabled(telegram_id, enabled).await
+    }
+
+    #[allow(clippy::use_self)]
+    async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64> {
+        crate::infra::db::Database::get_telegram_id_by_tt_user(self, tt_username).await
+    }
+}
+
+#[cfg(test)]
+#[path = "../../../tests/unit/app_reply_queue.rs"]
+mod tests;
 
 pub fn format_queue_message(
     lang: LanguageCode,
