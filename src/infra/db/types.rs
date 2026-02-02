@@ -12,7 +12,7 @@ pub struct UserSettings {
     pub reply_queue_enabled: bool,
 }
 
-#[derive(sqlx::FromRow, Debug)]
+#[derive(sqlx::FromRow, Debug, Clone)]
 pub struct Deeplink {
     pub action: String,
     pub payload: Option<String>,

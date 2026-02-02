@@ -1,6 +1,6 @@
 use super::*;
 use crate::core::types::DeeplinkAction;
-use crate::infra::db::Database;
+use crate::infra::db::{Database, types::Deeplink};
 use std::path::PathBuf;
 
 async fn setup_db() -> (Database, PathBuf) {
@@ -49,4 +49,44 @@ async fn resolve_for_user_honors_expected_id() {
 
     db.close().await;
     let _ = std::fs::remove_file(db_path);
+}
+
+#[derive(Default)]
+struct FakeDeeplinkRepo {
+    deeplink: Option<Deeplink>,
+}
+
+#[allow(async_fn_in_trait)]
+impl DeeplinkRepo for FakeDeeplinkRepo {
+    async fn resolve_deeplink(&self, _token: &str) -> anyhow::Result<Option<Deeplink>> {
+        Ok(self.deeplink.clone())
+    }
+}
+
+#[tokio::test]
+async fn resolve_rejects_wrong_expected_id() {
+    let repo = FakeDeeplinkRepo {
+        deeplink: Some(Deeplink {
+            action: "subscribe".to_string(),
+            payload: Some("payload".to_string()),
+            expected_telegram_id: Some(10),
+            expiry_time: chrono::Utc::now().naive_utc(),
+        }),
+    };
+    let res = resolve_for_user(&repo, "t", 42).await.unwrap();
+    assert!(res.is_none());
+}
+
+#[tokio::test]
+async fn resolve_rejects_unknown_action() {
+    let repo = FakeDeeplinkRepo {
+        deeplink: Some(Deeplink {
+            action: "drop_table".to_string(),
+            payload: Some("payload".to_string()),
+            expected_telegram_id: None,
+            expiry_time: chrono::Utc::now().naive_utc(),
+        }),
+    };
+    let res = resolve_for_user(&repo, "t", 1).await.unwrap();
+    assert!(res.is_none());
 }
