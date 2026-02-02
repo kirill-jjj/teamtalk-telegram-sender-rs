@@ -235,6 +235,7 @@ async fn set_bot_commands(
                     teamtalk_username: None,
                     not_on_online_enabled: false,
                     not_on_online_confirmed: false,
+                    reply_queue_enabled: false,
                 }
             });
 
@@ -281,6 +282,10 @@ fn get_user_commands(lang: LanguageCode) -> Vec<BotCommand> {
         BotCommand::new(
             "help",
             locales::get_text(lang.as_str(), "cmd-desc-help", None),
+        ),
+        BotCommand::new(
+            "queue",
+            locales::get_text(lang.as_str(), "cmd-desc-queue", None),
         ),
     ]
 }

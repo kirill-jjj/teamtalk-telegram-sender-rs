@@ -2,8 +2,10 @@
 
 use crate::adapters::tt::commands;
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
+use crate::app::services::reply_queue as reply_queue_service;
 use crate::bootstrap::config::GenderConfig;
-use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, NotificationType};
+use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand};
+use chrono::Utc;
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
 use teamtalk::client::ffi;
@@ -204,6 +206,57 @@ pub(super) fn handle_sdk_event(
                             .await
                         {
                             tracing::error!(error = %e, "Failed to send join broadcast");
+                        }
+                    });
+                }
+
+                if !user.username.is_empty() {
+                    let db = ctx.db.clone();
+                    let tx_tt_cmd = ctx.tx_tt_cmd.clone();
+                    let tt_username = user.username.clone();
+                    let default_lang = ctx.config.general.default_lang;
+                    let user_id = user.id.0;
+                    tokio::task::spawn_local(async move {
+                        let mut items = match db.get_reply_queue_for_user(&tt_username).await {
+                            Ok(items) => items,
+                            Err(e) => {
+                                tracing::error!(error = %e, "Failed to load reply queue");
+                                return;
+                            }
+                        };
+                        if items.is_empty() {
+                            return;
+                        }
+                        reply_queue_service::queue_items_sorted(&mut items);
+                        let lang = db
+                            .get_user_lang_by_tt_user(&tt_username)
+                            .await
+                            .unwrap_or(default_lang);
+                        let now = Utc::now();
+                        let mut sent_ids = Vec::new();
+                        for item in items {
+                            let formatted = reply_queue_service::format_queue_message(
+                                lang,
+                                item.created_at,
+                                now,
+                                &item.message_text,
+                            );
+                            if let Err(e) = tx_tt_cmd
+                                .send(TtCommand::ReplyToUser {
+                                    user_id,
+                                    text: formatted,
+                                })
+                                .await
+                            {
+                                tracing::error!(error = %e, "Failed to send queued reply");
+                                break;
+                            }
+                            sent_ids.push(item.id);
+                        }
+                        if !sent_ids.is_empty()
+                            && let Err(e) = db.delete_reply_queue_ids(&sent_ids).await
+                        {
+                            tracing::error!(error = %e, "Failed to clear sent queue items");
                         }
                     });
                 }

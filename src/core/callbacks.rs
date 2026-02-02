@@ -44,6 +44,11 @@ pub enum SettingsAction {
     NotifSelect,
     NoonToggle,
     MuteManage,
+    QueueMenu,
+    QueueToggleUser,
+    QueueToggleGlobal,
+    QueueClearSelf,
+    QueueClearAll,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]

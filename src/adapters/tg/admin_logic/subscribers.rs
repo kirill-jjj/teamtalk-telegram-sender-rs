@@ -224,6 +224,7 @@ async fn load_subscriber_settings(db: &Database, sub_id: i64) -> UserSettings {
                 teamtalk_username: None,
                 not_on_online_enabled: false,
                 not_on_online_confirmed: false,
+                reply_queue_enabled: false,
             }
         })
 }

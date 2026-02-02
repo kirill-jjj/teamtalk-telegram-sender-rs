@@ -63,7 +63,8 @@ impl Database {
                 us.mute_list_mode as "mute_list_mode!",
                 us.teamtalk_username,
                 us.not_on_online_enabled as "not_on_online_enabled!",
-                us.not_on_online_confirmed as "not_on_online_confirmed!"
+                us.not_on_online_confirmed as "not_on_online_confirmed!",
+                us.reply_queue_enabled as "reply_queue_enabled!"
             FROM user_settings us
             JOIN subscribed_users su ON us.telegram_id = su.telegram_id
             LEFT JOIN muted_users mu ON us.telegram_id = mu.user_settings_telegram_id

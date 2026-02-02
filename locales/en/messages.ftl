@@ -277,3 +277,41 @@ cmd-desc-exit = Shut down the bot
 cmd-desc-broadcast = Send a TeamTalk broadcast message
 cmd-desc-message = Send a Telegram message to subscribers
 val-none = None
+
+cmd-desc-queue = Reply queue.
+cmd-queue-help = /queue on|off (admin), /queue me on|off, /queue clear [all]
+cmd-queue-no-link = Link your TeamTalk account first.
+resp-queue-user-enabled = Reply queue enabled.
+resp-queue-user-disabled = Reply queue disabled.
+resp-queue-user-already-enabled = Reply queue is already enabled.
+resp-queue-user-already-disabled = Reply queue is already disabled.
+resp-queue-global-enabled = Global reply queue enabled.
+resp-queue-global-disabled = Global reply queue disabled.
+resp-queue-global-already-enabled = Global reply queue is already enabled.
+resp-queue-global-already-disabled = Global reply queue is already disabled.
+resp-queue-global-disabled-user = Global reply queue is disabled by the admin.
+resp-queue-cleared = Queue cleared ({ $count }).
+resp-queue-cleared-all = Queue cleared for all ({ $count }).
+
+queue-settings-title = Reply queue
+btn-queue-settings = Reply queue
+btn-queue-user-toggle = Personal queue: { $status }
+btn-queue-global-toggle = Global queue: { $status }
+btn-queue-clear = Clear my queue
+btn-queue-clear-all = Clear all queues
+
+tg-reply-queued = Message received and queued.
+
+tt-queue-help = /queue on|off, /queue me on|off, /queue clear [all]
+tt-queue-no-link = Link your Telegram account first.
+tt-queue-user-enabled = Personal queue enabled.
+tt-queue-user-disabled = Personal queue disabled.
+tt-queue-user-already-enabled = Reply queue is already enabled.
+tt-queue-user-already-disabled = Reply queue is already disabled.
+tt-queue-global-enabled = Global queue enabled.
+tt-queue-global-disabled = Global queue disabled.
+tt-queue-global-already-enabled = Global queue is already enabled.
+tt-queue-global-already-disabled = Global queue is already disabled.
+tt-queue-global-disabled-user = Global reply queue is disabled by the admin.
+tt-queue-cleared = Queue cleared ({ $count }).
+tt-queue-cleared-all = Queue cleared for all ({ $count }).

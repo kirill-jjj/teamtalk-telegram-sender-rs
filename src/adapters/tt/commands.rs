@@ -1,6 +1,7 @@
 #![allow(clippy::pedantic, clippy::nursery)]
 
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
+use crate::app::services::reply_queue as reply_queue_service;
 use crate::args;
 use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand};
 use crate::infra::locales;
@@ -402,6 +403,154 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 let text = locales::get_text(reply_lang.as_str(), "tt-skip-sent", None);
                 send_reply(text).await;
+            } else if cmd == "/queue" {
+                if username.is_empty() {
+                    let text = locales::get_text(reply_lang.as_str(), "tt-queue-no-link", None);
+                    send_reply(text).await;
+                    return;
+                }
+                let tt_tg_id = db.get_telegram_id_by_tt_user(&username).await;
+                let Some(tg_id) = tt_tg_id else {
+                    let text = locales::get_text(reply_lang.as_str(), "tt-queue-no-link", None);
+                    send_reply(text).await;
+                    return;
+                };
+                let parts: Vec<&str> = content.split_whitespace().collect();
+                if parts.len() < 2 {
+                    let text = locales::get_text(reply_lang.as_str(), "tt-queue-help", None);
+                    send_reply(text).await;
+                    return;
+                }
+                let is_admin = if admin_username
+                    .as_ref()
+                    .map(|u| u == &username)
+                    .unwrap_or(false)
+                {
+                    true
+                } else {
+                    db.get_all_admins()
+                        .await
+                        .map(|admins| admins.contains(&tg_id))
+                        .unwrap_or(false)
+                };
+
+                match &parts[1..] {
+                    ["on"] | ["off"] => {
+                        if !is_admin {
+                            let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                            send_reply(text).await;
+                            return;
+                        }
+                        let enabled = parts[1] == "on";
+                        let current =
+                            reply_queue_service::get_reply_queue_global_enabled(&db).await;
+                        let text_key = match current {
+                            Ok(val) if val == enabled => {
+                                if enabled {
+                                    "tt-queue-global-already-enabled"
+                                } else {
+                                    "tt-queue-global-already-disabled"
+                                }
+                            }
+                            Ok(_) => {
+                                if reply_queue_service::set_reply_queue_global_enabled(&db, enabled)
+                                    .await
+                                    .is_ok()
+                                {
+                                    if enabled {
+                                        "tt-queue-global-enabled"
+                                    } else {
+                                        "tt-queue-global-disabled"
+                                    }
+                                } else {
+                                    "tt-error-generic"
+                                }
+                            }
+                            Err(_) => "tt-error-generic",
+                        };
+                        let text = locales::get_text(reply_lang.as_str(), text_key, None);
+                        send_reply(text).await;
+                    }
+                    ["me", value] if *value == "on" || *value == "off" => {
+                        let enabled = *value == "on";
+                        let global_enabled =
+                            reply_queue_service::get_reply_queue_global_enabled(&db).await;
+                        let text_key = match global_enabled {
+                            Ok(false) => "tt-queue-global-disabled-user",
+                            Ok(true) => {
+                                let current =
+                                    reply_queue_service::get_reply_queue_user_enabled(&db, tg_id)
+                                        .await;
+                                match current {
+                                    Ok(val) if val == enabled => {
+                                        if enabled {
+                                            "tt-queue-user-already-enabled"
+                                        } else {
+                                            "tt-queue-user-already-disabled"
+                                        }
+                                    }
+                                    Ok(_) => {
+                                        if reply_queue_service::set_reply_queue_user_enabled(
+                                            &db, tg_id, enabled,
+                                        )
+                                        .await
+                                        .is_ok()
+                                        {
+                                            if enabled {
+                                                "tt-queue-user-enabled"
+                                            } else {
+                                                "tt-queue-user-disabled"
+                                            }
+                                        } else {
+                                            "tt-error-generic"
+                                        }
+                                    }
+                                    Err(_) => "tt-error-generic",
+                                }
+                            }
+                            Err(_) => "tt-error-generic",
+                        };
+                        let text = locales::get_text(reply_lang.as_str(), text_key, None);
+                        send_reply(text).await;
+                    }
+                    ["clear"] => {
+                        let count = db.clear_reply_queue_for_user(&username).await;
+                        let text = match count {
+                            Ok(count) => locales::get_text(
+                                reply_lang.as_str(),
+                                "tt-queue-cleared",
+                                args!(count = count).as_ref(),
+                            ),
+                            Err(_) => {
+                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None)
+                            }
+                        };
+                        send_reply(text).await;
+                    }
+                    ["clear", "all"] => {
+                        if !is_admin {
+                            let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                            send_reply(text).await;
+                            return;
+                        }
+                        let count = db.clear_reply_queue_all().await;
+                        let text = match count {
+                            Ok(count) => locales::get_text(
+                                reply_lang.as_str(),
+                                "tt-queue-cleared-all",
+                                args!(count = count).as_ref(),
+                            ),
+                            Err(_) => {
+                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None)
+                            }
+                        };
+                        send_reply(text).await;
+                    }
+                    _ => {
+                        let text = locales::get_text(reply_lang.as_str(), "tt-queue-help", None);
+                        send_reply(text).await;
+                    }
+                }
             } else if cmd == "/add_admin" {
                 let is_main_admin = admin_username
                     .as_ref()

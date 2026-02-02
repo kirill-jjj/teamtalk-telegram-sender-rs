@@ -9,6 +9,7 @@ pub struct UserSettings {
     pub teamtalk_username: Option<String>,
     pub not_on_online_enabled: bool,
     pub not_on_online_confirmed: bool,
+    pub reply_queue_enabled: bool,
 }
 
 #[derive(sqlx::FromRow, Debug)]

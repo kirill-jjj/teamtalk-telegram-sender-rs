@@ -8,6 +8,7 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{ensure_subscribed, notify_admin_error, send_text_key};
 use crate::app::services::deeplink as deeplink_service;
 use crate::app::services::pending as pending_service;
+use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::subscription as subscription_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
@@ -51,6 +52,8 @@ pub enum Command {
     Broadcast(String),
     #[command(description = "Message (Admin)")]
     Message(String),
+    #[command(description = "Reply Queue")]
+    Queue(String),
 }
 
 pub async fn answer_command(
@@ -157,6 +160,7 @@ impl<'a> CommandCtx<'a> {
             Command::Exit => self.exit().await,
             Command::Broadcast(text) => self.broadcast(text).await,
             Command::Message(text) => self.message(text).await,
+            Command::Queue(text) => self.queue(text).await,
         }
     }
 
@@ -663,6 +667,371 @@ impl<'a> CommandCtx<'a> {
             .await?;
         Ok(())
     }
+
+    #[allow(clippy::too_many_lines)]
+    async fn queue(&self, text: String) -> ResponseResult<()> {
+        let text = text.trim();
+        let parts: Vec<&str> = text.split_whitespace().collect();
+        if parts.is_empty() {
+            let help = locales::get_text(self.lang.as_str(), "cmd-queue-help", None);
+            self.bot
+                .send_message(self.msg.chat.id, help)
+                .reply_to(self.msg.id)
+                .await?;
+            return Ok(());
+        }
+
+        match parts.as_slice() {
+            ["on" | "off"] => {
+                if !self.is_admin {
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        "cmd-unauth",
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                let enabled = parts[0] == "on";
+                let current =
+                    match reply_queue_service::get_reply_queue_global_enabled(self.db).await {
+                        Ok(val) => val,
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to load global queue setting");
+                            notify_admin_error(
+                                self.bot,
+                                self.config,
+                                self.telegram_id,
+                                AdminErrorContext::Command,
+                                &e.to_string(),
+                                self.lang,
+                            )
+                            .await;
+                            send_text_key(
+                                self.bot,
+                                self.msg.chat.id,
+                                self.lang,
+                                "cmd-error",
+                                Some(self.msg.id),
+                            )
+                            .await?;
+                            return Ok(());
+                        }
+                    };
+                if current == enabled {
+                    let status_key = if enabled {
+                        "resp-queue-global-already-enabled"
+                    } else {
+                        "resp-queue-global-already-disabled"
+                    };
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        status_key,
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                if let Err(e) =
+                    reply_queue_service::set_reply_queue_global_enabled(self.db, enabled).await
+                {
+                    tracing::error!(error = %e, "Failed to update global queue setting");
+                    notify_admin_error(
+                        self.bot,
+                        self.config,
+                        self.telegram_id,
+                        AdminErrorContext::Command,
+                        &e.to_string(),
+                        self.lang,
+                    )
+                    .await;
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        "cmd-error",
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                let status_key = if enabled {
+                    "resp-queue-global-enabled"
+                } else {
+                    "resp-queue-global-disabled"
+                };
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    status_key,
+                    Some(self.msg.id),
+                )
+                .await?;
+            }
+            ["me", "on" | "off"] => {
+                let enabled = parts[1] == "on";
+                let tt_username = match self
+                    .db
+                    .get_tt_username_by_telegram_id(self.telegram_id)
+                    .await
+                {
+                    Ok(val) => val,
+                    Err(e) => {
+                        tracing::error!(error = %e, "Failed to load TT username");
+                        send_text_key(
+                            self.bot,
+                            self.msg.chat.id,
+                            self.lang,
+                            "cmd-error",
+                            Some(self.msg.id),
+                        )
+                        .await?;
+                        return Ok(());
+                    }
+                };
+                let Some(_tt_username) = tt_username else {
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        "cmd-queue-no-link",
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                };
+                let global_enabled =
+                    match reply_queue_service::get_reply_queue_global_enabled(self.db).await {
+                        Ok(val) => val,
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to load global queue setting");
+                            send_text_key(
+                                self.bot,
+                                self.msg.chat.id,
+                                self.lang,
+                                "cmd-error",
+                                Some(self.msg.id),
+                            )
+                            .await?;
+                            return Ok(());
+                        }
+                    };
+                if !global_enabled {
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        "resp-queue-global-disabled-user",
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                let current = match reply_queue_service::get_reply_queue_user_enabled(
+                    self.db,
+                    self.telegram_id,
+                )
+                .await
+                {
+                    Ok(val) => val,
+                    Err(e) => {
+                        tracing::error!(error = %e, "Failed to load queue setting");
+                        send_text_key(
+                            self.bot,
+                            self.msg.chat.id,
+                            self.lang,
+                            "cmd-error",
+                            Some(self.msg.id),
+                        )
+                        .await?;
+                        return Ok(());
+                    }
+                };
+                if current == enabled {
+                    let status_key = if enabled {
+                        "resp-queue-user-already-enabled"
+                    } else {
+                        "resp-queue-user-already-disabled"
+                    };
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        status_key,
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                if let Err(e) = reply_queue_service::set_reply_queue_user_enabled(
+                    self.db,
+                    self.telegram_id,
+                    enabled,
+                )
+                .await
+                {
+                    tracing::error!(error = %e, "Failed to update queue setting");
+                    notify_admin_error(
+                        self.bot,
+                        self.config,
+                        self.telegram_id,
+                        AdminErrorContext::Command,
+                        &e.to_string(),
+                        self.lang,
+                    )
+                    .await;
+                    send_text_key(
+                        self.bot,
+                        self.msg.chat.id,
+                        self.lang,
+                        "cmd-error",
+                        Some(self.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+                let status_key = if enabled {
+                    "resp-queue-user-enabled"
+                } else {
+                    "resp-queue-user-disabled"
+                };
+                send_text_key(
+                    self.bot,
+                    self.msg.chat.id,
+                    self.lang,
+                    status_key,
+                    Some(self.msg.id),
+                )
+                .await?;
+            }
+            ["clear"] | ["clear", "all"] => {
+                if parts.len() == 2 && parts[1] == "all" {
+                    if !self.is_admin {
+                        send_text_key(
+                            self.bot,
+                            self.msg.chat.id,
+                            self.lang,
+                            "cmd-unauth",
+                            Some(self.msg.id),
+                        )
+                        .await?;
+                        return Ok(());
+                    }
+                    let cleared = match self.db.clear_reply_queue_all().await {
+                        Ok(count) => count,
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to clear reply queue");
+                            notify_admin_error(
+                                self.bot,
+                                self.config,
+                                self.telegram_id,
+                                AdminErrorContext::Command,
+                                &e.to_string(),
+                                self.lang,
+                            )
+                            .await;
+                            send_text_key(
+                                self.bot,
+                                self.msg.chat.id,
+                                self.lang,
+                                "cmd-error",
+                                Some(self.msg.id),
+                            )
+                            .await?;
+                            return Ok(());
+                        }
+                    };
+                    let text = locales::get_text(
+                        self.lang.as_str(),
+                        "resp-queue-cleared-all",
+                        args!(count = cleared).as_ref(),
+                    );
+                    self.bot
+                        .send_message(self.msg.chat.id, text)
+                        .reply_to(self.msg.id)
+                        .await?;
+                } else {
+                    let tt_username = match self
+                        .db
+                        .get_tt_username_by_telegram_id(self.telegram_id)
+                        .await
+                    {
+                        Ok(val) => val,
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to load TT username");
+                            send_text_key(
+                                self.bot,
+                                self.msg.chat.id,
+                                self.lang,
+                                "cmd-error",
+                                Some(self.msg.id),
+                            )
+                            .await?;
+                            return Ok(());
+                        }
+                    };
+                    let Some(tt_username) = tt_username else {
+                        send_text_key(
+                            self.bot,
+                            self.msg.chat.id,
+                            self.lang,
+                            "cmd-queue-no-link",
+                            Some(self.msg.id),
+                        )
+                        .await?;
+                        return Ok(());
+                    };
+                    let cleared = match self.db.clear_reply_queue_for_user(&tt_username).await {
+                        Ok(count) => count,
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to clear reply queue");
+                            notify_admin_error(
+                                self.bot,
+                                self.config,
+                                self.telegram_id,
+                                AdminErrorContext::Command,
+                                &e.to_string(),
+                                self.lang,
+                            )
+                            .await;
+                            send_text_key(
+                                self.bot,
+                                self.msg.chat.id,
+                                self.lang,
+                                "cmd-error",
+                                Some(self.msg.id),
+                            )
+                            .await?;
+                            return Ok(());
+                        }
+                    };
+                    let text = locales::get_text(
+                        self.lang.as_str(),
+                        "resp-queue-cleared",
+                        args!(count = cleared).as_ref(),
+                    );
+                    self.bot
+                        .send_message(self.msg.chat.id, text)
+                        .reply_to(self.msg.id)
+                        .await?;
+                }
+            }
+            _ => {
+                let help = locales::get_text(self.lang.as_str(), "cmd-queue-help", None);
+                self.bot
+                    .send_message(self.msg.chat.id, help)
+                    .reply_to(self.msg.id)
+                    .await?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> ResponseResult<()> {
@@ -939,6 +1308,25 @@ async fn handle_user_reply(
             "tg-reply-failed"
         } else {
             "tg-reply-sent"
+        }
+    } else if let Some(tt_username) = tt_username.as_deref() {
+        match reply_queue_service::is_reply_queue_enabled_for_tt_user(db, tt_username).await {
+            Ok(true) => {
+                if let Err(e) = db
+                    .add_reply_queue_item(tt_username, telegram_id, text)
+                    .await
+                {
+                    tracing::error!(tt_username = %tt_username, error = %e, "Failed to queue reply");
+                    "tg-reply-failed"
+                } else {
+                    "tg-reply-queued"
+                }
+            }
+            Ok(false) => "tg-reply-offline",
+            Err(e) => {
+                tracing::error!(error = %e, "Failed to check reply queue status");
+                "tg-reply-failed"
+            }
         }
     } else {
         "tg-reply-offline"

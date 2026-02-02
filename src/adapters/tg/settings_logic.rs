@@ -1,6 +1,7 @@
 use crate::adapters::tg::keyboards::{
     back_btn, back_button, back_button_keyboard, callback_button, create_user_list_keyboard,
 };
+use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, MuteAction, SettingsAction};
@@ -59,6 +60,10 @@ fn main_settings_keyboard(lang: LanguageCode) -> InlineKeyboardMarkup {
         vec![callback_button(
             locales::get_text(lang.as_str(), "btn-notif-settings", None),
             CallbackAction::Settings(SettingsAction::NotifSelect),
+        )],
+        vec![callback_button(
+            locales::get_text(lang.as_str(), "btn-queue-settings", None),
+            CallbackAction::Settings(SettingsAction::QueueMenu),
         )],
     ])
 }
@@ -226,6 +231,105 @@ pub async fn send_notif_settings(
         msg.chat.id,
         msg.id,
         locales::get_text(lang.as_str(), "notif-settings-title", None),
+    )
+    .reply_markup(keyboard)
+    .parse_mode(ParseMode::Html)
+    .await?;
+    Ok(())
+}
+
+pub async fn send_queue_settings(
+    bot: &Bot,
+    msg: &Message,
+    db: &Database,
+    telegram_id: i64,
+    lang: LanguageCode,
+    is_admin: bool,
+) -> ResponseResult<()> {
+    let settings =
+        match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!(telegram_id, error = %e, "Failed to get or create user");
+                bot.edit_message_text(
+                    msg.chat.id,
+                    msg.id,
+                    locales::get_text(lang.as_str(), "cmd-error", None),
+                )
+                .await?;
+                return Ok(());
+            }
+        };
+
+    if settings.teamtalk_username.is_none() {
+        bot.edit_message_text(
+            msg.chat.id,
+            msg.id,
+            locales::get_text(lang.as_str(), "cmd-queue-no-link", None),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let user_status = if settings.reply_queue_enabled {
+        locales::get_text(lang.as_str(), "status-enabled", None)
+    } else {
+        locales::get_text(lang.as_str(), "status-disabled", None)
+    };
+    let user_btn = locales::get_text(
+        lang.as_str(),
+        "btn-queue-user-toggle",
+        args!(status = user_status).as_ref(),
+    );
+
+    let mut rows = vec![vec![callback_button(
+        user_btn,
+        CallbackAction::Settings(SettingsAction::QueueToggleUser),
+    )]];
+
+    if is_admin {
+        let global_enabled = reply_queue_service::get_reply_queue_global_enabled(db)
+            .await
+            .unwrap_or(false);
+        let global_status = if global_enabled {
+            locales::get_text(lang.as_str(), "status-enabled", None)
+        } else {
+            locales::get_text(lang.as_str(), "status-disabled", None)
+        };
+        let global_btn = locales::get_text(
+            lang.as_str(),
+            "btn-queue-global-toggle",
+            args!(status = global_status).as_ref(),
+        );
+        rows.push(vec![callback_button(
+            global_btn,
+            CallbackAction::Settings(SettingsAction::QueueToggleGlobal),
+        )]);
+    }
+
+    rows.push(vec![callback_button(
+        locales::get_text(lang.as_str(), "btn-queue-clear", None),
+        CallbackAction::Settings(SettingsAction::QueueClearSelf),
+    )]);
+
+    if is_admin {
+        rows.push(vec![callback_button(
+            locales::get_text(lang.as_str(), "btn-queue-clear-all", None),
+            CallbackAction::Settings(SettingsAction::QueueClearAll),
+        )]);
+    }
+
+    rows.push(vec![back_button(
+        lang,
+        "btn-back-settings",
+        CallbackAction::Settings(SettingsAction::Main),
+    )]);
+
+    let keyboard = InlineKeyboardMarkup::new(rows);
+    bot.edit_message_text(
+        msg.chat.id,
+        msg.id,
+        locales::get_text(lang.as_str(), "queue-settings-title", None),
     )
     .reply_markup(keyboard)
     .parse_mode(ParseMode::Html)

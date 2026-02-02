@@ -282,3 +282,41 @@ cmd-desc-exit = Выключить бота
 cmd-desc-broadcast = Отправить объявление в TeamTalk
 cmd-desc-message = Отправить сообщение подписчикам в Telegram
 val-none = Нет
+
+cmd-desc-queue = Управление очередью.
+cmd-queue-help = /queue on|off (глобально), /queue me on|off, /queue clear [all]
+cmd-queue-no-link = Сначала привяжите аккаунт TeamTalk.
+resp-queue-user-enabled = Очередь ответов включена.
+resp-queue-user-disabled = Очередь ответов отключена.
+resp-queue-user-already-enabled = Очередь ответов уже включена.
+resp-queue-user-already-disabled = Очередь ответов уже отключена.
+resp-queue-global-enabled = Глобальная очередь ответов включена.
+resp-queue-global-disabled = Глобальная очередь ответов отключена.
+resp-queue-global-already-enabled = Глобальная очередь ответов уже включена.
+resp-queue-global-already-disabled = Глобальная очередь ответов уже отключена.
+resp-queue-global-disabled-user = Глобальная очередь ответов отключена администратором.
+resp-queue-cleared = Очередь очищена ({ $count }).
+resp-queue-cleared-all = Очередь очищена для всех ({ $count }).
+
+queue-settings-title = Очередь ответов
+btn-queue-settings = Очередь ответов
+btn-queue-user-toggle = Очередь ответов: { $status }
+btn-queue-global-toggle = Глобальная очередь: { $status }
+btn-queue-clear = Очистить очередь
+btn-queue-clear-all = Очистить все очереди
+
+tg-reply-queued = Сообщение получено и поставлено в очередь.
+
+tt-queue-help = /queue on|off, /queue me on|off, /queue clear [all]
+tt-queue-no-link = Сначала привяжите Telegram аккаунт.
+tt-queue-user-enabled = Очередь ответов включена.
+tt-queue-user-disabled = Очередь ответов отключена.
+tt-queue-user-already-enabled = Очередь ответов уже включена.
+tt-queue-user-already-disabled = Очередь ответов уже отключена.
+tt-queue-global-enabled = Глобальная очередь включена.
+tt-queue-global-disabled = Глобальная очередь отключена.
+tt-queue-global-already-enabled = Глобальная очередь уже включена.
+tt-queue-global-already-disabled = Глобальная очередь уже отключена.
+tt-queue-global-disabled-user = Глобальная очередь ответов отключена администратором.
+tt-queue-cleared = Очередь очищена ({ $count }).
+tt-queue-cleared-all = Очередь очищена для всех ({ $count }).

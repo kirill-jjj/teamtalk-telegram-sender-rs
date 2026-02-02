@@ -21,7 +21,8 @@ impl Database {
                 mute_list_mode as "mute_list_mode!",
                 teamtalk_username,
                 not_on_online_enabled as "not_on_online_enabled!",
-                not_on_online_confirmed as "not_on_online_confirmed!"
+                not_on_online_confirmed as "not_on_online_confirmed!",
+                reply_queue_enabled as "reply_queue_enabled!"
             FROM user_settings
             WHERE telegram_id = ?
             "#,
@@ -52,7 +53,8 @@ impl Database {
                     mute_list_mode as "mute_list_mode!",
                     teamtalk_username,
                     not_on_online_enabled as "not_on_online_enabled!",
-                    not_on_online_confirmed as "not_on_online_confirmed!"
+                    not_on_online_confirmed as "not_on_online_confirmed!",
+                    reply_queue_enabled as "reply_queue_enabled!"
                 FROM user_settings
                 WHERE telegram_id = ?
                 "#,
@@ -200,6 +202,18 @@ impl Database {
         sqlx::query!(
             "UPDATE user_settings SET language_code = ? WHERE telegram_id = ?",
             lang_code,
+            telegram_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn update_reply_queue_enabled(&self, telegram_id: i64, enabled: bool) -> Result<()> {
+        let enabled_int = i64::from(enabled);
+        sqlx::query!(
+            "UPDATE user_settings SET reply_queue_enabled = ? WHERE telegram_id = ?",
+            enabled_int,
             telegram_id
         )
         .execute(&self.pool)

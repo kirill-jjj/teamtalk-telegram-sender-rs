@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO reply_queue (tt_username, admin_telegram_id, message_text) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "7d74bb763e74c7c928e3eca5d9472a877a314402ca46a25afb76926cf31b1b58"
+}
