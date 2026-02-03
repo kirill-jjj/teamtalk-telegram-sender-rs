@@ -130,12 +130,12 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                             error = %e,
                             "Failed to send TT skip command"
                         );
-                        "tt-error-generic"
+                        locales::LocaleKey::TtErrorGeneric
                     } else {
-                        "tt-skip-sent"
+                        locales::LocaleKey::TtSkipSent
                     }
                 } else {
-                    "cmd-unauth"
+                    locales::LocaleKey::CmdUnauth
                 };
                 let text = locales::get_text(reply_lang.as_str(), text_key, None);
                 if let Err(e) = tx_tt_cmd
@@ -296,14 +296,17 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                             let link = format!("https://t.me/{}?start={}", bot_user, token);
                             let text = locales::get_text(
                                 reply_lang.as_str(),
-                                "tt-sub-link",
+                                locales::LocaleKey::TtSubLink,
                                 args!(link = link).as_ref(),
                             );
                             send_reply(text).await;
                         }
                         Err(_) => {
-                            let text =
-                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
+                            let text = locales::get_text(
+                                reply_lang.as_str(),
+                                locales::LocaleKey::TtErrorGeneric,
+                                None,
+                            );
                             send_reply(text).await;
                         }
                     }
@@ -337,14 +340,17 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                             let link = format!("https://t.me/{}?start={}", bot_user, token);
                             let text = locales::get_text(
                                 reply_lang.as_str(),
-                                "tt-unsub-link",
+                                locales::LocaleKey::TtUnsubLink,
                                 args!(link = link).as_ref(),
                             );
                             send_reply(text).await;
                         }
                         Err(_) => {
-                            let text =
-                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
+                            let text = locales::get_text(
+                                reply_lang.as_str(),
+                                locales::LocaleKey::TtErrorGeneric,
+                                None,
+                            );
                             send_reply(text).await;
                         }
                     }
@@ -360,11 +366,19 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .as_ref()
                     .map(|u| u == username.as_str())
                     .unwrap_or(false);
-                let mut help_msg = locales::get_text(reply_lang.as_str(), "help-text", None);
+                let mut help_msg =
+                    locales::get_text(reply_lang.as_str(), locales::LocaleKey::HelpText, None);
                 if is_main_admin {
-                    let header =
-                        locales::get_text(reply_lang.as_str(), "tt-admin-help-header", None);
-                    let cmds = locales::get_text(reply_lang.as_str(), "tt-admin-help-cmds", None);
+                    let header = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminHelpHeader,
+                        None,
+                    );
+                    let cmds = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminHelpCmds,
+                        None,
+                    );
                     help_msg.push_str(&header);
                     help_msg.push_str(&cmds);
                 }
@@ -387,7 +401,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     false
                 };
                 if !is_admin {
-                    let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                    let text =
+                        locales::get_text(reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
                     send_reply(text).await;
                     return;
                 }
@@ -397,27 +412,44 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         error = %e,
                         "Failed to send TT skip command"
                     );
-                    let text = locales::get_text(reply_lang.as_str(), "tt-error-generic", None);
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtErrorGeneric,
+                        None,
+                    );
                     send_reply(text).await;
                     return;
                 }
-                let text = locales::get_text(reply_lang.as_str(), "tt-skip-sent", None);
+                let text =
+                    locales::get_text(reply_lang.as_str(), locales::LocaleKey::TtSkipSent, None);
                 send_reply(text).await;
             } else if cmd == "/queue" {
                 if username.as_str().is_empty() {
-                    let text = locales::get_text(reply_lang.as_str(), "tt-queue-no-link", None);
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtQueueNoLink,
+                        None,
+                    );
                     send_reply(text).await;
                     return;
                 }
                 let tt_tg_id = db.get_telegram_id_by_tt_user(&username).await;
                 let Some(tg_id) = tt_tg_id else {
-                    let text = locales::get_text(reply_lang.as_str(), "tt-queue-no-link", None);
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtQueueNoLink,
+                        None,
+                    );
                     send_reply(text).await;
                     return;
                 };
                 let parts: Vec<&str> = content.split_whitespace().collect();
                 if parts.len() < 2 {
-                    let text = locales::get_text(reply_lang.as_str(), "tt-queue-help", None);
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtQueueHelp,
+                        None,
+                    );
                     send_reply(text).await;
                     return;
                 }
@@ -437,7 +469,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 match &parts[1..] {
                     ["on"] | ["off"] => {
                         if !is_admin {
-                            let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                            let text = locales::get_text(
+                                reply_lang.as_str(),
+                                locales::LocaleKey::CmdUnauth,
+                                None,
+                            );
                             send_reply(text).await;
                             return;
                         }
@@ -447,9 +483,9 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         let text_key = match current {
                             Ok(val) if val == enabled => {
                                 if enabled {
-                                    "tt-queue-global-already-enabled"
+                                    locales::LocaleKey::TtQueueGlobalAlreadyEnabled
                                 } else {
-                                    "tt-queue-global-already-disabled"
+                                    locales::LocaleKey::TtQueueGlobalAlreadyDisabled
                                 }
                             }
                             Ok(_) => {
@@ -458,15 +494,15 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                                     .is_ok()
                                 {
                                     if enabled {
-                                        "tt-queue-global-enabled"
+                                        locales::LocaleKey::TtQueueGlobalEnabled
                                     } else {
-                                        "tt-queue-global-disabled"
+                                        locales::LocaleKey::TtQueueGlobalDisabled
                                     }
                                 } else {
-                                    "tt-error-generic"
+                                    locales::LocaleKey::TtErrorGeneric
                                 }
                             }
-                            Err(_) => "tt-error-generic",
+                            Err(_) => locales::LocaleKey::TtErrorGeneric,
                         };
                         let text = locales::get_text(reply_lang.as_str(), text_key, None);
                         send_reply(text).await;
@@ -476,7 +512,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         let global_enabled =
                             reply_queue_service::get_reply_queue_global_enabled(&db).await;
                         let text_key = match global_enabled {
-                            Ok(false) => "tt-queue-global-disabled-user",
+                            Ok(false) => locales::LocaleKey::TtQueueGlobalDisabledUser,
                             Ok(true) => {
                                 let current =
                                     reply_queue_service::get_reply_queue_user_enabled(&db, tg_id)
@@ -484,9 +520,9 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                                 match current {
                                     Ok(val) if val == enabled => {
                                         if enabled {
-                                            "tt-queue-user-already-enabled"
+                                            locales::LocaleKey::TtQueueUserAlreadyEnabled
                                         } else {
-                                            "tt-queue-user-already-disabled"
+                                            locales::LocaleKey::TtQueueUserAlreadyDisabled
                                         }
                                     }
                                     Ok(_) => {
@@ -497,18 +533,18 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                                         .is_ok()
                                         {
                                             if enabled {
-                                                "tt-queue-user-enabled"
+                                                locales::LocaleKey::TtQueueUserEnabled
                                             } else {
-                                                "tt-queue-user-disabled"
+                                                locales::LocaleKey::TtQueueUserDisabled
                                             }
                                         } else {
-                                            "tt-error-generic"
+                                            locales::LocaleKey::TtErrorGeneric
                                         }
                                     }
-                                    Err(_) => "tt-error-generic",
+                                    Err(_) => locales::LocaleKey::TtErrorGeneric,
                                 }
                             }
-                            Err(_) => "tt-error-generic",
+                            Err(_) => locales::LocaleKey::TtErrorGeneric,
                         };
                         let text = locales::get_text(reply_lang.as_str(), text_key, None);
                         send_reply(text).await;
@@ -518,18 +554,24 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         let text = match count {
                             Ok(count) => locales::get_text(
                                 reply_lang.as_str(),
-                                "tt-queue-cleared",
+                                locales::LocaleKey::TtQueueCleared,
                                 args!(count = count).as_ref(),
                             ),
-                            Err(_) => {
-                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None)
-                            }
+                            Err(_) => locales::get_text(
+                                reply_lang.as_str(),
+                                locales::LocaleKey::TtErrorGeneric,
+                                None,
+                            ),
                         };
                         send_reply(text).await;
                     }
                     ["clear", "all"] => {
                         if !is_admin {
-                            let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                            let text = locales::get_text(
+                                reply_lang.as_str(),
+                                locales::LocaleKey::CmdUnauth,
+                                None,
+                            );
                             send_reply(text).await;
                             return;
                         }
@@ -537,17 +579,23 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         let text = match count {
                             Ok(count) => locales::get_text(
                                 reply_lang.as_str(),
-                                "tt-queue-cleared-all",
+                                locales::LocaleKey::TtQueueClearedAll,
                                 args!(count = count).as_ref(),
                             ),
-                            Err(_) => {
-                                locales::get_text(reply_lang.as_str(), "tt-error-generic", None)
-                            }
+                            Err(_) => locales::get_text(
+                                reply_lang.as_str(),
+                                locales::LocaleKey::TtErrorGeneric,
+                                None,
+                            ),
                         };
                         send_reply(text).await;
                     }
                     _ => {
-                        let text = locales::get_text(reply_lang.as_str(), "tt-queue-help", None);
+                        let text = locales::get_text(
+                            reply_lang.as_str(),
+                            locales::LocaleKey::TtQueueHelp,
+                            None,
+                        );
                         send_reply(text).await;
                     }
                 }
@@ -557,12 +605,17 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .map(|u| u == username.as_str())
                     .unwrap_or(false);
                 if !is_main_admin {
-                    let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                    let text =
+                        locales::get_text(reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
                     send_reply(text).await;
                     return;
                 }
                 if parts.len() < 2 {
-                    let text = locales::get_text(reply_lang.as_str(), "tt-admin-no-ids", None);
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminNoIds,
+                        None,
+                    );
                     send_reply(text).await;
                     return;
                 }
@@ -590,14 +643,20 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 if added_count > 0 {
                     let args = args!(count = added_count);
-                    let text =
-                        locales::get_text(reply_lang.as_str(), "tt-admin-added", args.as_ref());
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminAdded,
+                        args.as_ref(),
+                    );
                     send_reply(text).await;
                 }
                 if failed_count > 0 {
                     let args = args!(count = failed_count);
-                    let text =
-                        locales::get_text(reply_lang.as_str(), "tt-admin-add-fail", args.as_ref());
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminAddFail,
+                        args.as_ref(),
+                    );
                     send_reply(text).await;
                 }
             } else if cmd == "/remove_admin" {
@@ -606,12 +665,17 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .map(|u| u == username.as_str())
                     .unwrap_or(false);
                 if !is_main_admin {
-                    let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
+                    let text =
+                        locales::get_text(reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
                     send_reply(text).await;
                     return;
                 }
                 if parts.len() < 2 {
-                    let text = locales::get_text(reply_lang.as_str(), "tt-admin-no-ids", None);
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminNoIds,
+                        None,
+                    );
                     send_reply(text).await;
                     return;
                 }
@@ -641,15 +705,18 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 if removed_count > 0 {
                     let args = args!(count = removed_count);
-                    let text =
-                        locales::get_text(reply_lang.as_str(), "tt-admin-removed", args.as_ref());
+                    let text = locales::get_text(
+                        reply_lang.as_str(),
+                        locales::LocaleKey::TtAdminRemoved,
+                        args.as_ref(),
+                    );
                     send_reply(text).await;
                 }
                 if failed_count > 0 {
                     let args = args!(count = failed_count);
                     let text = locales::get_text(
                         reply_lang.as_str(),
-                        "tt-admin-remove-fail",
+                        locales::LocaleKey::TtAdminRemoveFail,
                         args.as_ref(),
                     );
                     send_reply(text).await;

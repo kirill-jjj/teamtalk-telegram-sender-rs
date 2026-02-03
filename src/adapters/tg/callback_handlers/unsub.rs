@@ -40,7 +40,7 @@ pub async fn handle_unsub_action(
                 answer_callback(
                     &bot,
                     &q.id,
-                    locales::get_text(lang.as_str(), "cmd-error", None),
+                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
                     false,
                 )
                 .await?;
@@ -49,13 +49,13 @@ pub async fn handle_unsub_action(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang.as_str(), "cmd-success-unsub", None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdSuccessUnsub, None),
             )
             .await?;
             answer_callback(
                 &bot,
                 &q.id,
-                locales::get_text(lang.as_str(), "cmd-success-unsub", None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdSuccessUnsub, None),
                 false,
             )
             .await?;
@@ -64,7 +64,7 @@ pub async fn handle_unsub_action(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang.as_str(), "unsub-cancelled", None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::UnsubCancelled, None),
             )
             .await?;
             answer_callback_empty(&bot, &q.id).await?;

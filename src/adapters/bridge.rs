@@ -3,6 +3,7 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser, TtChannelName, TtUsername};
 use crate::infra::db::{Database, types::UserSettings};
 use crate::infra::locales;
+use crate::infra::locales::LocaleKey;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::RwLock;
@@ -217,8 +218,8 @@ async fn handle_broadcast(deps: &BridgeDeps<'_>, data: BroadcastData) {
     let escaped_server = teloxide::utils::html::escape(&data.server_name);
 
     let key = match data.event_type {
-        types::NotificationType::Join => "event-join",
-        types::NotificationType::Leave => "event-leave",
+        types::NotificationType::Join => LocaleKey::EventJoin,
+        types::NotificationType::Leave => LocaleKey::EventLeave,
     };
 
     let mut rendered_text_cache: HashMap<LanguageCode, String> = HashMap::new();
@@ -381,7 +382,11 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
         nick = html::escape(&data.nick),
         msg = html::escape(&data.msg_content)
     );
-    let text_admin = locales::get_text(admin_lang.as_str(), "admin-alert", args_admin.as_ref());
+    let text_admin = locales::get_text(
+        admin_lang.as_str(),
+        LocaleKey::AdminAlert,
+        args_admin.as_ref(),
+    );
 
     let res = bot
         .send_message(deps.admin_id, &text_admin)
@@ -412,9 +417,9 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     };
 
     let key_reply = if res.is_ok() {
-        "tt-msg-sent"
+        LocaleKey::TtMsgSent
     } else {
-        "tt-msg-failed"
+        LocaleKey::TtMsgFailed
     };
     let reply_text = locales::get_text(reply_lang.as_str(), key_reply, None);
 
@@ -471,8 +476,11 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
         channel = html::escape(data.channel_name.as_str()),
         msg = html::escape(&data.msg_content)
     );
-    let text_admin =
-        locales::get_text(admin_lang.as_str(), "admin-channel-pm", args_admin.as_ref());
+    let text_admin = locales::get_text(
+        admin_lang.as_str(),
+        LocaleKey::AdminChannelPm,
+        args_admin.as_ref(),
+    );
 
     let res = bot
         .send_message(deps.admin_id, &text_admin)

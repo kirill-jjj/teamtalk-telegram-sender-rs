@@ -269,27 +269,27 @@ fn get_user_commands(lang: LanguageCode) -> Vec<BotCommand> {
     vec![
         BotCommand::new(
             "menu",
-            locales::get_text(lang.as_str(), "cmd-desc-menu", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescMenu, None),
         ),
         BotCommand::new(
             "who",
-            locales::get_text(lang.as_str(), "cmd-desc-who", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescWho, None),
         ),
         BotCommand::new(
             "settings",
-            locales::get_text(lang.as_str(), "cmd-desc-settings", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescSettings, None),
         ),
         BotCommand::new(
             "unsub",
-            locales::get_text(lang.as_str(), "cmd-desc-unsub", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescUnsub, None),
         ),
         BotCommand::new(
             "help",
-            locales::get_text(lang.as_str(), "cmd-desc-help", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescHelp, None),
         ),
         BotCommand::new(
             "queue",
-            locales::get_text(lang.as_str(), "cmd-desc-queue", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescQueue, None),
         ),
     ]
 }
@@ -299,31 +299,31 @@ fn get_admin_commands(lang: LanguageCode) -> Vec<BotCommand> {
     cmds.extend(vec![
         BotCommand::new(
             "kick",
-            locales::get_text(lang.as_str(), "cmd-desc-kick", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescKick, None),
         ),
         BotCommand::new(
             "ban",
-            locales::get_text(lang.as_str(), "cmd-desc-ban", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescBan, None),
         ),
         BotCommand::new(
             "unban",
-            locales::get_text(lang.as_str(), "cmd-desc-unban", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescUnban, None),
         ),
         BotCommand::new(
             "subscribers",
-            locales::get_text(lang.as_str(), "cmd-desc-subscribers", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescSubscribers, None),
         ),
         BotCommand::new(
             "exit",
-            locales::get_text(lang.as_str(), "cmd-desc-exit", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescExit, None),
         ),
         BotCommand::new(
             "broadcast",
-            locales::get_text(lang.as_str(), "cmd-desc-broadcast", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescBroadcast, None),
         ),
         BotCommand::new(
             "message",
-            locales::get_text(lang.as_str(), "cmd-desc-message", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescMessage, None),
         ),
     ]);
     cmds

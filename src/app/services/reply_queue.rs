@@ -1,15 +1,14 @@
 use crate::core::types::{LanguageCode, TtUsername};
+use crate::infra::db::app_settings::AppSettingKey;
 use crate::infra::db::reply_queue::ReplyQueueItem;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike, Utc};
 
-const REPLY_QUEUE_GLOBAL_KEY: &str = "reply_queue_enabled_global";
-
 #[async_trait]
 pub trait ReplyQueueRepo: Sync {
-    async fn get_app_setting(&self, key: &str) -> Result<Option<String>>;
-    async fn set_app_setting(&self, key: &str, value: &str) -> Result<()>;
+    async fn get_app_setting(&self, key: AppSettingKey) -> Result<Option<String>>;
+    async fn set_app_setting(&self, key: AppSettingKey, value: &str) -> Result<()>;
     async fn get_or_create_user(
         &self,
         telegram_id: i64,
@@ -20,13 +19,16 @@ pub trait ReplyQueueRepo: Sync {
 }
 
 pub async fn get_reply_queue_global_enabled(db: &impl ReplyQueueRepo) -> Result<bool> {
-    let value = db.get_app_setting(REPLY_QUEUE_GLOBAL_KEY).await?;
+    let value = db
+        .get_app_setting(AppSettingKey::ReplyQueueEnabledGlobal)
+        .await?;
     Ok(matches!(value.as_deref(), Some("1" | "true" | "on")))
 }
 
 pub async fn set_reply_queue_global_enabled(db: &impl ReplyQueueRepo, enabled: bool) -> Result<()> {
     let val = if enabled { "1" } else { "0" };
-    db.set_app_setting(REPLY_QUEUE_GLOBAL_KEY, val).await
+    db.set_app_setting(AppSettingKey::ReplyQueueEnabledGlobal, val)
+        .await
 }
 
 pub async fn get_reply_queue_user_enabled(
@@ -60,11 +62,11 @@ pub async fn is_reply_queue_enabled_for_tt_user(
 
 #[async_trait]
 impl ReplyQueueRepo for crate::infra::db::Database {
-    async fn get_app_setting(&self, key: &str) -> Result<Option<String>> {
+    async fn get_app_setting(&self, key: AppSettingKey) -> Result<Option<String>> {
         self.get_app_setting(key).await
     }
 
-    async fn set_app_setting(&self, key: &str, value: &str) -> Result<()> {
+    async fn set_app_setting(&self, key: AppSettingKey, value: &str) -> Result<()> {
         self.set_app_setting(key, value).await
     }
 

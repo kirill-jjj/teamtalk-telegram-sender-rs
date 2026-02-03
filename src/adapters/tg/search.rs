@@ -10,7 +10,7 @@ use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MuteAction, SubAction};
 use crate::core::types::{
-    AdminErrorContext, LanguageCode, LiteUser, MuteListMode, TtCommand, TtUsername,
+    ActionStatus, AdminErrorContext, LanguageCode, LiteUser, MuteListMode, TtCommand, TtUsername,
 };
 use crate::infra::db::types::BanEntry;
 use crate::infra::locales;
@@ -81,7 +81,7 @@ pub async fn set_search_context_raw(
 }
 
 pub fn append_search_hint(text: &str, lang: LanguageCode) -> String {
-    let hint = locales::get_text(lang.as_str(), "list-search-hint", None);
+    let hint = locales::get_text(lang.as_str(), locales::LocaleKey::ListSearchHint, None);
     format!("{text}\n\n{hint}")
 }
 
@@ -117,7 +117,11 @@ pub async fn maybe_handle_search_message(
 
     if matches.is_empty() {
         let args = args!(query = query.to_string());
-        let text = locales::get_text(lang.as_str(), "list-search-empty", args.as_ref());
+        let text = locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::ListSearchEmpty,
+            args.as_ref(),
+        );
         bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
         return Ok(true);
     }
@@ -381,7 +385,14 @@ async fn handle_single_match(
                 .await;
                 return Ok(true);
             }
-            send_text_key(bot, msg.chat.id, lang, "toast-user-unbanned", Some(msg.id)).await?;
+            send_text_key(
+                bot,
+                msg.chat.id,
+                lang,
+                locales::LocaleKey::ToastUserUnbanned,
+                Some(msg.id),
+            )
+            .await?;
             bans_logic::edit_unban_list(bot, msg, &state.db, &state.search_contexts, lang, *page)
                 .await?;
             Ok(true)
@@ -466,7 +477,11 @@ async fn handle_single_match(
                 return Ok(true);
             }
             let args = args!(user = username.to_string());
-            let text = locales::get_text(lang.as_str(), "toast-account-linked", args.as_ref());
+            let text = locales::get_text(
+                lang.as_str(),
+                locales::LocaleKey::ToastAccountLinked,
+                args.as_ref(),
+            );
             bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
             subscriber_settings_logic::send_sub_manage_tt_menu(
                 bot, msg, &state.db, lang, *sub_id, *page,
@@ -509,8 +524,15 @@ async fn toggle_mute_and_render(
         return Ok(());
     }
 
-    let fmt_args = args!(user = args.username.to_string(), action = "toggled");
-    let text = locales::get_text(args.lang.as_str(), "toast-user-muted", fmt_args.as_ref());
+    let fmt_args = args!(
+        user = args.username.to_string(),
+        action = ActionStatus::Toggled.as_str()
+    );
+    let text = locales::get_text(
+        args.lang.as_str(),
+        locales::LocaleKey::ToastUserMuted,
+        fmt_args.as_ref(),
+    );
     bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
 
     if args.server_list {
@@ -529,7 +551,7 @@ async fn toggle_mute_and_render(
             lang: args.lang,
             accounts: &accounts,
             page: args.page,
-            title_key: "list-all-accs-title",
+            title_key: locales::LocaleKey::ListAllAccsTitle,
             guest_username,
             mode: args.mode,
         };
@@ -552,7 +574,7 @@ async fn toggle_mute_and_render(
             lang: args.lang,
             items: &muted,
             page: args.page,
-            title_key: "list-mute-title",
+            title_key: locales::LocaleKey::ListMuteTitle,
             guest_username,
             mode: args.mode,
         };
@@ -580,7 +602,14 @@ async fn send_tt_command(
         )
         .await;
     }
-    send_text_key(bot, msg.chat.id, lang, "toast-command-sent", Some(msg.id)).await?;
+    send_text_key(
+        bot,
+        msg.chat.id,
+        lang,
+        locales::LocaleKey::ToastCommandSent,
+        Some(msg.id),
+    )
+    .await?;
     Ok(())
 }
 
@@ -594,7 +623,7 @@ async fn render_search_results(
 ) -> ResponseResult<()> {
     let title = locales::get_text(
         lang.as_str(),
-        "list-search-title",
+        locales::LocaleKey::ListSearchTitle,
         args!(query = query.to_string()).as_ref(),
     );
     let back_action = back_action(&ctx.list_type);
@@ -617,7 +646,7 @@ fn search_results_keyboard(
             candidate.action.clone(),
         )]);
     }
-    let (back_text, back_act) = back_btn(lang, "btn-back-search", back_action);
+    let (back_text, back_act) = back_btn(lang, locales::LocaleKey::BtnBackSearch, back_action);
     rows.push(vec![callback_button(back_text, back_act)]);
     InlineKeyboardMarkup::new(rows)
 }

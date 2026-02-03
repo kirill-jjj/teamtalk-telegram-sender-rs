@@ -1,6 +1,7 @@
 use crate::core::callbacks::{AsCallbackData, CallbackAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
+use crate::infra::locales::LocaleKey;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 pub fn callback_button<T, A>(text: T, action: A) -> InlineKeyboardButton
@@ -13,7 +14,7 @@ where
 
 pub fn back_button(
     lang: LanguageCode,
-    back_key: &str,
+    back_key: LocaleKey,
     back_action: CallbackAction,
 ) -> InlineKeyboardButton {
     callback_button(
@@ -24,9 +25,9 @@ pub fn back_button(
 
 pub fn confirm_cancel_keyboard(
     lang: LanguageCode,
-    yes_key: &str,
+    yes_key: LocaleKey,
     yes_action: CallbackAction,
-    no_key: &str,
+    no_key: LocaleKey,
     no_action: CallbackAction,
 ) -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new(vec![vec![
@@ -37,7 +38,7 @@ pub fn confirm_cancel_keyboard(
 
 pub fn back_button_keyboard(
     lang: LanguageCode,
-    back_key: &str,
+    back_key: LocaleKey,
     back_action: CallbackAction,
 ) -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new(vec![vec![callback_button(
@@ -48,7 +49,7 @@ pub fn back_button_keyboard(
 
 pub fn back_btn(
     lang: LanguageCode,
-    back_key: &str,
+    back_key: LocaleKey,
     back_action: CallbackAction,
 ) -> (String, CallbackAction) {
     (
@@ -74,14 +75,14 @@ where
 
     if current_page > 0 {
         nav_row.push(callback_button(
-            locales::get_text(lang.as_str(), "btn-prev", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnPrev, None),
             page_builder(current_page - 1),
         ));
     }
 
     if total_pages > 0 && current_page < total_pages - 1 {
         nav_row.push(callback_button(
-            locales::get_text(lang.as_str(), "btn-next", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnNext, None),
             page_builder(current_page + 1),
         ));
     }
@@ -145,38 +146,38 @@ pub fn create_main_menu_keyboard(lang: LanguageCode, is_admin: bool) -> InlineKe
 
     let mut buttons = vec![
         vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-who", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuWho, None),
             CallbackAction::Menu(MenuAction::Who),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-settings", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuSettings, None),
             CallbackAction::Settings(crate::core::callbacks::SettingsAction::Main),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-unsub", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuUnsub, None),
             CallbackAction::Menu(MenuAction::Unsub),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-help", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuHelp, None),
             CallbackAction::Menu(MenuAction::Help),
         )],
     ];
 
     if is_admin {
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-kick", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuKick, None),
             CallbackAction::Admin(AdminAction::KickList { page: 0 }),
         )]);
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-ban", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuBan, None),
             CallbackAction::Admin(AdminAction::BanList { page: 0 }),
         )]);
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-unban", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuUnban, None),
             CallbackAction::Admin(AdminAction::UnbanList { page: 0 }),
         )]);
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-menu-subs", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuSubs, None),
             CallbackAction::Admin(AdminAction::SubsList { page: 0 }),
         )]);
     }

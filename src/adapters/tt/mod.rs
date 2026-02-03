@@ -46,7 +46,7 @@ pub(super) fn resolve_channel_name(
     if channel_id.0 == 0 {
         return TtChannelName::from(locales::get_text(
             lang.as_str(),
-            "tt-root-channel-name",
+            locales::LocaleKey::TtRootChannelName,
             None,
         ));
     }
@@ -54,7 +54,7 @@ pub(super) fn resolve_channel_name(
         Some(channel) if !channel.name.is_empty() => TtChannelName::from(channel.name),
         Some(_) => TtChannelName::from(locales::get_text(
             lang.as_str(),
-            "tt-root-channel-name",
+            locales::LocaleKey::TtRootChannelName,
             None,
         )),
         None => TtChannelName::new("Unknown"),

@@ -51,7 +51,11 @@ pub(super) fn handle_who_command(
     let total = users.len();
 
     let header_args = args!(server = server_name, count = total);
-    let header = locales::get_text(lang.as_str(), "tt-report-header", header_args.as_ref());
+    let header = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::TtReportHeader,
+        header_args.as_ref(),
+    );
 
     let mut report = String::with_capacity(1024);
     if let Err(e) = writeln!(report, "{}\n", header) {
@@ -64,20 +68,25 @@ pub(super) fn handle_who_command(
         let user_list = nicks.join(", ");
 
         let location = if chan_name == "ROOT_MARKER" {
-            locales::get_text(lang.as_str(), "tt-report-root", None)
+            locales::get_text(lang.as_str(), locales::LocaleKey::TtReportRoot, None)
         } else {
             chan_name
         };
 
         let row_args = args!(users = user_list, channel = location);
-        let row_text = locales::get_text(lang.as_str(), "tt-report-row", row_args.as_ref());
+        let row_text = locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::TtReportRow,
+            row_args.as_ref(),
+        );
 
         if let Err(e) = writeln!(report, "{}", row_text) {
             tracing::error!(error = %e, "Failed to write who report row");
         }
     }
     if !unauth_users.is_empty() {
-        let unauth_label = locales::get_text(lang.as_str(), "tt-report-unauth", None);
+        let unauth_label =
+            locales::get_text(lang.as_str(), locales::LocaleKey::TtReportUnauth, None);
         if let Err(e) = writeln!(report, "{} {}", unauth_users.join(", "), unauth_label) {
             tracing::error!(error = %e, "Failed to write who report unauth row");
         }

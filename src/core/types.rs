@@ -108,6 +108,19 @@ pub enum MuteListMode {
     Whitelist,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActionStatus {
+    Toggled,
+}
+
+impl ActionStatus {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Toggled => "toggled",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
 #[error("unsupported mute list mode")]
 pub struct MuteListModeParseError;
@@ -224,18 +237,6 @@ pub enum AdminErrorContext {
     Subscription,
     TtCommand,
     UpdateListener,
-}
-
-impl AdminErrorContext {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Command => "admin-error-context-command",
-            Self::Callback => "admin-error-context-callback",
-            Self::Subscription => "admin-error-context-subscription",
-            Self::TtCommand => "admin-error-context-tt-command",
-            Self::UpdateListener => "admin-error-context-update-listener",
-        }
-    }
 }
 
 #[derive(Debug)]

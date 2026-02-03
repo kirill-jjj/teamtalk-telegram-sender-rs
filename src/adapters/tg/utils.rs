@@ -3,6 +3,7 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{AdminErrorContext, LanguageCode};
 use crate::infra::db::Database;
 use crate::infra::locales;
+use crate::infra::locales::LocaleKey;
 use teloxide::prelude::*;
 use teloxide::sugar::request::RequestReplyExt;
 use teloxide::types::ParseMode;
@@ -20,7 +21,7 @@ pub async fn ensure_subscribed(
             if let Err(e) = bot
                 .send_message(
                     msg.chat.id,
-                    locales::get_text(lang.as_str(), "cmd-not-subscribed", None),
+                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdNotSubscribed, None),
                 )
                 .parse_mode(ParseMode::Html)
                 .reply_to(msg.id)
@@ -52,7 +53,7 @@ pub async fn ensure_subscribed(
             if let Err(e) = bot
                 .send_message(
                     msg.chat.id,
-                    locales::get_text(lang.as_str(), "cmd-error", None),
+                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
                 )
                 .parse_mode(ParseMode::Html)
                 .reply_to(msg.id)
@@ -82,7 +83,7 @@ pub async fn check_db_err(
         tracing::error!(error = ?e, "Database error");
         notify_admin_error(bot, config, user_id, context, &e.to_string(), lang).await;
 
-        let error_text = locales::get_text(lang.as_str(), "cmd-error", None);
+        let error_text = locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None);
         bot.answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
             .text(error_text)
             .show_alert(true)
@@ -102,13 +103,24 @@ pub async fn notify_admin_error(
     lang: LanguageCode,
 ) {
     let admin_chat_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
-    let context_text = locales::get_text(lang.as_str(), context.as_str(), None);
+    let context_key = match context {
+        AdminErrorContext::Command => LocaleKey::AdminErrorContextCommand,
+        AdminErrorContext::Callback => LocaleKey::AdminErrorContextCallback,
+        AdminErrorContext::Subscription => LocaleKey::AdminErrorContextSubscription,
+        AdminErrorContext::TtCommand => LocaleKey::AdminErrorContextTtCommand,
+        AdminErrorContext::UpdateListener => LocaleKey::AdminErrorContextUpdateListener,
+    };
+    let context_text = locales::get_text(lang.as_str(), context_key, None);
     let args = crate::args!(
         user_id = user_id.to_string(),
         context = context_text,
         error = error.to_string()
     );
-    let text = locales::get_text(lang.as_str(), "admin-error-user", args.as_ref());
+    let text = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::AdminErrorUser,
+        args.as_ref(),
+    );
     if let Err(e) = bot.send_message(admin_chat_id, text).await {
         tracing::error!(error = %e, "Failed to notify admin about error");
     }
@@ -141,7 +153,7 @@ pub async fn send_text_key(
     bot: &Bot,
     chat_id: teloxide::types::ChatId,
     lang: LanguageCode,
-    key: &str,
+    key: LocaleKey,
     reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
     let req = bot.send_message(chat_id, locales::get_text(lang.as_str(), key, None));

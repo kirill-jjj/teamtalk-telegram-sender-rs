@@ -62,7 +62,11 @@ async fn handle_kick_list(
 ) -> ResponseResult<()> {
     let users = sorted_online_users(&state.online_users);
     let args = args!(server = state.config.teamtalk.display_name().to_string());
-    let base = locales::get_text(lang.as_str(), "list-kick-title", args.as_ref());
+    let base = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::ListKickTitle,
+        args.as_ref(),
+    );
     let title = append_search_hint(&base, lang);
     let keyboard = create_user_list_keyboard(
         &users,
@@ -100,7 +104,11 @@ async fn handle_ban_list(
 ) -> ResponseResult<()> {
     let users = sorted_online_users(&state.online_users);
     let args = args!(server = state.config.teamtalk.display_name().to_string());
-    let base = locales::get_text(lang.as_str(), "list-ban-title", args.as_ref());
+    let base = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::ListBanTitle,
+        args.as_ref(),
+    );
     let title = append_search_hint(&base, lang);
     let keyboard = create_user_list_keyboard(
         &users,
@@ -150,7 +158,7 @@ async fn handle_kick_perform(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text(lang.as_str(), "toast-command-sent", None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::ToastCommandSent, None),
         false,
     )
     .await
@@ -173,7 +181,7 @@ async fn handle_ban_perform(
         return answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-no-users", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdNoUsers, None),
             true,
         )
         .await;
@@ -201,7 +209,7 @@ async fn handle_ban_perform(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-error", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
             true,
         )
         .await?;
@@ -254,7 +262,7 @@ async fn handle_ban_perform(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text(lang.as_str(), "toast-command-sent", None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::ToastCommandSent, None),
         false,
     )
     .await
@@ -310,7 +318,7 @@ async fn handle_unban_perform(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text(lang.as_str(), "toast-user-unbanned", None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::ToastUserUnbanned, None),
         false,
     )
     .await?;

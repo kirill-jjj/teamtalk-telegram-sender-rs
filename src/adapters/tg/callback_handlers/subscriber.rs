@@ -127,7 +127,11 @@ impl SubCtx<'_> {
         answer_callback(
             self.bot,
             self.q_id,
-            locales::get_text(self.lang.as_str(), "toast-subscriber-deleted", None),
+            locales::get_text(
+                self.lang.as_str(),
+                locales::LocaleKey::ToastSubscriberDeleted,
+                None,
+            ),
             true,
         )
         .await?;
@@ -191,7 +195,11 @@ impl SubCtx<'_> {
         answer_callback(
             self.bot,
             self.q_id,
-            locales::get_text(self.lang.as_str(), "toast-user-banned", None),
+            locales::get_text(
+                self.lang.as_str(),
+                locales::LocaleKey::ToastUserBanned,
+                None,
+            ),
             true,
         )
         .await?;
@@ -230,7 +238,7 @@ impl SubCtx<'_> {
             self.q_id,
             locales::get_text(
                 self.lang.as_str(),
-                "toast-account-unlinked",
+                locales::LocaleKey::ToastAccountUnlinked,
                 args!(user = sub_id.to_string()).as_ref(),
             ),
             true,
@@ -292,7 +300,7 @@ impl SubCtx<'_> {
             self.q_id,
             locales::get_text(
                 self.lang.as_str(),
-                "toast-account-linked",
+                locales::LocaleKey::ToastAccountLinked,
                 args!(user = username.to_string()).as_ref(),
             ),
             true,
@@ -330,7 +338,7 @@ impl SubCtx<'_> {
             self.q_id,
             locales::get_text(
                 self.lang.as_str(),
-                "toast-lang-set",
+                locales::LocaleKey::ToastLangSet,
                 args!(id = sub_id.to_string(), lang = new_lang.as_str()).as_ref(),
             ),
             false,
@@ -368,7 +376,7 @@ impl SubCtx<'_> {
             self.q_id,
             locales::get_text(
                 self.lang.as_str(),
-                "toast-notif-set",
+                locales::LocaleKey::ToastNotifSet,
                 args!(id = sub_id.to_string(), val = val.to_string()).as_ref(),
             ),
             false,
@@ -400,7 +408,7 @@ impl SubCtx<'_> {
             self.q_id,
             locales::get_text(
                 self.lang.as_str(),
-                "toast-noon-toggled",
+                locales::LocaleKey::ToastNoonToggled,
                 args!(id = sub_id.to_string(), status = "toggled").as_ref(),
             ),
             false,
@@ -438,7 +446,7 @@ impl SubCtx<'_> {
             self.q_id,
             locales::get_text(
                 self.lang.as_str(),
-                "toast-mute-mode-sub-set",
+                locales::LocaleKey::ToastMuteModeSubSet,
                 args!(id = sub_id.to_string(), val = mode.to_string()).as_ref(),
             ),
             false,

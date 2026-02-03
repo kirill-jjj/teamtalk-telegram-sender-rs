@@ -64,7 +64,11 @@ async fn load_user_lang(
                 )
                 .await;
                 bot.answer_callback_query(query_id)
-                    .text(locales::get_text(default_lang.as_str(), "cmd-error", None))
+                    .text(locales::get_text(
+                        default_lang.as_str(),
+                        locales::LocaleKey::CmdError,
+                        None,
+                    ))
                     .show_alert(true)
                     .await?;
                 return Ok(default_lang);
@@ -85,7 +89,11 @@ async fn ensure_subscribed(
         Ok(true) => Ok(true),
         Ok(false) => {
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(lang.as_str(), "cmd-not-subscribed", None))
+                .text(locales::get_text(
+                    lang.as_str(),
+                    locales::LocaleKey::CmdNotSubscribed,
+                    None,
+                ))
                 .show_alert(true)
                 .await?;
             Ok(false)
@@ -106,7 +114,11 @@ async fn ensure_subscribed(
             )
             .await;
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(lang.as_str(), "cmd-error", None))
+                .text(locales::get_text(
+                    lang.as_str(),
+                    locales::LocaleKey::CmdError,
+                    None,
+                ))
                 .show_alert(true)
                 .await?;
             Ok(false)

@@ -7,7 +7,9 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err, notify_admin_error};
 use crate::args;
 use crate::core::callbacks::MuteAction;
-use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername};
+use crate::core::types::{
+    ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername,
+};
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -92,7 +94,7 @@ async fn handle_mode_set(
         &q.id,
         locales::get_text(
             lang.as_str(),
-            "toast-mute-mode-set",
+            locales::LocaleKey::ToastMuteModeSet,
             args!(mode = mode.to_string()).as_ref(),
         ),
         false,
@@ -124,7 +126,7 @@ async fn handle_list(
         lang,
         items: &muted,
         page,
-        title_key: "list-mute-title",
+        title_key: locales::LocaleKey::ListMuteTitle,
         guest_username,
         mode: mode.clone(),
     })
@@ -170,11 +172,18 @@ async fn handle_toggle(
         return Ok(());
     }
 
-    let args = args!(user = username.to_string(), action = "toggled");
+    let args = args!(
+        user = username.to_string(),
+        action = ActionStatus::Toggled.as_str()
+    );
     answer_callback(
         ctx.bot,
         &ctx.q.id,
-        locales::get_text(ctx.lang.as_str(), "toast-user-muted", args.as_ref()),
+        locales::get_text(
+            ctx.lang.as_str(),
+            locales::LocaleKey::ToastUserMuted,
+            args.as_ref(),
+        ),
         false,
     )
     .await?;
@@ -193,7 +202,7 @@ async fn handle_toggle(
         lang: ctx.lang,
         items: &muted,
         page,
-        title_key: "list-mute-title",
+        title_key: locales::LocaleKey::ListMuteTitle,
         guest_username,
         mode,
     })
@@ -226,7 +235,7 @@ async fn handle_server_list(
         lang,
         accounts: &accounts,
         page,
-        title_key: "list-all-accs-title",
+        title_key: locales::LocaleKey::ListAllAccsTitle,
         guest_username,
         mode: mode.clone(),
     })
@@ -272,11 +281,18 @@ async fn handle_server_toggle(
         return Ok(());
     }
 
-    let args = args!(user = username.to_string(), action = "toggled");
+    let args = args!(
+        user = username.to_string(),
+        action = ActionStatus::Toggled.as_str()
+    );
     answer_callback(
         ctx.bot,
         &ctx.q.id,
-        locales::get_text(ctx.lang.as_str(), "toast-user-muted", args.as_ref()),
+        locales::get_text(
+            ctx.lang.as_str(),
+            locales::LocaleKey::ToastUserMuted,
+            args.as_ref(),
+        ),
         false,
     )
     .await?;
@@ -297,7 +313,7 @@ async fn handle_server_toggle(
         lang: ctx.lang,
         accounts: &accounts,
         page,
-        title_key: "list-all-accs-title",
+        title_key: locales::LocaleKey::ListAllAccsTitle,
         guest_username,
         mode,
     })

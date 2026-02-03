@@ -49,7 +49,7 @@ pub async fn send_subscribers_list(
     if subs.is_empty() {
         let req = bot.send_message(
             chat_id,
-            locales::get_text(lang.as_str(), "list-subs-empty", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsEmpty, None),
         );
         if let Some(reply_to) = reply_to {
             req.reply_to(reply_to).await?;
@@ -81,13 +81,13 @@ pub async fn send_subscribers_list(
         |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
         Some(back_btn(
             lang,
-            "btn-back-menu",
+            locales::LocaleKey::BtnBackMenu,
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
     );
 
-    let base = locales::get_text(lang.as_str(), "list-subs-title", None);
+    let base = locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsTitle, None);
     let text = append_search_hint(&base, lang);
     let req = bot.send_message(chat_id, text).reply_markup(keyboard);
     if let Some(reply_to) = reply_to {
@@ -143,7 +143,7 @@ pub async fn edit_subscribers_list(
         bot.edit_message_text(
             msg.chat.id,
             msg.id,
-            locales::get_text(lang.as_str(), "list-subs-empty", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsEmpty, None),
         )
         .await?;
         return Ok(());
@@ -171,13 +171,13 @@ pub async fn edit_subscribers_list(
         |p| CallbackAction::Admin(AdminAction::SubsList { page: p }),
         Some(back_btn(
             lang,
-            "btn-back-menu",
+            locales::LocaleKey::BtnBackMenu,
             CallbackAction::Menu(MenuAction::Who),
         )),
         lang,
     );
 
-    let base = locales::get_text(lang.as_str(), "list-subs-title", None);
+    let base = locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsTitle, None);
     let text = append_search_hint(&base, lang);
     bot.edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)
@@ -277,29 +277,41 @@ fn build_subscriber_details_text(
 ) -> String {
     let notif_setting = settings.notification_settings.clone();
     let notif_text = match notif_setting {
-        NotificationSetting::All => {
-            locales::get_text(lang.as_str(), "btn-sub-all", args!(marker = "").as_ref())
-        }
-        NotificationSetting::JoinOff => {
-            locales::get_text(lang.as_str(), "btn-sub-leave", args!(marker = "").as_ref())
-        }
-        NotificationSetting::LeaveOff => {
-            locales::get_text(lang.as_str(), "btn-sub-join", args!(marker = "").as_ref())
-        }
-        NotificationSetting::None => {
-            locales::get_text(lang.as_str(), "btn-sub-none", args!(marker = "").as_ref())
-        }
+        NotificationSetting::All => locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::BtnSubAll,
+            args!(marker = "").as_ref(),
+        ),
+        NotificationSetting::JoinOff => locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::BtnSubLeave,
+            args!(marker = "").as_ref(),
+        ),
+        NotificationSetting::LeaveOff => locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::BtnSubJoin,
+            args!(marker = "").as_ref(),
+        ),
+        NotificationSetting::None => locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::BtnSubNone,
+            args!(marker = "").as_ref(),
+        ),
     };
 
     let mute_mode = settings.mute_list_mode.clone();
     let mode_text = match mute_mode {
-        MuteListMode::Blacklist => locales::get_text(lang.as_str(), "mode-blacklist", None),
-        MuteListMode::Whitelist => locales::get_text(lang.as_str(), "mode-whitelist", None),
+        MuteListMode::Blacklist => {
+            locales::get_text(lang.as_str(), locales::LocaleKey::ModeBlacklist, None)
+        }
+        MuteListMode::Whitelist => {
+            locales::get_text(lang.as_str(), locales::LocaleKey::ModeWhitelist, None)
+        }
     };
     let sub_lang = settings.language_code;
 
     let tt_user = settings.teamtalk_username.as_ref().map_or_else(
-        || locales::get_text(lang.as_str(), "val-none", None),
+        || locales::get_text(lang.as_str(), locales::LocaleKey::ValNone, None),
         ToString::to_string,
     );
     let args = args!(
@@ -307,15 +319,19 @@ fn build_subscriber_details_text(
         tt_user = tt_user,
         lang = sub_lang.as_str(),
         noon = if settings.not_on_online_enabled {
-            locales::get_text(lang.as_str(), "status-enabled", None)
+            locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
         } else {
-            locales::get_text(lang.as_str(), "status-disabled", None)
+            locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
         },
         notif = notif_text,
         mode = mode_text
     );
 
-    locales::get_text(lang.as_str(), "sub-details-title", args.as_ref())
+    locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::SubDetailsTitle,
+        args.as_ref(),
+    )
 }
 
 fn build_subscriber_details_keyboard(
@@ -323,7 +339,7 @@ fn build_subscriber_details_keyboard(
     sub_id: i64,
     return_page: usize,
 ) -> InlineKeyboardMarkup {
-    let btn = |text_key: &str, action: SubAction| {
+    let btn = |text_key: locales::LocaleKey, action: SubAction| {
         callback_button(
             locales::get_text(lang.as_str(), text_key, None),
             CallbackAction::Subscriber(action),
@@ -332,56 +348,56 @@ fn build_subscriber_details_keyboard(
 
     InlineKeyboardMarkup::new(vec![
         vec![btn(
-            "btn-sub-delete",
+            locales::LocaleKey::BtnSubDelete,
             SubAction::Delete {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-ban",
+            locales::LocaleKey::BtnSubBan,
             SubAction::Ban {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-manage-tt",
+            locales::LocaleKey::BtnSubManageTt,
             SubAction::ManageTt {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-lang",
+            locales::LocaleKey::BtnSubLang,
             SubAction::LangMenu {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-noon",
+            locales::LocaleKey::BtnSubNoon,
             SubAction::NoonToggle {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-notif",
+            locales::LocaleKey::BtnSubNotif,
             SubAction::NotifMenu {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-mute-mode",
+            locales::LocaleKey::BtnSubMuteMode,
             SubAction::ModeMenu {
                 sub_id,
                 page: return_page,
             },
         )],
         vec![btn(
-            "btn-sub-view-mute",
+            locales::LocaleKey::BtnSubViewMute,
             SubAction::MuteView {
                 sub_id,
                 page: return_page,
@@ -390,7 +406,7 @@ fn build_subscriber_details_keyboard(
         )],
         vec![back_button(
             lang,
-            "btn-back-subs",
+            locales::LocaleKey::BtnBackSubs,
             CallbackAction::Admin(AdminAction::SubsList { page: return_page }),
         )],
     ])

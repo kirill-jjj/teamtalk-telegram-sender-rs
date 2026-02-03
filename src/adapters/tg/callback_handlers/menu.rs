@@ -44,18 +44,21 @@ pub async fn handle_menu(
             answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Help => {
-            bot.send_message(chat_id, locales::get_text(lang.as_str(), "help-text", None))
-                .parse_mode(ParseMode::Html)
-                .await?;
+            bot.send_message(
+                chat_id,
+                locales::get_text(lang.as_str(), locales::LocaleKey::HelpText, None),
+            )
+            .parse_mode(ParseMode::Html)
+            .await?;
             answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Unsub => {
-            let text = locales::get_text(lang.as_str(), "unsub-confirm-text", None);
+            let text = locales::get_text(lang.as_str(), locales::LocaleKey::UnsubConfirmText, None);
             let keyboard = confirm_cancel_keyboard(
                 lang,
-                "btn-yes",
+                locales::LocaleKey::BtnYes,
                 CallbackAction::Unsub(UnsubAction::Confirm),
-                "btn-no",
+                locales::LocaleKey::BtnNo,
                 CallbackAction::Unsub(UnsubAction::Cancel),
             );
 

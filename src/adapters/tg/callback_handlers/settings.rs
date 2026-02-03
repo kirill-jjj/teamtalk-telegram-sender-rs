@@ -88,14 +88,14 @@ async fn handle_lang_select(bot: &Bot, msg: &Message, lang: LanguageCode) -> Res
         )],
         vec![back_button(
             lang,
-            "btn-back-settings",
+            locales::LocaleKey::BtnBackSettings,
             CallbackAction::Settings(SettingsAction::Main),
         )],
     ]);
     bot.edit_message_text(
         msg.chat.id,
         msg.id,
-        locales::get_text(lang.as_str(), "msg-choose-lang", None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::MsgChooseLang, None),
     )
     .reply_markup(keyboard)
     .await?;
@@ -127,7 +127,11 @@ async fn handle_lang_set(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text(new_lang.as_str(), "toast-lang-updated", None),
+        locales::get_text(
+            new_lang.as_str(),
+            locales::LocaleKey::ToastLangUpdated,
+            None,
+        ),
         false,
     )
     .await?;
@@ -160,10 +164,10 @@ async fn handle_sub_set(
         return Ok(());
     }
     let text_key = match setting {
-        NotificationSetting::All => "btn-sub-all",
-        NotificationSetting::JoinOff => "btn-sub-leave",
-        NotificationSetting::LeaveOff => "btn-sub-join",
-        NotificationSetting::None => "btn-sub-none",
+        NotificationSetting::All => locales::LocaleKey::BtnSubAll,
+        NotificationSetting::JoinOff => locales::LocaleKey::BtnSubLeave,
+        NotificationSetting::LeaveOff => locales::LocaleKey::BtnSubJoin,
+        NotificationSetting::None => locales::LocaleKey::BtnSubNone,
     };
     let setting_text = locales::get_text(lang.as_str(), text_key, args!(marker = "").as_ref());
     answer_callback(
@@ -171,7 +175,7 @@ async fn handle_sub_set(
         &q.id,
         locales::get_text(
             lang.as_str(),
-            "resp-sub-updated",
+            locales::LocaleKey::RespSubUpdated,
             args!(text = setting_text).as_ref(),
         ),
         false,
@@ -215,7 +219,7 @@ async fn handle_noon_toggle(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-fail-noon-guest", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdFailNoonGuest, None),
             true,
         )
         .await?;
@@ -225,16 +229,16 @@ async fn handle_noon_toggle(
     match state.db.toggle_noon(telegram_id).await {
         Ok(new_val) => {
             let status = if new_val {
-                locales::get_text(lang.as_str(), "status-enabled", None)
+                locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
             } else {
-                locales::get_text(lang.as_str(), "status-disabled", None)
+                locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
             };
             if let Err(e) = answer_callback(
                 bot,
                 &q.id,
                 locales::get_text(
                     lang.as_str(),
-                    "resp-noon-updated",
+                    locales::LocaleKey::RespNoonUpdated,
                     args!(status = status).as_ref(),
                 ),
                 false,
@@ -331,7 +335,7 @@ async fn handle_queue_toggle_user(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-queue-no-link", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
             true,
         )
         .await?;
@@ -359,7 +363,11 @@ async fn handle_queue_toggle_user(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "resp-queue-global-disabled-user", None),
+            locales::get_text(
+                lang.as_str(),
+                locales::LocaleKey::RespQueueGlobalDisabledUser,
+                None,
+            ),
             true,
         )
         .await?;
@@ -384,9 +392,9 @@ async fn handle_queue_toggle_user(
     }
 
     let status_key = if new_val {
-        "resp-queue-user-enabled"
+        locales::LocaleKey::RespQueueUserEnabled
     } else {
-        "resp-queue-user-disabled"
+        locales::LocaleKey::RespQueueUserDisabled
     };
     answer_callback(
         bot,
@@ -413,7 +421,7 @@ async fn handle_queue_toggle_global(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-unauth", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
             true,
         )
         .await?;
@@ -437,9 +445,9 @@ async fn handle_queue_toggle_global(
         return Ok(());
     }
     let status_key = if new_val {
-        "resp-queue-global-enabled"
+        locales::LocaleKey::RespQueueGlobalEnabled
     } else {
-        "resp-queue-global-disabled"
+        locales::LocaleKey::RespQueueGlobalDisabled
     };
     answer_callback(
         bot,
@@ -485,7 +493,7 @@ async fn handle_queue_clear_self(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-queue-no-link", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
             true,
         )
         .await?;
@@ -512,7 +520,7 @@ async fn handle_queue_clear_self(
         &q.id,
         locales::get_text(
             lang.as_str(),
-            "resp-queue-cleared",
+            locales::LocaleKey::RespQueueCleared,
             args!(count = cleared).as_ref(),
         ),
         false,
@@ -535,7 +543,7 @@ async fn handle_queue_clear_all(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text(lang.as_str(), "cmd-unauth", None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
             true,
         )
         .await?;
@@ -562,7 +570,7 @@ async fn handle_queue_clear_all(
         &q.id,
         locales::get_text(
             lang.as_str(),
-            "resp-queue-cleared-all",
+            locales::LocaleKey::RespQueueClearedAll,
             args!(count = cleared).as_ref(),
         ),
         false,

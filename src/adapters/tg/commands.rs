@@ -104,25 +104,31 @@ impl<'a> CommandCtx<'a> {
         let db = &state.db;
         let config = &state.config;
         let default_lang = config.general.default_lang;
-        let settings = match user_settings_service::get_or_create(db, telegram_id, default_lang)
-            .await
-        {
-            Ok(s) => s,
-            Err(e) => {
-                tracing::error!(telegram_id, error = %e, "Failed to get or create user");
-                notify_admin_error(
-                    bot,
-                    config,
-                    telegram_id,
-                    AdminErrorContext::Command,
-                    &e.to_string(),
-                    default_lang,
-                )
-                .await;
-                send_text_key(bot, msg.chat.id, default_lang, "cmd-error", Some(msg.id)).await?;
-                return Ok(None);
-            }
-        };
+        let settings =
+            match user_settings_service::get_or_create(db, telegram_id, default_lang).await {
+                Ok(s) => s,
+                Err(e) => {
+                    tracing::error!(telegram_id, error = %e, "Failed to get or create user");
+                    notify_admin_error(
+                        bot,
+                        config,
+                        telegram_id,
+                        AdminErrorContext::Command,
+                        &e.to_string(),
+                        default_lang,
+                    )
+                    .await;
+                    send_text_key(
+                        bot,
+                        msg.chat.id,
+                        default_lang,
+                        locales::LocaleKey::CmdError,
+                        Some(msg.id),
+                    )
+                    .await?;
+                    return Ok(None);
+                }
+            };
         let lang = settings.language_code;
         let is_admin = if telegram_id == config.telegram.admin_chat_id {
             true
@@ -174,7 +180,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "hello-start",
+                locales::LocaleKey::HelloStart,
                 Some(self.msg.id),
             )
             .await;
@@ -189,7 +195,7 @@ impl<'a> CommandCtx<'a> {
                     self.bot,
                     self.msg.chat.id,
                     self.lang,
-                    "cmd-invalid-deeplink",
+                    locales::LocaleKey::CmdInvalidDeeplink,
                     Some(self.msg.id),
                 )
                 .await
@@ -209,7 +215,7 @@ impl<'a> CommandCtx<'a> {
                     self.bot,
                     self.msg.chat.id,
                     self.lang,
-                    "cmd-error",
+                    locales::LocaleKey::CmdError,
                     Some(self.msg.id),
                 )
                 .await
@@ -225,7 +231,7 @@ impl<'a> CommandCtx<'a> {
                     self.bot,
                     self.msg.chat.id,
                     self.lang,
-                    "cmd-user-banned",
+                    locales::LocaleKey::CmdUserBanned,
                     Some(self.msg.id),
                 )
                 .await
@@ -235,7 +241,11 @@ impl<'a> CommandCtx<'a> {
                 self.bot
                     .send_message(
                         self.msg.chat.id,
-                        locales::get_text(self.lang.as_str(), "cmd-tt-banned", args.as_ref()),
+                        locales::get_text(
+                            self.lang.as_str(),
+                            locales::LocaleKey::CmdTtBanned,
+                            args.as_ref(),
+                        ),
                     )
                     .reply_to(self.msg.id)
                     .await?;
@@ -246,7 +256,7 @@ impl<'a> CommandCtx<'a> {
                     self.bot,
                     self.msg.chat.id,
                     self.lang,
-                    "cmd-success-sub",
+                    locales::LocaleKey::CmdSuccessSub,
                     Some(self.msg.id),
                 )
                 .await
@@ -255,7 +265,11 @@ impl<'a> CommandCtx<'a> {
                 self.bot
                     .send_message(
                         self.msg.chat.id,
-                        locales::get_text(self.lang.as_str(), "cmd-success-sub-guest", None),
+                        locales::get_text(
+                            self.lang.as_str(),
+                            locales::LocaleKey::CmdSuccessSubGuest,
+                            None,
+                        ),
                     )
                     .parse_mode(ParseMode::Html)
                     .reply_to(self.msg.id)
@@ -277,7 +291,7 @@ impl<'a> CommandCtx<'a> {
                     self.bot,
                     self.msg.chat.id,
                     self.lang,
-                    "cmd-error",
+                    locales::LocaleKey::CmdError,
                     Some(self.msg.id),
                 )
                 .await
@@ -301,7 +315,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-error",
+                locales::LocaleKey::CmdError,
                 Some(self.msg.id),
             )
             .await;
@@ -310,7 +324,7 @@ impl<'a> CommandCtx<'a> {
             self.bot,
             self.msg.chat.id,
             self.lang,
-            "cmd-success-unsub",
+            locales::LocaleKey::CmdSuccessUnsub,
             Some(self.msg.id),
         )
         .await
@@ -324,7 +338,7 @@ impl<'a> CommandCtx<'a> {
         self.bot
             .send_message(
                 self.msg.chat.id,
-                locales::get_text(self.lang.as_str(), "menu-title", None),
+                locales::get_text(self.lang.as_str(), locales::LocaleKey::MenuTitle, None),
             )
             .parse_mode(ParseMode::Html)
             .reply_to(self.msg.id)
@@ -340,7 +354,7 @@ impl<'a> CommandCtx<'a> {
         self.bot
             .send_message(
                 self.msg.chat.id,
-                locales::get_text(self.lang.as_str(), "help-text", None),
+                locales::get_text(self.lang.as_str(), locales::LocaleKey::HelpText, None),
             )
             .parse_mode(ParseMode::Html)
             .reply_to(self.msg.id)
@@ -386,12 +400,16 @@ impl<'a> CommandCtx<'a> {
         if !ensure_subscribed(self.bot, self.msg, self.db, self.config, self.lang).await {
             return Ok(());
         }
-        let text = locales::get_text(self.lang.as_str(), "unsub-confirm-text", None);
+        let text = locales::get_text(
+            self.lang.as_str(),
+            locales::LocaleKey::UnsubConfirmText,
+            None,
+        );
         let keyboard = confirm_cancel_keyboard(
             self.lang,
-            "btn-yes",
+            locales::LocaleKey::BtnYes,
             CallbackAction::Unsub(UnsubAction::Confirm),
-            "btn-no",
+            locales::LocaleKey::BtnNo,
             CallbackAction::Unsub(UnsubAction::Cancel),
         );
         self.bot
@@ -408,7 +426,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-unauth",
+                locales::LocaleKey::CmdUnauth,
                 Some(self.msg.id),
             )
             .await?;
@@ -425,9 +443,9 @@ impl<'a> CommandCtx<'a> {
 
         let is_kick = matches!(cmd, Command::Kick);
         let title_key = if is_kick {
-            "list-kick-title"
+            locales::LocaleKey::ListKickTitle
         } else {
-            "list-ban-title"
+            locales::LocaleKey::ListBanTitle
         };
 
         let args = args!(server = self.config.teamtalk.display_name().to_string());
@@ -486,7 +504,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-unauth",
+                locales::LocaleKey::CmdUnauth,
                 Some(self.msg.id),
             )
             .await?;
@@ -510,7 +528,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-unauth",
+                locales::LocaleKey::CmdUnauth,
                 Some(self.msg.id),
             )
             .await?;
@@ -534,7 +552,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-unauth",
+                locales::LocaleKey::CmdUnauth,
                 Some(self.msg.id),
             )
             .await?;
@@ -543,7 +561,11 @@ impl<'a> CommandCtx<'a> {
         self.bot
             .send_message(
                 self.msg.chat.id,
-                locales::get_text(self.lang.as_str(), "cmd-shutting-down", None),
+                locales::get_text(
+                    self.lang.as_str(),
+                    locales::LocaleKey::CmdShuttingDown,
+                    None,
+                ),
             )
             .reply_to(self.msg.id)
             .await?;
@@ -558,7 +580,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-unauth",
+                locales::LocaleKey::CmdUnauth,
                 Some(self.msg.id),
             )
             .await?;
@@ -571,7 +593,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-broadcast-empty",
+                locales::LocaleKey::CmdBroadcastEmpty,
                 Some(self.msg.id),
             )
             .await?;
@@ -593,7 +615,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-error",
+                locales::LocaleKey::CmdError,
                 Some(self.msg.id),
             )
             .await?;
@@ -604,7 +626,7 @@ impl<'a> CommandCtx<'a> {
             self.bot,
             self.msg.chat.id,
             self.lang,
-            "cmd-broadcast-sent",
+            locales::LocaleKey::CmdBroadcastSent,
             Some(self.msg.id),
         )
         .await
@@ -616,7 +638,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-unauth",
+                locales::LocaleKey::CmdUnauth,
                 Some(self.msg.id),
             )
             .await?;
@@ -629,7 +651,7 @@ impl<'a> CommandCtx<'a> {
                 self.bot,
                 self.msg.chat.id,
                 self.lang,
-                "cmd-message-empty",
+                locales::LocaleKey::CmdMessageEmpty,
                 Some(self.msg.id),
             )
             .await?;
@@ -653,7 +675,7 @@ impl<'a> CommandCtx<'a> {
                     self.bot,
                     self.msg.chat.id,
                     self.lang,
-                    "cmd-error",
+                    locales::LocaleKey::CmdError,
                     Some(self.msg.id),
                 )
                 .await?;
@@ -682,7 +704,11 @@ impl<'a> CommandCtx<'a> {
         }
 
         let args = args!(sent = sent, failed = failed);
-        let reply = locales::get_text(self.lang.as_str(), "cmd-message-sent", args.as_ref());
+        let reply = locales::get_text(
+            self.lang.as_str(),
+            locales::LocaleKey::CmdMessageSent,
+            args.as_ref(),
+        );
         self.bot
             .send_message(self.msg.chat.id, reply)
             .reply_to(self.msg.id)
@@ -695,7 +721,8 @@ impl<'a> CommandCtx<'a> {
         let text = text.trim();
         let parts: Vec<&str> = text.split_whitespace().collect();
         if parts.is_empty() {
-            let help = locales::get_text(self.lang.as_str(), "cmd-queue-help", None);
+            let help =
+                locales::get_text(self.lang.as_str(), locales::LocaleKey::CmdQueueHelp, None);
             self.bot
                 .send_message(self.msg.chat.id, help)
                 .reply_to(self.msg.id)
@@ -710,7 +737,7 @@ impl<'a> CommandCtx<'a> {
                         self.bot,
                         self.msg.chat.id,
                         self.lang,
-                        "cmd-unauth",
+                        locales::LocaleKey::CmdUnauth,
                         Some(self.msg.id),
                     )
                     .await?;
@@ -735,7 +762,7 @@ impl<'a> CommandCtx<'a> {
                                 self.bot,
                                 self.msg.chat.id,
                                 self.lang,
-                                "cmd-error",
+                                locales::LocaleKey::CmdError,
                                 Some(self.msg.id),
                             )
                             .await?;
@@ -744,9 +771,9 @@ impl<'a> CommandCtx<'a> {
                     };
                 if current == enabled {
                     let status_key = if enabled {
-                        "resp-queue-global-already-enabled"
+                        locales::LocaleKey::RespQueueGlobalAlreadyEnabled
                     } else {
-                        "resp-queue-global-already-disabled"
+                        locales::LocaleKey::RespQueueGlobalAlreadyDisabled
                     };
                     send_text_key(
                         self.bot,
@@ -775,16 +802,16 @@ impl<'a> CommandCtx<'a> {
                         self.bot,
                         self.msg.chat.id,
                         self.lang,
-                        "cmd-error",
+                        locales::LocaleKey::CmdError,
                         Some(self.msg.id),
                     )
                     .await?;
                     return Ok(());
                 }
                 let status_key = if enabled {
-                    "resp-queue-global-enabled"
+                    locales::LocaleKey::RespQueueGlobalEnabled
                 } else {
-                    "resp-queue-global-disabled"
+                    locales::LocaleKey::RespQueueGlobalDisabled
                 };
                 send_text_key(
                     self.bot,
@@ -809,7 +836,7 @@ impl<'a> CommandCtx<'a> {
                             self.bot,
                             self.msg.chat.id,
                             self.lang,
-                            "cmd-error",
+                            locales::LocaleKey::CmdError,
                             Some(self.msg.id),
                         )
                         .await?;
@@ -821,7 +848,7 @@ impl<'a> CommandCtx<'a> {
                         self.bot,
                         self.msg.chat.id,
                         self.lang,
-                        "cmd-queue-no-link",
+                        locales::LocaleKey::CmdQueueNoLink,
                         Some(self.msg.id),
                     )
                     .await?;
@@ -836,7 +863,7 @@ impl<'a> CommandCtx<'a> {
                                 self.bot,
                                 self.msg.chat.id,
                                 self.lang,
-                                "cmd-error",
+                                locales::LocaleKey::CmdError,
                                 Some(self.msg.id),
                             )
                             .await?;
@@ -848,7 +875,7 @@ impl<'a> CommandCtx<'a> {
                         self.bot,
                         self.msg.chat.id,
                         self.lang,
-                        "resp-queue-global-disabled-user",
+                        locales::LocaleKey::RespQueueGlobalDisabledUser,
                         Some(self.msg.id),
                     )
                     .await?;
@@ -867,7 +894,7 @@ impl<'a> CommandCtx<'a> {
                             self.bot,
                             self.msg.chat.id,
                             self.lang,
-                            "cmd-error",
+                            locales::LocaleKey::CmdError,
                             Some(self.msg.id),
                         )
                         .await?;
@@ -876,9 +903,9 @@ impl<'a> CommandCtx<'a> {
                 };
                 if current == enabled {
                     let status_key = if enabled {
-                        "resp-queue-user-already-enabled"
+                        locales::LocaleKey::RespQueueUserAlreadyEnabled
                     } else {
-                        "resp-queue-user-already-disabled"
+                        locales::LocaleKey::RespQueueUserAlreadyDisabled
                     };
                     send_text_key(
                         self.bot,
@@ -911,16 +938,16 @@ impl<'a> CommandCtx<'a> {
                         self.bot,
                         self.msg.chat.id,
                         self.lang,
-                        "cmd-error",
+                        locales::LocaleKey::CmdError,
                         Some(self.msg.id),
                     )
                     .await?;
                     return Ok(());
                 }
                 let status_key = if enabled {
-                    "resp-queue-user-enabled"
+                    locales::LocaleKey::RespQueueUserEnabled
                 } else {
-                    "resp-queue-user-disabled"
+                    locales::LocaleKey::RespQueueUserDisabled
                 };
                 send_text_key(
                     self.bot,
@@ -938,7 +965,7 @@ impl<'a> CommandCtx<'a> {
                             self.bot,
                             self.msg.chat.id,
                             self.lang,
-                            "cmd-unauth",
+                            locales::LocaleKey::CmdUnauth,
                             Some(self.msg.id),
                         )
                         .await?;
@@ -961,7 +988,7 @@ impl<'a> CommandCtx<'a> {
                                 self.bot,
                                 self.msg.chat.id,
                                 self.lang,
-                                "cmd-error",
+                                locales::LocaleKey::CmdError,
                                 Some(self.msg.id),
                             )
                             .await?;
@@ -970,7 +997,7 @@ impl<'a> CommandCtx<'a> {
                     };
                     let text = locales::get_text(
                         self.lang.as_str(),
-                        "resp-queue-cleared-all",
+                        locales::LocaleKey::RespQueueClearedAll,
                         args!(count = cleared).as_ref(),
                     );
                     self.bot
@@ -990,7 +1017,7 @@ impl<'a> CommandCtx<'a> {
                                 self.bot,
                                 self.msg.chat.id,
                                 self.lang,
-                                "cmd-error",
+                                locales::LocaleKey::CmdError,
                                 Some(self.msg.id),
                             )
                             .await?;
@@ -1002,7 +1029,7 @@ impl<'a> CommandCtx<'a> {
                             self.bot,
                             self.msg.chat.id,
                             self.lang,
-                            "cmd-queue-no-link",
+                            locales::LocaleKey::CmdQueueNoLink,
                             Some(self.msg.id),
                         )
                         .await?;
@@ -1025,7 +1052,7 @@ impl<'a> CommandCtx<'a> {
                                 self.bot,
                                 self.msg.chat.id,
                                 self.lang,
-                                "cmd-error",
+                                locales::LocaleKey::CmdError,
                                 Some(self.msg.id),
                             )
                             .await?;
@@ -1034,7 +1061,7 @@ impl<'a> CommandCtx<'a> {
                     };
                     let text = locales::get_text(
                         self.lang.as_str(),
-                        "resp-queue-cleared",
+                        locales::LocaleKey::RespQueueCleared,
                         args!(count = cleared).as_ref(),
                     );
                     self.bot
@@ -1044,7 +1071,8 @@ impl<'a> CommandCtx<'a> {
                 }
             }
             _ => {
-                let help = locales::get_text(self.lang.as_str(), "cmd-queue-help", None);
+                let help =
+                    locales::get_text(self.lang.as_str(), locales::LocaleKey::CmdQueueHelp, None);
                 self.bot
                     .send_message(self.msg.chat.id, help)
                     .reply_to(self.msg.id)
@@ -1113,7 +1141,7 @@ async fn handle_admin_reply(
     if reply_to.is_none() {
         if let Some(voice) = voice {
             let reply_key = match stream_voice(bot, state, None, voice).await {
-                Ok(()) => "tg-reply-sent",
+                Ok(()) => locales::LocaleKey::TgReplySent,
                 Err(e) => {
                     notify_admin_error(
                         bot,
@@ -1124,7 +1152,7 @@ async fn handle_admin_reply(
                         admin_lang,
                     )
                     .await;
-                    "tg-reply-failed"
+                    locales::LocaleKey::TgReplyFailed
                 }
             };
             let reply_text = locales::get_text(admin_lang.as_str(), reply_key, None);
@@ -1189,12 +1217,15 @@ async fn handle_channel_reply(
     if let Ok(Some((channel_id, _channel_name, _server_name, original_text))) =
         pending_service::get_pending_channel_reply(db, input.reply_id).await
     {
-        let mut reply_key = "tg-reply-sent";
+        let mut reply_key = locales::LocaleKey::TgReplySent;
         if let Some(voice) = input.voice {
             let duration = format_duration(voice.duration.seconds());
             let args = args!(msg = original_text.clone(), duration = duration);
-            let announce_text =
-                locales::get_text(ctx.admin_lang.as_str(), "tt-channel-reply", args.as_ref());
+            let announce_text = locales::get_text(
+                ctx.admin_lang.as_str(),
+                locales::LocaleKey::TtChannelReply,
+                args.as_ref(),
+            );
             if let Err(e) =
                 stream_voice(ctx.bot, ctx.state, Some((channel_id, announce_text)), voice).await
             {
@@ -1207,13 +1238,13 @@ async fn handle_channel_reply(
                     ctx.admin_lang,
                 )
                 .await;
-                reply_key = "tg-reply-failed";
+                reply_key = locales::LocaleKey::TgReplyFailed;
             }
         } else if let Some(text) = input.text {
             let args = args!(msg = original_text.clone(), reply = text.to_string());
             let channel_text = locales::get_text(
                 ctx.admin_lang.as_str(),
-                "tt-channel-reply-text",
+                locales::LocaleKey::TtChannelReplyText,
                 args.as_ref(),
             );
             if let Err(e) = ctx
@@ -1235,7 +1266,7 @@ async fn handle_channel_reply(
                     ctx.admin_lang,
                 )
                 .await;
-                reply_key = "tg-reply-failed";
+                reply_key = locales::LocaleKey::TgReplyFailed;
             }
         } else {
             return Ok(true);
@@ -1331,9 +1362,9 @@ async fn handle_user_reply(
                 admin_lang,
             )
             .await;
-            "tg-reply-failed"
+            locales::LocaleKey::TgReplyFailed
         } else {
-            "tg-reply-sent"
+            locales::LocaleKey::TgReplySent
         }
     } else if let Some(tt_username) = tt_username.as_ref() {
         match reply_queue_service::is_reply_queue_enabled_for_tt_user(db, tt_username).await {
@@ -1343,19 +1374,19 @@ async fn handle_user_reply(
                     .await
                 {
                     tracing::error!(tt_username = %tt_username, error = %e, "Failed to queue reply");
-                    "tg-reply-failed"
+                    locales::LocaleKey::TgReplyFailed
                 } else {
-                    "tg-reply-queued"
+                    locales::LocaleKey::TgReplyQueued
                 }
             }
-            Ok(false) => "tg-reply-offline",
+            Ok(false) => locales::LocaleKey::TgReplyOffline,
             Err(e) => {
                 tracing::error!(error = %e, "Failed to check reply queue status");
-                "tg-reply-failed"
+                locales::LocaleKey::TgReplyFailed
             }
         }
     } else {
-        "tg-reply-offline"
+        locales::LocaleKey::TgReplyOffline
     };
     let reply_text = locales::get_text(admin_lang.as_str(), reply_key, None);
     let _ = bot

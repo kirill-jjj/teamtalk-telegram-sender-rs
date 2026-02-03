@@ -33,7 +33,7 @@ pub async fn send_sub_manage_tt_menu(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang.as_str(), "cmd-error", None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
             )
             .await?;
             return Ok(());
@@ -42,13 +42,21 @@ pub async fn send_sub_manage_tt_menu(
     let tt_user = settings.teamtalk_username;
 
     let args = args!(id = sub_id.to_string());
-    let text = locales::get_text(lang.as_str(), "sub-manage-tt-title", args.as_ref());
+    let text = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::SubManageTtTitle,
+        args.as_ref(),
+    );
 
     let mut buttons = vec![];
     if let Some(user) = tt_user {
         let args_btn = args!(user = user.to_string());
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), "btn-unlink", args_btn.as_ref()),
+            locales::get_text(
+                lang.as_str(),
+                locales::LocaleKey::BtnUnlink,
+                args_btn.as_ref(),
+            ),
             CallbackAction::Subscriber(SubAction::Unlink {
                 sub_id,
                 page: return_page,
@@ -56,7 +64,7 @@ pub async fn send_sub_manage_tt_menu(
         )]);
     }
     buttons.push(vec![callback_button(
-        locales::get_text(lang.as_str(), "btn-link-new", None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::BtnLinkNew, None),
         CallbackAction::Subscriber(SubAction::LinkList {
             sub_id,
             page: return_page,
@@ -65,7 +73,7 @@ pub async fn send_sub_manage_tt_menu(
     )]);
     buttons.push(vec![back_button(
         lang,
-        "btn-back-user-actions",
+        locales::LocaleKey::BtnBackUserActions,
         CallbackAction::Subscriber(SubAction::Details {
             sub_id,
             page: return_page,
@@ -128,7 +136,7 @@ pub async fn send_sub_link_account_list(
         },
         Some(back_btn(
             lang,
-            "btn-back-manage-acc",
+            locales::LocaleKey::BtnBackManageAcc,
             CallbackAction::Subscriber(SubAction::ManageTt {
                 sub_id: target_id,
                 page: sub_page,
@@ -138,7 +146,11 @@ pub async fn send_sub_link_account_list(
     );
 
     let args = args!(id = target_id.to_string());
-    let base = locales::get_text(lang.as_str(), "list-link-title", args.as_ref());
+    let base = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::ListLinkTitle,
+        args.as_ref(),
+    );
     let text = append_search_hint(&base, lang);
 
     bot.edit_message_text(msg.chat.id, msg.id, text)
@@ -167,7 +179,11 @@ pub async fn send_sub_lang_menu(
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(lang.as_str(), "sub-lang-title", args.as_ref());
+    let text = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::SubLangTitle,
+        args.as_ref(),
+    );
 
     let mk_btn = |lbl: &str, l_code: &str| {
         callback_button(
@@ -188,7 +204,7 @@ pub async fn send_sub_lang_menu(
         vec![mk_btn("🇬🇧 English", "en")],
         vec![back_button(
             lang,
-            "btn-back-user-actions",
+            locales::LocaleKey::BtnBackUserActions,
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: return_page,
@@ -210,14 +226,34 @@ pub async fn send_sub_notif_menu(
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(lang.as_str(), "sub-notif-title", args.as_ref());
+    let text = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::SubNotifTitle,
+        args.as_ref(),
+    );
 
     let marker_args = args!(marker = "");
 
-    let btn_all = locales::get_text(lang.as_str(), "btn-sub-all", marker_args.as_ref());
-    let btn_join = locales::get_text(lang.as_str(), "btn-sub-join", marker_args.as_ref());
-    let btn_leave = locales::get_text(lang.as_str(), "btn-sub-leave", marker_args.as_ref());
-    let btn_none = locales::get_text(lang.as_str(), "btn-sub-none", marker_args.as_ref());
+    let btn_all = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::BtnSubAll,
+        marker_args.as_ref(),
+    );
+    let btn_join = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::BtnSubJoin,
+        marker_args.as_ref(),
+    );
+    let btn_leave = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::BtnSubLeave,
+        marker_args.as_ref(),
+    );
+    let btn_none = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::BtnSubNone,
+        marker_args.as_ref(),
+    );
 
     let mk_act = |val: NotificationSetting| {
         CallbackAction::Subscriber(SubAction::NotifSet {
@@ -240,7 +276,7 @@ pub async fn send_sub_notif_menu(
         vec![callback_button(btn_none, mk_act(NotificationSetting::None))],
         vec![back_button(
             lang,
-            "btn-back-user-actions",
+            locales::LocaleKey::BtnBackUserActions,
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: return_page,
@@ -262,10 +298,14 @@ pub async fn send_sub_mute_mode_menu(
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(lang.as_str(), "sub-mode-title", args.as_ref());
+    let text = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::SubModeTitle,
+        args.as_ref(),
+    );
 
-    let bl_text = locales::get_text(lang.as_str(), "mode-blacklist", None);
-    let wl_text = locales::get_text(lang.as_str(), "mode-whitelist", None);
+    let bl_text = locales::get_text(lang.as_str(), locales::LocaleKey::ModeBlacklist, None);
+    let wl_text = locales::get_text(lang.as_str(), locales::LocaleKey::ModeWhitelist, None);
 
     let mk_act = |mode: MuteListMode| {
         CallbackAction::Subscriber(SubAction::ModeSet {
@@ -280,7 +320,7 @@ pub async fn send_sub_mute_mode_menu(
         vec![callback_button(wl_text, mk_act(MuteListMode::Whitelist))],
         vec![back_button(
             lang,
-            "btn-back-user-actions",
+            locales::LocaleKey::BtnBackUserActions,
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: return_page,
@@ -332,7 +372,11 @@ pub async fn send_sub_mute_list(
 
     let user_name = format!("{target_id}");
     let args = args!(name = user_name);
-    let base = locales::get_text(lang.as_str(), "list-mute-title-for", args.as_ref());
+    let base = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::ListMuteTitleFor,
+        args.as_ref(),
+    );
     let title = append_search_hint(&base, lang);
 
     let keyboard = create_user_list_keyboard(
@@ -348,7 +392,7 @@ pub async fn send_sub_mute_list(
         },
         Some(back_btn(
             lang,
-            "btn-back-user-actions",
+            locales::LocaleKey::BtnBackUserActions,
             CallbackAction::Subscriber(SubAction::Details {
                 sub_id: target_id,
                 page: sub_page,
