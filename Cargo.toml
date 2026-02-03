@@ -34,7 +34,6 @@ unic-langid = "0.9"
 self_update = { version = "0.42", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
-tracing-futures = "0.2"
 futures-util = "0.3.31"
 async-trait = "0.1.89"
 thiserror = "2.0.18"

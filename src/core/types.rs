@@ -217,7 +217,6 @@ impl From<String> for TtChannelName {
     }
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdminErrorContext {
     Command,
