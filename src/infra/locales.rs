@@ -233,9 +233,11 @@ pub enum LocaleKey {
     ConfirmAdminRemove,
     ToastAdminAdded,
     ToastAdminRemoved,
+    ValYes,
+    ValNo,
 }
 
-const LOCALE_KEY_STRINGS: [&str; 205] = [
+const LOCALE_KEY_STRINGS: [&str; 207] = [
     "admin-alert",
     "admin-channel-pm",
     "admin-error-context-callback",
@@ -441,6 +443,8 @@ const LOCALE_KEY_STRINGS: [&str; 205] = [
     "confirm-admin-remove",
     "toast-admin-added",
     "toast-admin-removed",
+    "val-yes",
+    "val-no",
 ];
 
 impl LocaleKey {

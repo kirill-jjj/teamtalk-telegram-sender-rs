@@ -304,6 +304,8 @@ cmd-desc-exit = Выключить бота
 cmd-desc-broadcast = Отправить объявление в TeamTalk
 cmd-desc-message = Отправить сообщение подписчикам в Telegram
 val-none = Нет
+val-yes = Да
+val-no = Нет
 
 cmd-desc-queue = Управление очередью.
 cmd-queue-help = /queue on|off (глобально), /queue me on|off, /queue clear [all]

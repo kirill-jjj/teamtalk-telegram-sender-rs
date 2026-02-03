@@ -245,7 +245,6 @@ pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> Respons
         .await)
         .map_or_else(|_| args.sub_id.to_string(), |chat| format_tg_user(&chat));
 
-    let text = build_subscriber_details_text(args.lang, &settings, display_name);
     let is_admin = match args.db.get_all_admins().await {
         Ok(admins) => admins.contains(&args.sub_id),
         Err(e) => {
@@ -253,6 +252,7 @@ pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> Respons
             false
         }
     };
+    let text = build_subscriber_details_text(args.lang, &settings, display_name, is_admin);
     let keyboard = build_subscriber_details_keyboard(
         args.lang,
         args.sub_id,
@@ -296,6 +296,7 @@ fn build_subscriber_details_text(
     lang: LanguageCode,
     settings: &UserSettings,
     display_name: String,
+    is_admin: bool,
 ) -> String {
     let notif_setting = settings.notification_settings.clone();
     let notif_text = match notif_setting {
@@ -336,6 +337,11 @@ fn build_subscriber_details_text(
         || locales::get_text(lang.as_str(), locales::LocaleKey::ValNone, None),
         ToString::to_string,
     );
+    let admin_label = if is_admin {
+        locales::get_text(lang.as_str(), locales::LocaleKey::ValYes, None)
+    } else {
+        locales::get_text(lang.as_str(), locales::LocaleKey::ValNo, None)
+    };
     let args = args!(
         name = display_name,
         tt_user = tt_user,
@@ -346,7 +352,8 @@ fn build_subscriber_details_text(
             locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
         },
         notif = notif_text,
-        mode = mode_text
+        mode = mode_text,
+        admin = admin_label
     );
 
     locales::get_text(

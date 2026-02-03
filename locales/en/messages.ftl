@@ -301,6 +301,8 @@ cmd-desc-exit = Shut down the bot
 cmd-desc-broadcast = Send a TeamTalk broadcast message
 cmd-desc-message = Send a Telegram message to subscribers
 val-none = None
+val-yes = Yes
+val-no = No
 
 cmd-desc-queue = Reply queue.
 cmd-queue-help = /queue on|off (admin), /queue me on|off, /queue clear [all]
