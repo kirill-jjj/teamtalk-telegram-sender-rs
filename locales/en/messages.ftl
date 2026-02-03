@@ -139,7 +139,12 @@ btn-back-search = Back to list
 
 # Toast messages
 toast-mute-mode-set = Mute list mode set to { $mode }.
-toast-user-muted = { $user } has been { $action }.
+toast-user-muted =
+    { $action ->
+        [added] { $user } was added to the list.
+        [removed] { $user } was removed from the list.
+       *[toggled] { $user } was toggled.
+    }
 toast-lang-updated = Language has been changed.
 toast-command-sent = Command sent.
 toast-user-banned = User was banned and their profile was deleted.

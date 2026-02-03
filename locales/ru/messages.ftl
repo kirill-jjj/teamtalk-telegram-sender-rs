@@ -141,7 +141,12 @@ btn-back-search = Назад к списку
 
 # Toast messages
 toast-mute-mode-set = Режим списка игнорирования изменен на { $mode }.
-toast-user-muted = { $user } был { $action }.
+toast-user-muted =
+    { $action ->
+        [added] { $user } добавлен в список.
+        [removed] { $user } удален из списка.
+       *[toggled] { $user } статус изменен.
+    }
 toast-lang-updated = Язык был изменен.
 toast-command-sent = Команда отправлена.
 toast-user-banned = Пользователь был забанен, а его профиль удален.
