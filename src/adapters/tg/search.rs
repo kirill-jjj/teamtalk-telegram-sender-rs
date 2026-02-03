@@ -402,8 +402,20 @@ async fn handle_single_match(
             else {
                 return Ok(false);
             };
-            subscribers_logic::send_subscriber_details(bot, msg, &state.db, lang, *sub_id, *page)
-                .await?;
+            let requester_id = msg.from.as_ref().map_or(0, |u| u.id.0);
+            let is_main_admin = i64::try_from(requester_id).unwrap_or(i64::MAX)
+                == state.config.telegram.admin_chat_id;
+            subscribers_logic::send_subscriber_details(subscribers_logic::SubscriberDetailsArgs {
+                bot,
+                msg,
+                db: &state.db,
+                lang,
+                sub_id: *sub_id,
+                return_page: *page,
+                is_main_admin,
+                admin_chat_id: state.config.telegram.admin_chat_id,
+            })
+            .await?;
             Ok(true)
         }
         SearchListType::MuteServer {

@@ -227,9 +227,15 @@ pub enum LocaleKey {
     UnsubCancelled,
     UnsubConfirmText,
     ValNone,
+    BtnSubAdminAdd,
+    BtnSubAdminRemove,
+    ConfirmAdminAdd,
+    ConfirmAdminRemove,
+    ToastAdminAdded,
+    ToastAdminRemoved,
 }
 
-const LOCALE_KEY_STRINGS: [&str; 199] = [
+const LOCALE_KEY_STRINGS: [&str; 205] = [
     "admin-alert",
     "admin-channel-pm",
     "admin-error-context-callback",
@@ -429,6 +435,12 @@ const LOCALE_KEY_STRINGS: [&str; 199] = [
     "unsub-cancelled",
     "unsub-confirm-text",
     "val-none",
+    "btn-sub-admin-add",
+    "btn-sub-admin-remove",
+    "confirm-admin-add",
+    "confirm-admin-remove",
+    "toast-admin-added",
+    "toast-admin-removed",
 ];
 
 impl LocaleKey {

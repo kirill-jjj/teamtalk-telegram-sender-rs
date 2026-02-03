@@ -3,15 +3,16 @@ use crate::adapters::tg::admin_logic::subscriber_settings::{
     send_sub_mute_mode_menu, send_sub_notif_menu,
 };
 use crate::adapters::tg::admin_logic::subscribers::{
-    edit_subscribers_list, send_subscriber_details,
+    edit_subscribers_list, send_subscriber_details, SubscriberDetailsArgs,
 };
+use crate::adapters::tg::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
     answer_callback, answer_callback_empty, check_db_err, notify_admin_error,
 };
 use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::args;
-use crate::core::callbacks::SubAction;
+use crate::core::callbacks::{CallbackAction, SubAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
@@ -75,6 +76,14 @@ impl SubCtx<'_> {
     async fn dispatch(&self, action: SubAction) -> ResponseResult<()> {
         match action {
             SubAction::Details { sub_id, page } => self.details(sub_id, page).await,
+            SubAction::AdminAddConfirm { sub_id, page } => {
+                self.admin_add_confirm(sub_id, page).await
+            }
+            SubAction::AdminAdd { sub_id, page } => self.admin_add(sub_id, page).await,
+            SubAction::AdminRemoveConfirm { sub_id, page } => {
+                self.admin_remove_confirm(sub_id, page).await
+            }
+            SubAction::AdminRemove { sub_id, page } => self.admin_remove(sub_id, page).await,
             SubAction::Delete { sub_id, page } => self.delete(sub_id, page).await,
             SubAction::Ban { sub_id, page } => self.ban(sub_id, page).await,
             SubAction::ManageTt { sub_id, page } => self.manage_tt(sub_id, page).await,
@@ -105,8 +114,124 @@ impl SubCtx<'_> {
     }
 
     async fn details(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
-        send_subscriber_details(self.bot, self.msg, self.db, self.lang, sub_id, page).await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         answer_callback_empty(self.bot, self.q_id).await?;
+        Ok(())
+    }
+
+    async fn admin_add_confirm(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+        if !self.is_main_admin() {
+            answer_callback_empty(self.bot, self.q_id).await?;
+            return Ok(());
+        }
+        let text = locales::get_text(
+            self.lang.as_str(),
+            locales::LocaleKey::ConfirmAdminAdd,
+            None,
+        );
+        let keyboard = confirm_cancel_keyboard(
+            self.lang,
+            locales::LocaleKey::BtnYes,
+            CallbackAction::Subscriber(SubAction::AdminAdd { sub_id, page }),
+            locales::LocaleKey::BtnNo,
+            CallbackAction::Subscriber(SubAction::Details { sub_id, page }),
+        );
+        self.bot
+            .edit_message_text(self.msg.chat.id, self.msg.id, text)
+            .reply_markup(keyboard)
+            .await?;
+        answer_callback_empty(self.bot, self.q_id).await?;
+        Ok(())
+    }
+
+    async fn admin_remove_confirm(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+        if !self.is_main_admin() {
+            answer_callback_empty(self.bot, self.q_id).await?;
+            return Ok(());
+        }
+        let text = locales::get_text(
+            self.lang.as_str(),
+            locales::LocaleKey::ConfirmAdminRemove,
+            None,
+        );
+        let keyboard = confirm_cancel_keyboard(
+            self.lang,
+            locales::LocaleKey::BtnYes,
+            CallbackAction::Subscriber(SubAction::AdminRemove { sub_id, page }),
+            locales::LocaleKey::BtnNo,
+            CallbackAction::Subscriber(SubAction::Details { sub_id, page }),
+        );
+        self.bot
+            .edit_message_text(self.msg.chat.id, self.msg.id, text)
+            .reply_markup(keyboard)
+            .await?;
+        answer_callback_empty(self.bot, self.q_id).await?;
+        Ok(())
+    }
+
+    async fn admin_add(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+        if !self.is_main_admin() {
+            answer_callback_empty(self.bot, self.q_id).await?;
+            return Ok(());
+        }
+        if check_db_err(
+            self.bot,
+            &self.q_id.0,
+            self.db.add_admin(sub_id).await.map(|_| ()),
+            self.config,
+            self.admin_chat_id,
+            AdminErrorContext::Callback,
+            self.lang,
+        )
+        .await?
+        {
+            return Ok(());
+        }
+        answer_callback(
+            self.bot,
+            self.q_id,
+            locales::get_text(
+                self.lang.as_str(),
+                locales::LocaleKey::ToastAdminAdded,
+                None,
+            ),
+            true,
+        )
+        .await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
+        Ok(())
+    }
+
+    async fn admin_remove(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+        if !self.is_main_admin() {
+            answer_callback_empty(self.bot, self.q_id).await?;
+            return Ok(());
+        }
+        if check_db_err(
+            self.bot,
+            &self.q_id.0,
+            self.db.remove_admin(sub_id).await.map(|_| ()),
+            self.config,
+            self.admin_chat_id,
+            AdminErrorContext::Callback,
+            self.lang,
+        )
+        .await?
+        {
+            return Ok(());
+        }
+        answer_callback(
+            self.bot,
+            self.q_id,
+            locales::get_text(
+                self.lang.as_str(),
+                locales::LocaleKey::ToastAdminRemoved,
+                None,
+            ),
+            true,
+        )
+        .await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         Ok(())
     }
 
@@ -344,7 +469,7 @@ impl SubCtx<'_> {
             false,
         )
         .await?;
-        send_subscriber_details(self.bot, self.msg, self.db, self.lang, sub_id, page).await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         Ok(())
     }
 
@@ -382,7 +507,7 @@ impl SubCtx<'_> {
             false,
         )
         .await?;
-        send_subscriber_details(self.bot, self.msg, self.db, self.lang, sub_id, page).await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         Ok(())
     }
 
@@ -414,7 +539,7 @@ impl SubCtx<'_> {
             false,
         )
         .await?;
-        send_subscriber_details(self.bot, self.msg, self.db, self.lang, sub_id, page).await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         Ok(())
     }
 
@@ -452,7 +577,7 @@ impl SubCtx<'_> {
             false,
         )
         .await?;
-        send_subscriber_details(self.bot, self.msg, self.db, self.lang, sub_id, page).await?;
+        send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         Ok(())
     }
 
@@ -468,6 +593,24 @@ impl SubCtx<'_> {
             view_page,
         )
         .await
+    }
+
+    #[allow(clippy::missing_const_for_fn)]
+    fn is_main_admin(&self) -> bool {
+        self.admin_chat_id == self.config.telegram.admin_chat_id
+    }
+
+    fn sub_details_args(&self, sub_id: i64, page: usize) -> SubscriberDetailsArgs<'_> {
+        SubscriberDetailsArgs {
+            bot: self.bot,
+            msg: self.msg,
+            db: self.db,
+            lang: self.lang,
+            sub_id,
+            return_page: page,
+            is_main_admin: self.is_main_admin(),
+            admin_chat_id: self.config.telegram.admin_chat_id,
+        }
     }
 }
 

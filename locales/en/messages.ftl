@@ -53,6 +53,8 @@ cmd-shutting-down = Shutting down...
 # Unsubscribe
 cmd-desc-unsub = Unsubscribe from notifications
 unsub-confirm-text = Are you sure you want to unsubscribe? This will delete your settings and stop all notifications.
+confirm-admin-add = Add this user to admins?
+confirm-admin-remove = Remove this user from admins?
 unsub-cancelled = Operation cancelled. You remain subscribed.
 btn-yes = Yes
 btn-no = No
@@ -147,6 +149,8 @@ toast-user-muted =
     }
 toast-lang-updated = Language has been changed.
 toast-command-sent = Command sent.
+toast-admin-added = User added to admins.
+toast-admin-removed = User removed from admins.
 toast-user-banned = User was banned and their profile was deleted.
 toast-user-unbanned = User has been successfully unbanned.
 toast-subscriber-deleted = Subscriber deleted successfully.
@@ -272,6 +276,8 @@ sub-mode-title = Select mute list mode for subscriber { $id }:
 
 btn-sub-delete = 🗑️ Delete Subscriber
 btn-sub-ban = 🚫 Ban User (TG & TT)
+btn-sub-admin-add = ➕ Add to admins
+btn-sub-admin-remove = ➖ Remove from admins
 btn-sub-manage-tt = 🔗 Manage TeamTalk Account
 btn-sub-lang = 🗣️ Change Language
 btn-sub-noon = 🌞 Toggle Offline-only

@@ -149,6 +149,8 @@ toast-user-muted =
     }
 toast-lang-updated = Язык был изменен.
 toast-command-sent = Команда отправлена.
+toast-admin-added = Пользователь добавлен в админы.
+toast-admin-removed = Пользователь удален из админов.
 toast-user-banned = Пользователь был забанен, а его профиль удален.
 toast-user-unbanned = Пользователь успешно разбанен.
 toast-subscriber-deleted = Подписчик успешно удален.

@@ -57,6 +57,22 @@ pub enum SubAction {
         sub_id: i64,
         page: usize,
     },
+    AdminAddConfirm {
+        sub_id: i64,
+        page: usize,
+    },
+    AdminAdd {
+        sub_id: i64,
+        page: usize,
+    },
+    AdminRemoveConfirm {
+        sub_id: i64,
+        page: usize,
+    },
+    AdminRemove {
+        sub_id: i64,
+        page: usize,
+    },
     Delete {
         sub_id: i64,
         page: usize,

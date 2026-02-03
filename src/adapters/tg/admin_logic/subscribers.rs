@@ -225,23 +225,45 @@ pub async fn prepare_display_list(
     display_list
 }
 
-pub async fn send_subscriber_details(
-    bot: &Bot,
-    msg: &Message,
-    db: &Database,
-    lang: LanguageCode,
-    sub_id: i64,
-    return_page: usize,
-) -> ResponseResult<()> {
-    let settings = load_subscriber_settings(db, sub_id).await;
+pub struct SubscriberDetailsArgs<'a> {
+    pub bot: &'a Bot,
+    pub msg: &'a Message,
+    pub db: &'a Database,
+    pub lang: LanguageCode,
+    pub sub_id: i64,
+    pub return_page: usize,
+    pub is_main_admin: bool,
+    pub admin_chat_id: i64,
+}
 
-    let display_name = (bot.get_chat(teloxide::types::ChatId(sub_id)).await)
-        .map_or_else(|_| sub_id.to_string(), |chat| format_tg_user(&chat));
+pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> ResponseResult<()> {
+    let settings = load_subscriber_settings(args.db, args.sub_id).await;
 
-    let text = build_subscriber_details_text(lang, &settings, display_name);
-    let keyboard = build_subscriber_details_keyboard(lang, sub_id, return_page);
+    let display_name = (args
+        .bot
+        .get_chat(teloxide::types::ChatId(args.sub_id))
+        .await)
+    .map_or_else(|_| args.sub_id.to_string(), |chat| format_tg_user(&chat));
 
-    bot.edit_message_text(msg.chat.id, msg.id, text)
+    let text = build_subscriber_details_text(args.lang, &settings, display_name);
+    let is_admin = match args.db.get_all_admins().await {
+        Ok(admins) => admins.contains(&args.sub_id),
+        Err(e) => {
+            tracing::error!(sub_id = args.sub_id, error = %e, "Failed to load admins list");
+            false
+        }
+    };
+    let keyboard = build_subscriber_details_keyboard(
+        args.lang,
+        args.sub_id,
+        args.return_page,
+        is_admin,
+        args.is_main_admin,
+        args.admin_chat_id,
+    );
+
+    args.bot
+        .edit_message_text(args.msg.chat.id, args.msg.id, text)
         .reply_markup(keyboard)
         .parse_mode(ParseMode::Html)
         .await?;
@@ -338,6 +360,9 @@ fn build_subscriber_details_keyboard(
     lang: LanguageCode,
     sub_id: i64,
     return_page: usize,
+    is_admin: bool,
+    is_main_admin: bool,
+    admin_chat_id: i64,
 ) -> InlineKeyboardMarkup {
     let btn = |text_key: locales::LocaleKey, action: SubAction| {
         callback_button(
@@ -346,7 +371,7 @@ fn build_subscriber_details_keyboard(
         )
     };
 
-    InlineKeyboardMarkup::new(vec![
+    let mut rows = vec![
         vec![btn(
             locales::LocaleKey::BtnSubDelete,
             SubAction::Delete {
@@ -361,6 +386,30 @@ fn build_subscriber_details_keyboard(
                 page: return_page,
             },
         )],
+    ];
+
+    if is_main_admin && sub_id != admin_chat_id {
+        let (key, action) = if is_admin {
+            (
+                locales::LocaleKey::BtnSubAdminRemove,
+                SubAction::AdminRemoveConfirm {
+                    sub_id,
+                    page: return_page,
+                },
+            )
+        } else {
+            (
+                locales::LocaleKey::BtnSubAdminAdd,
+                SubAction::AdminAddConfirm {
+                    sub_id,
+                    page: return_page,
+                },
+            )
+        };
+        rows.push(vec![btn(key, action)]);
+    }
+
+    rows.extend([
         vec![btn(
             locales::LocaleKey::BtnSubManageTt,
             SubAction::ManageTt {
@@ -409,5 +458,6 @@ fn build_subscriber_details_keyboard(
             locales::LocaleKey::BtnBackSubs,
             CallbackAction::Admin(AdminAction::SubsList { page: return_page }),
         )],
-    ])
+    ]);
+    InlineKeyboardMarkup::new(rows)
 }
