@@ -515,7 +515,12 @@ async fn toggle_mute_and_render(
 
     if args.server_list {
         let accounts = load_accounts(&state.user_accounts);
-        let guest_username = state.config.teamtalk.guest_username.as_deref();
+        let guest_username = state
+            .config
+            .teamtalk
+            .guest_username
+            .as_ref()
+            .map(TtUsername::as_str);
         let render_args = RenderMuteListArgs {
             bot,
             msg,
@@ -535,7 +540,12 @@ async fn toggle_mute_and_render(
             .get_muted_users_list(args.telegram_id, args.mode.clone())
             .await
             .unwrap_or_default();
-        let guest_username = state.config.teamtalk.guest_username.as_deref();
+        let guest_username = state
+            .config
+            .teamtalk
+            .guest_username
+            .as_ref()
+            .map(TtUsername::as_str);
         let render_args = RenderMuteListStringsArgs {
             bot,
             msg,

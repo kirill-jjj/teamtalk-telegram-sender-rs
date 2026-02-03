@@ -172,6 +172,52 @@ impl From<&str> for TtUsername {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[serde(transparent)]
+#[sqlx(transparent)]
+pub struct TtChannelName(String);
+
+impl TtChannelName {
+    pub fn new(value: impl Into<String>) -> Self {
+        Self(value.into())
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for TtChannelName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl AsRef<str> for TtChannelName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<&str> for TtChannelName {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return Err("channel name is empty");
+        }
+        Ok(Self(trimmed.to_string()))
+    }
+}
+
+impl From<String> for TtChannelName {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdminErrorContext {
     Command,
@@ -210,7 +256,7 @@ pub enum BridgeEvent {
     },
     ToAdminChannel {
         channel_id: i32,
-        channel_name: String,
+        channel_name: TtChannelName,
         server_name: String,
         msg_content: String,
     },
@@ -273,7 +319,7 @@ pub struct LiteUser {
     pub id: i32,
     pub nickname: String,
     pub username: TtUsername,
-    pub channel_name: String,
+    pub channel_name: TtChannelName,
 }
 
 #[cfg(test)]

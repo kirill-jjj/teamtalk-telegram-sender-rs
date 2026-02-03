@@ -23,7 +23,7 @@ pub struct Application {
 struct BotInit {
     event_bot: Option<Bot>,
     message_bot: Option<Bot>,
-    bot_username: Option<String>,
+    bot_username: Option<TtUsername>,
     message_token_present: bool,
 }
 
@@ -42,7 +42,7 @@ struct TeamtalkWorkerConfig {
     rx_tt_cmd: tokio_mpsc::Receiver<crate::core::types::TtCommand>,
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
     db: Database,
-    bot_username: Option<String>,
+    bot_username: Option<TtUsername>,
     client: Client,
 }
 
@@ -278,7 +278,7 @@ async fn init_bots(config: &Arc<Config>) -> Result<BotInit> {
             .clone()
             .ok_or_else(|| anyhow!("Bot must have a username!"))?;
         tracing::info!(username = %username, "Interaction bot username");
-        Some(username)
+        Some(TtUsername::from(username))
     } else {
         None
     };

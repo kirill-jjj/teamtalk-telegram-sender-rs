@@ -5,7 +5,9 @@ pub mod events;
 pub mod reports;
 
 use crate::bootstrap::config::Config;
-use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, TtCommand, TtUsername};
+use crate::core::types::{
+    BridgeEvent, LanguageCode, LiteUser, TtChannelName, TtCommand, TtUsername,
+};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use futures_util::StreamExt;
@@ -40,14 +42,22 @@ pub(super) fn resolve_channel_name(
     client: &Client,
     channel_id: ChannelId,
     lang: LanguageCode,
-) -> String {
+) -> TtChannelName {
     if channel_id.0 == 0 {
-        return locales::get_text(lang.as_str(), "tt-root-channel-name", None);
+        return TtChannelName::from(locales::get_text(
+            lang.as_str(),
+            "tt-root-channel-name",
+            None,
+        ));
     }
     match client.get_channel(channel_id) {
-        Some(channel) if !channel.name.is_empty() => channel.name,
-        Some(_) => locales::get_text(lang.as_str(), "tt-root-channel-name", None),
-        None => "Unknown".to_string(),
+        Some(channel) if !channel.name.is_empty() => TtChannelName::from(channel.name),
+        Some(_) => TtChannelName::from(locales::get_text(
+            lang.as_str(),
+            "tt-root-channel-name",
+            None,
+        )),
+        None => TtChannelName::new("Unknown"),
     }
 }
 
@@ -59,7 +69,7 @@ pub struct WorkerContext {
     pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub db: Database,
-    pub bot_username: Option<String>,
+    pub bot_username: Option<TtUsername>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
     pub tt_lang_cache: Arc<RwLock<HashMap<TtUsername, LanguageCode>>>,
@@ -83,7 +93,7 @@ pub struct RunTeamtalkArgs {
     pub rx_cmd: Receiver<TtCommand>,
     pub tx_cmd_clone: Sender<TtCommand>,
     pub db: Database,
-    pub bot_username: Option<String>,
+    pub bot_username: Option<TtUsername>,
     pub client: Client,
     pub tx_init: oneshot::Sender<Result<(), String>>,
 }

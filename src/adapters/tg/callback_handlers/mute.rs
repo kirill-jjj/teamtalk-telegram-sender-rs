@@ -112,7 +112,12 @@ async fn handle_list(
     page: usize,
 ) -> ResponseResult<()> {
     let muted = load_muted_users(&state.db, telegram_id, mode.clone()).await;
-    let guest_username = state.config.teamtalk.guest_username.as_deref();
+    let guest_username = state
+        .config
+        .teamtalk
+        .guest_username
+        .as_ref()
+        .map(TtUsername::as_str);
     render_mute_list_strings(RenderMuteListStringsArgs {
         bot,
         msg,
@@ -175,7 +180,13 @@ async fn handle_toggle(
     .await?;
 
     let muted = load_muted_users(&ctx.state.db, ctx.telegram_id, mode.clone()).await;
-    let guest_username = ctx.state.config.teamtalk.guest_username.as_deref();
+    let guest_username = ctx
+        .state
+        .config
+        .teamtalk
+        .guest_username
+        .as_ref()
+        .map(TtUsername::as_str);
     render_mute_list_strings(RenderMuteListStringsArgs {
         bot: ctx.bot,
         msg: ctx.msg,
@@ -201,7 +212,12 @@ async fn handle_server_list(
     request_accounts(bot, state, telegram_id, lang).await;
 
     let accounts = load_accounts(&state.user_accounts);
-    let guest_username = state.config.teamtalk.guest_username.as_deref();
+    let guest_username = state
+        .config
+        .teamtalk
+        .guest_username
+        .as_ref()
+        .map(TtUsername::as_str);
     render_mute_list(RenderMuteListArgs {
         bot,
         msg,
@@ -266,7 +282,13 @@ async fn handle_server_toggle(
     .await?;
 
     let accounts = load_accounts(&ctx.state.user_accounts);
-    let guest_username = ctx.state.config.teamtalk.guest_username.as_deref();
+    let guest_username = ctx
+        .state
+        .config
+        .teamtalk
+        .guest_username
+        .as_ref()
+        .map(TtUsername::as_str);
     render_mute_list(RenderMuteListArgs {
         bot: ctx.bot,
         msg: ctx.msg,

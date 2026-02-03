@@ -266,7 +266,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         || tt_config
                             .guest_username
                             .as_ref()
-                            .map(|g| g == username.as_str())
+                            .map(|g| g == &username)
                             .unwrap_or(false);
 
                     let payload = if is_guest {

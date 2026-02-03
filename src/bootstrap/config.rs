@@ -1,4 +1,4 @@
-use crate::core::types::LanguageCode;
+use crate::core::types::{LanguageCode, TtChannelName, TtUsername};
 use serde::Deserialize;
 use serde_with::{NoneAsEmptyString, serde_as};
 use teamtalk::types::UserGender;
@@ -103,7 +103,7 @@ pub struct TeamTalkConfig {
     pub encrypted: bool,
     pub user_name: String,
     pub password: String,
-    pub channel: String,
+    pub channel: TtChannelName,
     pub channel_password: Option<String>,
     pub nick_name: String,
     #[serde(default)]
@@ -111,8 +111,8 @@ pub struct TeamTalkConfig {
     pub client_name: String,
     pub server_name: Option<String>,
     #[serde(default)]
-    pub global_ignore_usernames: Vec<String>,
-    pub guest_username: Option<String>,
+    pub global_ignore_usernames: Vec<TtUsername>,
+    pub guest_username: Option<TtUsername>,
 }
 
 impl TeamTalkConfig {

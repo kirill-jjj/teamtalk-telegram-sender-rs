@@ -1,6 +1,6 @@
 use crate::args;
 use crate::bootstrap::config::Config;
-use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser, TtUsername};
+use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser, TtChannelName, TtUsername};
 use crate::infra::db::{Database, types::UserSettings};
 use crate::infra::locales;
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ struct AdminData {
 
 struct AdminChannelData {
     channel_id: i32,
-    channel_name: String,
+    channel_name: TtChannelName,
     server_name: String,
     msg_content: String,
 }
@@ -468,7 +468,7 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
 
     let args_admin = args!(
         server = html::escape(&data.server_name),
-        channel = html::escape(&data.channel_name),
+        channel = html::escape(data.channel_name.as_str()),
         msg = html::escape(&data.msg_content)
     );
     let text_admin =
@@ -484,7 +484,7 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
             .add_pending_channel_reply(
                 i64::from(msg.id.0),
                 data.channel_id,
-                &data.channel_name,
+                data.channel_name.as_str(),
                 &data.server_name,
                 &data.msg_content,
             )

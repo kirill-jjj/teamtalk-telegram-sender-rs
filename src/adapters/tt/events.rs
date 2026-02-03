@@ -57,7 +57,7 @@ pub(super) fn handle_sdk_event(
                 ..UserStatus::default()
             };
             client.set_status(status, &tt_config.status_text);
-            let chan_id = client.get_channel_id_from_path(&tt_config.channel);
+            let chan_id = client.get_channel_id_from_path(tt_config.channel.as_str());
             if chan_id.0 > 0 {
                 let cmd_id = client
                     .join_channel(chan_id, tt_config.channel_password.as_deref().unwrap_or(""));
@@ -192,7 +192,11 @@ pub(super) fn handle_sdk_event(
                     .map(|t| t.elapsed() >= Duration::from_secs(2))
                     .unwrap_or(false);
 
-                if is_ready && !tt_config.global_ignore_usernames.contains(&user.username) {
+                if is_ready
+                    && !tt_config
+                        .global_ignore_usernames
+                        .contains(&lite_user.username)
+                {
                     let real_name = client.get_server_properties().map(|p| p.name);
                     let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
@@ -306,11 +310,7 @@ pub(super) fn handle_sdk_event(
                         let is_ready = ready_time
                             .map(|t| t.elapsed() >= Duration::from_secs(2))
                             .unwrap_or(false);
-                        if is_ready
-                            && !tt_config
-                                .global_ignore_usernames
-                                .contains(&u.username.to_string())
-                        {
+                        if is_ready && !tt_config.global_ignore_usernames.contains(&u.username) {
                             let real_name = client.get_server_properties().map(|p| p.name);
                             let server_name = resolve_server_name(tt_config, real_name.as_deref());
 

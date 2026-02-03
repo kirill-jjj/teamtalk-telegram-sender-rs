@@ -64,6 +64,14 @@ fn tt_username_helpers() {
     assert_eq!(from_string.as_ref(), "bob");
 }
 
+#[test]
+fn tt_channel_name_trim_and_reject_empty() {
+    let channel = TtChannelName::try_from("  /main  ").unwrap();
+    assert_eq!(channel.as_str(), "/main");
+    assert!(TtChannelName::try_from("").is_err());
+    assert!(TtChannelName::try_from("   ").is_err());
+}
+
 proptest! {
     #[test]
     fn tt_username_roundtrips(input in ".*") {
