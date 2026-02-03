@@ -68,6 +68,9 @@ jobs:
         with:
           toolchain: nightly
 
+      - name: Install rustfmt (nightly)
+        run: rustup component add rustfmt --toolchain nightly
+
       - name: Install cargo-udeps
         run: cargo install cargo-udeps --locked
 
@@ -78,7 +81,7 @@ jobs:
         run: cargo test
 
       - name: Cargo Fmt
-        run: cargo fmt --check
+        run: cargo +nightly fmt --check
 
       - name: sccache Stats
         run: sccache --show-stats
