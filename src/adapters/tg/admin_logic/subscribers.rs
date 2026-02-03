@@ -243,7 +243,7 @@ pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> Respons
         .bot
         .get_chat(teloxide::types::ChatId(args.sub_id))
         .await)
-    .map_or_else(|_| args.sub_id.to_string(), |chat| format_tg_user(&chat));
+        .map_or_else(|_| args.sub_id.to_string(), |chat| format_tg_user(&chat));
 
     let text = build_subscriber_details_text(args.lang, &settings, display_name);
     let is_admin = match args.db.get_all_admins().await {
