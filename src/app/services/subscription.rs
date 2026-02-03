@@ -1,7 +1,8 @@
 use crate::core::types::TtUsername;
 use anyhow::Result;
+use async_trait::async_trait;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait SubscriptionRepo: Sync {
     async fn is_telegram_id_banned(&self, telegram_id: i64) -> Result<bool>;
     async fn is_teamtalk_username_banned(&self, username: &TtUsername) -> Result<bool>;
@@ -54,6 +55,7 @@ pub async fn is_subscribed(db: &impl SubscriptionRepo, telegram_id: i64) -> Resu
     db.is_subscribed(telegram_id).await
 }
 
+#[async_trait]
 impl SubscriptionRepo for crate::infra::db::Database {
     async fn is_telegram_id_banned(&self, telegram_id: i64) -> Result<bool> {
         self.is_telegram_id_banned(telegram_id).await

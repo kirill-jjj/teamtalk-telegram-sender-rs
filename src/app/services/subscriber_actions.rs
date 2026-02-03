@@ -1,7 +1,8 @@
 use crate::core::types::{MuteListMode, NotificationSetting, TtUsername};
 use anyhow::Result;
+use async_trait::async_trait;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait SubscriberActionsRepo: Sync {
     async fn delete_user_profile(&self, telegram_id: i64) -> Result<()>;
     async fn unlink_tt_account(&self, telegram_id: i64) -> Result<()>;
@@ -46,6 +47,7 @@ pub async fn update_mute_mode(
     db.update_mute_mode(telegram_id, mode).await
 }
 
+#[async_trait]
 impl SubscriberActionsRepo for crate::infra::db::Database {
     async fn delete_user_profile(&self, telegram_id: i64) -> Result<()> {
         self.delete_user_profile(telegram_id).await

@@ -1,7 +1,8 @@
 use crate::core::types::DeeplinkAction;
 use anyhow::Result;
+use async_trait::async_trait;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait DeeplinkRepo: Sync {
     async fn resolve_deeplink(
         &self,
@@ -36,6 +37,7 @@ pub async fn resolve_for_user(
     }))
 }
 
+#[async_trait]
 impl DeeplinkRepo for crate::infra::db::Database {
     async fn resolve_deeplink(
         &self,

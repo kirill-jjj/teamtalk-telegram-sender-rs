@@ -1,5 +1,6 @@
 use crate::core::types::LanguageCode;
 use serde::Deserialize;
+use serde_with::{NoneAsEmptyString, serde_as};
 use teamtalk::types::UserGender;
 
 #[derive(Deserialize, Clone)]
@@ -13,6 +14,7 @@ pub struct Config {
     pub operational_parameters: OperationalParameters,
 }
 
+#[serde_as]
 #[derive(Deserialize, Clone)]
 pub struct GeneralConfig {
     #[serde(default = "default_lang")]
@@ -20,6 +22,8 @@ pub struct GeneralConfig {
     #[serde(default = "default_log_level")]
     pub log_level: LogLevelConfig,
 
+    #[serde(default)]
+    #[serde_as(as = "NoneAsEmptyString")]
     pub admin_username: Option<String>,
 
     #[serde(default)]

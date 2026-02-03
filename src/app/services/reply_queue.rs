@@ -1,11 +1,12 @@
 use crate::core::types::{LanguageCode, TtUsername};
 use crate::infra::db::reply_queue::ReplyQueueItem;
 use anyhow::Result;
+use async_trait::async_trait;
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike, Utc};
 
 const REPLY_QUEUE_GLOBAL_KEY: &str = "reply_queue_enabled_global";
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait ReplyQueueRepo: Sync {
     async fn get_app_setting(&self, key: &str) -> Result<Option<String>>;
     async fn set_app_setting(&self, key: &str, value: &str) -> Result<()>;
@@ -57,6 +58,7 @@ pub async fn is_reply_queue_enabled_for_tt_user(
     get_reply_queue_user_enabled(db, tg_id).await
 }
 
+#[async_trait]
 impl ReplyQueueRepo for crate::infra::db::Database {
     async fn get_app_setting(&self, key: &str) -> Result<Option<String>> {
         self.get_app_setting(key).await

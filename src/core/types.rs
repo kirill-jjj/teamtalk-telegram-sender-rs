@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
+use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
@@ -107,6 +108,10 @@ pub enum MuteListMode {
     Whitelist,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Error)]
+#[error("unsupported mute list mode")]
+pub struct MuteListModeParseError;
+
 impl fmt::Display for MuteListMode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -117,13 +122,13 @@ impl fmt::Display for MuteListMode {
 }
 
 impl TryFrom<&str> for MuteListMode {
-    type Error = &'static str;
+    type Error = MuteListModeParseError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "blacklist" => Ok(Self::Blacklist),
             "whitelist" => Ok(Self::Whitelist),
-            _ => Err("unsupported mute list mode"),
+            _ => Err(MuteListModeParseError),
         }
     }
 }

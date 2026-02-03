@@ -3,6 +3,7 @@ use crate::app::services::subscription::{
 };
 use crate::core::types::TtUsername;
 use anyhow::Result;
+use async_trait::async_trait;
 
 #[derive(Default)]
 struct FakeRepo {
@@ -11,7 +12,7 @@ struct FakeRepo {
     subscribed: bool,
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 impl SubscriptionRepo for FakeRepo {
     async fn is_telegram_id_banned(&self, _telegram_id: i64) -> Result<bool> {
         Ok(self.banned_tg)

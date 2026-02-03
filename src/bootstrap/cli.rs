@@ -1,22 +1,21 @@
 use crate::bootstrap::config::Config;
-use anyhow::{Result, anyhow};
+use anyhow::Result;
+use clap::Parser;
 use std::path::Path;
 
+#[derive(Debug, Parser)]
+#[command(name = "teamtalk-telegram-sender-rs")]
+struct CliArgs {
+    #[arg(short = 'c', long = "config", value_name = "PATH", action = clap::ArgAction::Append)]
+    config: Vec<String>,
+}
+
 pub fn collect_config_paths(args: &[String]) -> Result<Vec<String>> {
-    let mut configs = Vec::new();
-    let mut iter = args.iter();
-    while let Some(arg) = iter.next() {
-        if arg == "--config" {
-            let path = iter
-                .next()
-                .ok_or_else(|| anyhow!("Missing value for --config"))?;
-            configs.push(path.clone());
-        }
+    let cli = CliArgs::try_parse_from(args)?;
+    if cli.config.is_empty() {
+        return Ok(vec!["config.toml".to_string()]);
     }
-    if configs.is_empty() {
-        configs.push("config.toml".to_string());
-    }
-    Ok(configs)
+    Ok(cli.config)
 }
 
 pub fn instance_name_from_path(path: &str) -> String {

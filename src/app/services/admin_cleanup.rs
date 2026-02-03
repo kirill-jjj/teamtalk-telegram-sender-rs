@@ -1,7 +1,8 @@
 use crate::core::types::TtUsername;
 use anyhow::Result;
+use async_trait::async_trait;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait AdminCleanupRepo: Sync {
     async fn delete_user_profile(&self, telegram_id: i64) -> Result<()>;
     async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<i64>;
@@ -21,6 +22,7 @@ pub async fn get_telegram_id_by_tt_user(
     db.get_telegram_id_by_tt_user(tt_username).await
 }
 
+#[async_trait]
 impl AdminCleanupRepo for crate::infra::db::Database {
     async fn delete_user_profile(&self, telegram_id: i64) -> Result<()> {
         self.delete_user_profile(telegram_id).await

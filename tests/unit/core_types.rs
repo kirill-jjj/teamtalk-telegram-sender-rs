@@ -1,4 +1,5 @@
 use super::*;
+use proptest::prelude::*;
 
 #[test]
 fn language_code_parse_and_display() {
@@ -61,4 +62,12 @@ fn tt_username_helpers() {
     assert_eq!(from_str.as_ref(), "user");
     let from_string: TtUsername = String::from("bob").into();
     assert_eq!(from_string.as_ref(), "bob");
+}
+
+proptest! {
+    #[test]
+    fn tt_username_roundtrips(input in ".*") {
+        let name = TtUsername::new(input.clone());
+        prop_assert_eq!(name.as_ref(), input.as_str());
+    }
 }

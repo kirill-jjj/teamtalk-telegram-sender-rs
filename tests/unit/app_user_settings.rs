@@ -2,11 +2,12 @@ use crate::app::services::user_settings::{UserSettingsRepo, get_or_create};
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
 use crate::infra::db::types::UserSettings;
 use anyhow::Result;
+use async_trait::async_trait;
 
 #[derive(Default)]
 struct FakeUserSettingsRepo;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 impl UserSettingsRepo for FakeUserSettingsRepo {
     async fn get_or_create_user(
         &self,

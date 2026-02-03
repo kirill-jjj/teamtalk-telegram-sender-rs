@@ -36,6 +36,10 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-futures = "0.2"
 futures-util = "0.3.31"
+async-trait = "0.1.89"
+thiserror = "2.0.18"
+serde_with = "3.16.1"
+clap = { version = "4.5.54", features = ["derive"] }
 
 [lints.clippy]
 all = { level = "deny", priority = -1 }
@@ -62,3 +66,6 @@ rust_2024_compatibility = { level = "deny", priority = -1 }
 nonstandard_style = { level = "deny", priority = -1 }
 unused = { level = "deny", priority = -1 }
 missing_docs = "deny"
+
+[dev-dependencies]
+proptest = "1.9.0"

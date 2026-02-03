@@ -1,5 +1,6 @@
 use crate::core::types::LanguageCode;
 use anyhow::Result;
+use async_trait::async_trait;
 
 pub async fn get_or_create(
     db: &impl UserSettingsRepo,
@@ -9,7 +10,7 @@ pub async fn get_or_create(
     db.get_or_create_user(telegram_id, default_lang).await
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 pub trait UserSettingsRepo: Sync {
     async fn get_or_create_user(
         &self,
@@ -18,6 +19,7 @@ pub trait UserSettingsRepo: Sync {
     ) -> Result<crate::infra::db::types::UserSettings>;
 }
 
+#[async_trait]
 impl UserSettingsRepo for crate::infra::db::Database {
     async fn get_or_create_user(
         &self,

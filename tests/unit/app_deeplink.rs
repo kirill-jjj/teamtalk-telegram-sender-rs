@@ -1,6 +1,7 @@
 use super::*;
 use crate::core::types::DeeplinkAction;
 use crate::infra::db::{Database, types::Deeplink};
+use async_trait::async_trait;
 use std::path::PathBuf;
 
 async fn setup_db() -> (Database, PathBuf) {
@@ -56,7 +57,7 @@ struct FakeDeeplinkRepo {
     deeplink: Option<Deeplink>,
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 impl DeeplinkRepo for FakeDeeplinkRepo {
     async fn resolve_deeplink(&self, _token: &str) -> anyhow::Result<Option<Deeplink>> {
         Ok(self.deeplink.clone())

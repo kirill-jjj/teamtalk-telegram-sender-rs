@@ -5,6 +5,7 @@ use crate::app::services::reply_queue::{
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::types::UserSettings;
 use anyhow::Result;
+use async_trait::async_trait;
 use chrono::{Duration, Utc};
 
 #[derive(Default)]
@@ -14,7 +15,7 @@ struct FakeReplyQueueRepo {
     tt_to_tg: Option<i64>,
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 impl ReplyQueueRepo for FakeReplyQueueRepo {
     async fn get_app_setting(&self, _key: &str) -> Result<Option<String>> {
         Ok(self.global_value.clone())

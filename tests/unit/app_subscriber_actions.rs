@@ -3,11 +3,12 @@ use crate::app::services::subscriber_actions::{
 };
 use crate::core::types::{MuteListMode, NotificationSetting, TtUsername};
 use anyhow::Result;
+use async_trait::async_trait;
 
 #[derive(Default)]
 struct FakeSubscriberRepo;
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 impl SubscriberActionsRepo for FakeSubscriberRepo {
     async fn delete_user_profile(&self, _telegram_id: i64) -> Result<()> {
         Ok(())

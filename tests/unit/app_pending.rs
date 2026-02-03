@@ -4,6 +4,7 @@ use crate::app::services::pending::{
 };
 use crate::core::types::TtUsername;
 use anyhow::Result;
+use async_trait::async_trait;
 
 #[derive(Default)]
 struct FakePendingRepo {
@@ -11,7 +12,7 @@ struct FakePendingRepo {
     channel_reply: Option<(i32, String, String, String)>,
 }
 
-#[allow(async_fn_in_trait)]
+#[async_trait]
 impl PendingRepo for FakePendingRepo {
     async fn get_pending_reply(&self, _reply_id: i64) -> Result<Option<(i32, Option<TtUsername>)>> {
         Ok(self.reply.clone())
