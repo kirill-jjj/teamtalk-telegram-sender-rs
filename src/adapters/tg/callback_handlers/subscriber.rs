@@ -12,7 +12,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::args;
 use crate::core::callbacks::SubAction;
-use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -23,7 +23,7 @@ struct SubCtx<'a> {
     db: &'a Database,
     config: &'a crate::bootstrap::config::Config,
     user_accounts: &'a std::sync::Arc<
-        std::sync::RwLock<std::collections::HashMap<String, teamtalk::types::UserAccount>>,
+        std::sync::RwLock<std::collections::HashMap<TtUsername, teamtalk::types::UserAccount>>,
     >,
     tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
     search_contexts: &'a std::sync::Arc<
@@ -277,7 +277,7 @@ impl SubCtx<'_> {
         if check_db_err(
             self.bot,
             &self.q_id.0,
-            subscriber_actions_service::link_tt(self.db, sub_id, username.as_str()).await,
+            subscriber_actions_service::link_tt(self.db, sub_id, &username).await,
             self.config,
             self.admin_chat_id,
             AdminErrorContext::Callback,

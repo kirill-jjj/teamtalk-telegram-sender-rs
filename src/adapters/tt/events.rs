@@ -4,7 +4,9 @@ use crate::adapters::tt::commands;
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::bootstrap::config::GenderConfig;
-use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand};
+use crate::core::types::{
+    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand, TtUsername,
+};
 use chrono::Utc;
 use std::time::{Duration, Instant};
 use teamtalk::client::ReconnectHandler;
@@ -80,7 +82,7 @@ pub(super) fn handle_sdk_event(
                 && !account.username.is_empty()
                 && let Ok(mut accounts) = ctx.user_accounts.write()
             {
-                accounts.insert(account.username.clone(), account);
+                accounts.insert(TtUsername::new(account.username.clone()), account);
             }
         }
         Event::UserAccountCreated | Event::UserAccountRemoved => {
@@ -95,16 +97,17 @@ pub(super) fn handle_sdk_event(
                 && let Ok(mut users) = ctx.online_users.write()
                 && let Some(existing_lite_user) = users.get_mut(&user.id.0)
             {
-                if existing_lite_user.username != user.username {
+                let new_username = TtUsername::new(user.username.clone());
+                if existing_lite_user.username != new_username {
                     if let Ok(mut by_username) = ctx.online_users_by_username.write() {
-                        if !existing_lite_user.username.is_empty() {
+                        if !existing_lite_user.username.as_str().is_empty() {
                             by_username.remove(&existing_lite_user.username);
                         }
                         if !user.username.is_empty() {
-                            by_username.insert(user.username.clone(), user.id.0);
+                            by_username.insert(new_username.clone(), user.id.0);
                         }
                     }
-                    existing_lite_user.username = user.username.clone();
+                    existing_lite_user.username = new_username;
                 }
 
                 if existing_lite_user.nickname != user.nickname {
@@ -173,11 +176,11 @@ pub(super) fn handle_sdk_event(
                 let lite_user = LiteUser {
                     id: user.id.0,
                     nickname: nickname.clone(),
-                    username: user.username.clone(),
+                    username: TtUsername::new(user.username.clone()),
                     channel_name,
                 };
                 if let Ok(mut by_username) = ctx.online_users_by_username.write()
-                    && !lite_user.username.is_empty()
+                    && !lite_user.username.as_str().is_empty()
                 {
                     by_username.insert(lite_user.username.clone(), lite_user.id);
                 }
@@ -194,7 +197,7 @@ pub(super) fn handle_sdk_event(
                     let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
                     let tx_bridge = ctx.tx_bridge.clone();
-                    let related_tt_username = user.username.clone();
+                    let related_tt_username = TtUsername::new(user.username.clone());
                     tokio::task::spawn_local(async move {
                         if let Err(e) = tx_bridge
                             .send(BridgeEvent::Broadcast {
@@ -213,7 +216,7 @@ pub(super) fn handle_sdk_event(
                 if !user.username.is_empty() {
                     let db = ctx.db.clone();
                     let tx_tt_cmd = ctx.tx_tt_cmd.clone();
-                    let tt_username = user.username.clone();
+                    let tt_username = TtUsername::new(user.username.clone());
                     let default_lang = ctx.config.general.default_lang;
                     let user_id = user.id.0;
                     tokio::task::spawn_local(async move {
@@ -272,11 +275,11 @@ pub(super) fn handle_sdk_event(
                 let lite_user = LiteUser {
                     id: user.id.0,
                     nickname,
-                    username: user.username.clone(),
+                    username: TtUsername::new(user.username.clone()),
                     channel_name,
                 };
                 if let Ok(mut by_username) = ctx.online_users_by_username.write()
-                    && !lite_user.username.is_empty()
+                    && !lite_user.username.as_str().is_empty()
                 {
                     by_username.insert(lite_user.username.clone(), lite_user.id);
                 }
@@ -295,7 +298,7 @@ pub(super) fn handle_sdk_event(
                 };
                 if let Some(u) = removed {
                     if let Ok(mut by_username) = ctx.online_users_by_username.write()
-                        && !u.username.is_empty()
+                        && !u.username.as_str().is_empty()
                     {
                         by_username.remove(&u.username);
                     }
@@ -303,7 +306,11 @@ pub(super) fn handle_sdk_event(
                         let is_ready = ready_time
                             .map(|t| t.elapsed() >= Duration::from_secs(2))
                             .unwrap_or(false);
-                        if is_ready && !tt_config.global_ignore_usernames.contains(&u.username) {
+                        if is_ready
+                            && !tt_config
+                                .global_ignore_usernames
+                                .contains(&u.username.to_string())
+                        {
                             let real_name = client.get_server_properties().map(|p| p.name);
                             let server_name = resolve_server_name(tt_config, real_name.as_deref());
 

@@ -67,26 +67,12 @@ impl DeeplinkRepo for FakeDeeplinkRepo {
 async fn resolve_rejects_wrong_expected_id() {
     let repo = FakeDeeplinkRepo {
         deeplink: Some(Deeplink {
-            action: "subscribe".to_string(),
+            action: DeeplinkAction::Subscribe,
             payload: Some("payload".to_string()),
             expected_telegram_id: Some(10),
             expiry_time: chrono::Utc::now().naive_utc(),
         }),
     };
     let res = resolve_for_user(&repo, "t", 42).await.unwrap();
-    assert!(res.is_none());
-}
-
-#[tokio::test]
-async fn resolve_rejects_unknown_action() {
-    let repo = FakeDeeplinkRepo {
-        deeplink: Some(Deeplink {
-            action: "drop_table".to_string(),
-            payload: Some("payload".to_string()),
-            expected_telegram_id: None,
-            expiry_time: chrono::Utc::now().naive_utc(),
-        }),
-    };
-    let res = resolve_for_user(&repo, "t", 1).await.unwrap();
     assert!(res.is_none());
 }

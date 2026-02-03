@@ -1,7 +1,7 @@
 use crate::app::services::subscriber_actions::{
     SubscriberActionsRepo, delete_user, link_tt, unlink_tt, update_mute_mode, update_notifications,
 };
-use crate::core::types::{MuteListMode, NotificationSetting};
+use crate::core::types::{MuteListMode, NotificationSetting, TtUsername};
 use anyhow::Result;
 
 #[derive(Default)]
@@ -17,7 +17,7 @@ impl SubscriberActionsRepo for FakeSubscriberRepo {
         Ok(())
     }
 
-    async fn link_tt_account(&self, _telegram_id: i64, _username: &str) -> Result<()> {
+    async fn link_tt_account(&self, _telegram_id: i64, _username: &TtUsername) -> Result<()> {
         Ok(())
     }
 
@@ -39,7 +39,7 @@ async fn subscriber_actions_delegates() {
     let repo = FakeSubscriberRepo;
     delete_user(&repo, 1).await.unwrap();
     unlink_tt(&repo, 1).await.unwrap();
-    link_tt(&repo, 1, "tt").await.unwrap();
+    link_tt(&repo, 1, &TtUsername::new("tt")).await.unwrap();
     update_notifications(&repo, 1, NotificationSetting::All)
         .await
         .unwrap();

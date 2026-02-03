@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[serde(rename_all = "lowercase")]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
 pub enum LanguageCode {
     #[serde(alias = "EN", alias = "En")]
     En,
@@ -16,10 +17,6 @@ impl LanguageCode {
             Self::En => "en",
             Self::Ru => "ru",
         }
-    }
-
-    pub fn from_str_or_default(value: &str, fallback: Self) -> Self {
-        Self::try_from(value).unwrap_or(fallback)
     }
 }
 
@@ -41,7 +38,8 @@ impl TryFrom<&str> for LanguageCode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "snake_case")]
 pub enum NotificationSetting {
     All,
     JoinOff,
@@ -49,7 +47,8 @@ pub enum NotificationSetting {
     None,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
 pub enum DeeplinkAction {
     Subscribe,
     Unsubscribe,
@@ -101,7 +100,8 @@ impl TryFrom<&str> for NotificationSetting {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
 pub enum MuteListMode {
     Blacklist,
     Whitelist,
@@ -128,8 +128,9 @@ impl TryFrom<&str> for MuteListMode {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
 #[serde(transparent)]
+#[sqlx(transparent)]
 pub struct TtUsername(String);
 
 impl TtUsername {
@@ -193,12 +194,12 @@ pub enum BridgeEvent {
         event_type: NotificationType,
         nickname: String,
         server_name: String,
-        related_tt_username: String,
+        related_tt_username: TtUsername,
     },
     ToAdmin {
         user_id: i32,
         nick: String,
-        tt_username: String,
+        tt_username: TtUsername,
         msg_content: String,
         server_name: String,
     },
@@ -266,7 +267,7 @@ pub enum TtCommand {
 pub struct LiteUser {
     pub id: i32,
     pub nickname: String,
-    pub username: String,
+    pub username: TtUsername,
     pub channel_name: String,
 }
 

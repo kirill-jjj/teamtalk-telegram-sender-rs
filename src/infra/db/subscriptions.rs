@@ -33,7 +33,7 @@ impl Database {
             r#"
             SELECT
                 su.telegram_id as "telegram_id!",
-                us.teamtalk_username
+                us.teamtalk_username as "teamtalk_username?: crate::core::types::TtUsername"
             FROM subscribed_users su
             LEFT JOIN user_settings us ON su.telegram_id = us.telegram_id
             "#
@@ -45,23 +45,24 @@ impl Database {
 
     pub async fn get_recipients_for_event(
         &self,
-        tt_username: &str,
+        tt_username: &crate::core::types::TtUsername,
         event_type: NotificationType,
     ) -> Result<Vec<UserSettings>> {
         let event_tag = match event_type {
             NotificationType::Join => "join",
             NotificationType::Leave => "leave",
         };
+        let tt_username = tt_username.as_str();
 
         let recipients = sqlx::query_as!(
             UserSettings,
             r#"
             SELECT
                 us.telegram_id as "telegram_id!",
-                us.language_code as "language_code!",
-                us.notification_settings as "notification_settings!",
-                us.mute_list_mode as "mute_list_mode!",
-                us.teamtalk_username,
+                us.language_code as "language_code!: crate::core::types::LanguageCode",
+                us.notification_settings as "notification_settings!: crate::core::types::NotificationSetting",
+                us.mute_list_mode as "mute_list_mode!: crate::core::types::MuteListMode",
+                us.teamtalk_username as "teamtalk_username?: crate::core::types::TtUsername",
                 us.not_on_online_enabled as "not_on_online_enabled!",
                 us.not_on_online_confirmed as "not_on_online_confirmed!",
                 us.reply_queue_enabled as "reply_queue_enabled!"

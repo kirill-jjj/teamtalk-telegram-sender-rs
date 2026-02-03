@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                su.telegram_id as \"telegram_id!\",\n                us.teamtalk_username as \"teamtalk_username?: crate::core::types::TtUsername\"\n            FROM subscribed_users su\n            LEFT JOIN user_settings us ON su.telegram_id = us.telegram_id\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "teamtalk_username?: crate::core::types::TtUsername",
+        "ordinal": 1,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "2f8b6b852142ec7c5dc8740fa9038492c549e6bf7db8d2815ef44e888c72a9b6"
+}

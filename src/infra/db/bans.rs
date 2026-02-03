@@ -1,3 +1,4 @@
+use crate::core::types::TtUsername;
 use anyhow::Result;
 use chrono::Utc;
 
@@ -7,7 +8,7 @@ impl Database {
     pub async fn add_ban(
         &self,
         telegram_id: Option<i64>,
-        teamtalk_username: Option<String>,
+        teamtalk_username: Option<TtUsername>,
         reason: Option<String>,
     ) -> Result<()> {
         let now = Utc::now().naive_utc();
@@ -30,7 +31,7 @@ impl Database {
             SELECT
                 id as "id!",
                 telegram_id as "telegram_id?",
-                teamtalk_username as "teamtalk_username?"
+                teamtalk_username as "teamtalk_username?: TtUsername"
             FROM ban_list
             ORDER BY banned_at DESC
             "#
@@ -57,7 +58,8 @@ impl Database {
         Ok(record.count > 0)
     }
 
-    pub async fn is_teamtalk_username_banned(&self, tt_username: &str) -> Result<bool> {
+    pub async fn is_teamtalk_username_banned(&self, tt_username: &TtUsername) -> Result<bool> {
+        let tt_username = tt_username.as_str();
         let record = sqlx::query!(
             "SELECT count(*) as count FROM ban_list WHERE teamtalk_username = ? COLLATE NOCASE",
             tt_username

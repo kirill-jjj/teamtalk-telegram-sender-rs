@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                action as \"action!\",\n                payload,\n                expected_telegram_id,\n                expiry_time as \"expiry_time!\"\n            FROM deeplinks WHERE token = ?\n            ",
+  "query": "\n            SELECT\n                action as \"action!: crate::core::types::DeeplinkAction\",\n                payload,\n                expected_telegram_id,\n                expiry_time as \"expiry_time!\"\n            FROM deeplinks WHERE token = ?\n            ",
   "describe": {
     "columns": [
       {
-        "name": "action!",
+        "name": "action!: crate::core::types::DeeplinkAction",
         "ordinal": 0,
         "type_info": "Text"
       },
@@ -34,5 +34,5 @@
       false
     ]
   },
-  "hash": "35a3abbb2c59ef757162f4b6451e5a9baf8a62ad64c90b83f4cbbc6d848351f6"
+  "hash": "732dbfd94e7910f22e896b6a7c6a503bcb3b1bd2202d02b32f0bfcfab3d37bea"
 }

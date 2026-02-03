@@ -2,17 +2,18 @@ use crate::app::services::pending::{
     PendingRepo, get_pending_channel_reply, get_pending_reply, touch_pending_channel_reply,
     touch_pending_reply,
 };
+use crate::core::types::TtUsername;
 use anyhow::Result;
 
 #[derive(Default)]
 struct FakePendingRepo {
-    reply: Option<(i32, Option<String>)>,
+    reply: Option<(i32, Option<TtUsername>)>,
     channel_reply: Option<(i32, String, String, String)>,
 }
 
 #[allow(async_fn_in_trait)]
 impl PendingRepo for FakePendingRepo {
-    async fn get_pending_reply(&self, _reply_id: i64) -> Result<Option<(i32, Option<String>)>> {
+    async fn get_pending_reply(&self, _reply_id: i64) -> Result<Option<(i32, Option<TtUsername>)>> {
         Ok(self.reply.clone())
     }
 
@@ -35,11 +36,11 @@ impl PendingRepo for FakePendingRepo {
 #[tokio::test]
 async fn pending_reply_delegates() {
     let repo = FakePendingRepo {
-        reply: Some((7, Some("hi".to_string()))),
+        reply: Some((7, Some(TtUsername::new("hi")))),
         ..Default::default()
     };
     let res = get_pending_reply(&repo, 1).await.unwrap();
-    assert_eq!(res, Some((7, Some("hi".to_string()))));
+    assert_eq!(res, Some((7, Some(TtUsername::new("hi")))));
     touch_pending_reply(&repo, 1).await.unwrap();
 }
 

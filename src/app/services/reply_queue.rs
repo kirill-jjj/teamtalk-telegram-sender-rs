@@ -1,4 +1,4 @@
-use crate::core::types::LanguageCode;
+use crate::core::types::{LanguageCode, TtUsername};
 use crate::infra::db::reply_queue::ReplyQueueItem;
 use anyhow::Result;
 use chrono::{DateTime, Datelike, Local, NaiveDateTime, Timelike, Utc};
@@ -15,7 +15,7 @@ pub trait ReplyQueueRepo: Sync {
         default_lang: LanguageCode,
     ) -> Result<crate::infra::db::types::UserSettings>;
     async fn update_reply_queue_enabled(&self, telegram_id: i64, enabled: bool) -> Result<()>;
-    async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64>;
+    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<i64>;
 }
 
 pub async fn get_reply_queue_global_enabled(db: &impl ReplyQueueRepo) -> Result<bool> {
@@ -46,7 +46,7 @@ pub async fn set_reply_queue_user_enabled(
 
 pub async fn is_reply_queue_enabled_for_tt_user(
     db: &impl ReplyQueueRepo,
-    tt_username: &str,
+    tt_username: &TtUsername,
 ) -> Result<bool> {
     if !get_reply_queue_global_enabled(db).await? {
         return Ok(false);
@@ -79,7 +79,7 @@ impl ReplyQueueRepo for crate::infra::db::Database {
     }
 
     #[allow(clippy::use_self)]
-    async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64> {
+    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<i64> {
         crate::infra::db::Database::get_telegram_id_by_tt_user(self, tt_username).await
     }
 }

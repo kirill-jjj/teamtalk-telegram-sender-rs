@@ -13,11 +13,10 @@ impl Database {
         ttl_seconds: i64,
     ) -> Result<()> {
         let expiry = Utc::now() + Duration::seconds(ttl_seconds);
-        let action_str = action.to_string();
         sqlx::query!(
             "INSERT INTO deeplinks (token, action, payload, expected_telegram_id, expiry_time) VALUES (?, ?, ?, ?, ?)",
             token,
-            action_str,
+            action,
             payload,
             expected_telegram_id,
             expiry
@@ -32,7 +31,7 @@ impl Database {
             Deeplink,
             r#"
             SELECT
-                action as "action!",
+                action as "action!: crate::core::types::DeeplinkAction",
                 payload,
                 expected_telegram_id,
                 expiry_time as "expiry_time!"

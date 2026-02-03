@@ -272,7 +272,7 @@ async fn handle_mute_manage(
 ) -> ResponseResult<()> {
     match user_settings_service::get_or_create(&state.db, telegram_id, LanguageCode::En).await {
         Ok(u) => {
-            let mode = user_settings_service::parse_mute_list_mode(&u.mute_list_mode);
+            let mode = u.mute_list_mode;
             let has_guest = state.config.teamtalk.guest_username.is_some();
             send_mute_menu(bot, msg, lang, mode, has_guest).await?;
         }

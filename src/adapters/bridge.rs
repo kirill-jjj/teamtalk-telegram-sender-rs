@@ -1,6 +1,6 @@
 use crate::args;
 use crate::bootstrap::config::Config;
-use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser};
+use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser, TtUsername};
 use crate::infra::db::{Database, types::UserSettings};
 use crate::infra::locales;
 use std::collections::HashMap;
@@ -28,13 +28,13 @@ struct BroadcastData {
     event_type: types::NotificationType,
     nickname: String,
     server_name: String,
-    related_tt_username: String,
+    related_tt_username: TtUsername,
 }
 
 struct AdminData {
     user_id: i32,
     nick: String,
-    tt_username: String,
+    tt_username: TtUsername,
     msg_content: String,
     server_name: String,
 }
@@ -57,7 +57,7 @@ struct BroadcastTaskCtx {
     online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
     db: Database,
     admin_id: teloxide::types::ChatId,
-    related_tt_username: String,
+    related_tt_username: TtUsername,
 }
 
 pub struct BridgeContext {
@@ -233,7 +233,7 @@ async fn handle_broadcast(deps: &BridgeDeps<'_>, data: BroadcastData) {
             related_tt_username: data.related_tt_username.clone(),
         };
 
-        let lang = LanguageCode::from_str_or_default(&sub.language_code, deps.default_lang);
+        let lang = sub.language_code;
         let text = rendered_text_cache
             .entry(lang)
             .or_insert_with(|| {
@@ -288,14 +288,10 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
 
     if let Ok(msg) = &res
         && sub.telegram_id == ctx.admin_id.0
-        && !ctx.related_tt_username.is_empty()
+        && !ctx.related_tt_username.as_str().is_empty()
         && let Err(e) = ctx
             .db
-            .add_pending_reply(
-                i64::from(msg.id.0),
-                0,
-                Some(ctx.related_tt_username.as_str()),
-            )
+            .add_pending_reply(i64::from(msg.id.0), 0, Some(&ctx.related_tt_username))
             .await
     {
         tracing::error!(
@@ -369,7 +365,7 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
         .get_or_create_user(deps.admin_id.0, deps.default_lang)
         .await;
     let admin_lang = match admin_settings {
-        Ok(u) => LanguageCode::from_str_or_default(&u.language_code, deps.default_lang),
+        Ok(u) => u.language_code,
         Err(e) => {
             tracing::error!(
                 component = "bridge",
@@ -406,7 +402,7 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
         );
     }
 
-    let reply_lang = if data.tt_username.is_empty() {
+    let reply_lang = if data.tt_username.as_str().is_empty() {
         deps.default_lang
     } else {
         deps.db
@@ -459,7 +455,7 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
         .get_or_create_user(deps.admin_id.0, deps.default_lang)
         .await;
     let admin_lang = match admin_settings {
-        Ok(u) => LanguageCode::from_str_or_default(&u.language_code, deps.default_lang),
+        Ok(u) => u.language_code,
         Err(e) => {
             tracing::error!(
                 component = "bridge",

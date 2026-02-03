@@ -1,6 +1,7 @@
 use crate::app::services::subscription::{
     SubscribeOutcome, SubscriptionRepo, is_subscribed, subscribe_via_deeplink, unsubscribe,
 };
+use crate::core::types::TtUsername;
 use anyhow::Result;
 
 #[derive(Default)]
@@ -16,7 +17,7 @@ impl SubscriptionRepo for FakeRepo {
         Ok(self.banned_tg)
     }
 
-    async fn is_teamtalk_username_banned(&self, _username: &str) -> Result<bool> {
+    async fn is_teamtalk_username_banned(&self, _username: &TtUsername) -> Result<bool> {
         Ok(self.banned_tt)
     }
 
@@ -24,7 +25,7 @@ impl SubscriptionRepo for FakeRepo {
         Ok(())
     }
 
-    async fn link_tt_account(&self, _telegram_id: i64, _tt_username: &str) -> Result<()> {
+    async fn link_tt_account(&self, _telegram_id: i64, _tt_username: &TtUsername) -> Result<()> {
         Ok(())
     }
 

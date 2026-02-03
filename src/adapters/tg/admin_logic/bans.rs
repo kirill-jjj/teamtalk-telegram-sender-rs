@@ -53,8 +53,8 @@ pub async fn send_unban_list(
             let name = e.telegram_id.map_or_else(
                 || {
                     e.teamtalk_username
-                        .clone()
-                        .unwrap_or_else(|| "Unknown".to_string())
+                        .as_ref()
+                        .map_or_else(|| "Unknown".to_string(), ToString::to_string)
                 },
                 |tg| format!("{tg}"),
             );
@@ -144,8 +144,8 @@ pub async fn edit_unban_list(
             let name = e.telegram_id.map_or_else(
                 || {
                     e.teamtalk_username
-                        .clone()
-                        .unwrap_or_else(|| "Unknown".to_string())
+                        .as_ref()
+                        .map_or_else(|| "Unknown".to_string(), ToString::to_string)
                 },
                 |tg| format!("{tg}"),
             );

@@ -7,7 +7,7 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, check_db_err, notify_admin_error};
 use crate::args;
 use crate::core::callbacks::MuteAction;
-use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername};
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
@@ -48,7 +48,7 @@ pub async fn handle_mute(
             username,
             page,
         } => {
-            handle_toggle(&ctx, mode, username.to_string(), page).await?;
+            handle_toggle(&ctx, mode, username, page).await?;
         }
         MuteAction::ServerList { mode, page } => {
             handle_server_list(&bot, msg, &state, telegram_id, lang, mode, page).await?;
@@ -58,7 +58,7 @@ pub async fn handle_mute(
             username,
             page,
         } => {
-            handle_server_toggle(&ctx, mode, username.to_string(), page).await?;
+            handle_server_toggle(&ctx, mode, username, page).await?;
         }
     }
 
@@ -143,13 +143,13 @@ async fn handle_list(
 async fn handle_toggle(
     ctx: &MuteCtx<'_>,
     mode: MuteListMode,
-    username: String,
+    username: TtUsername,
     page: usize,
 ) -> ResponseResult<()> {
     if let Err(e) = ctx
         .state
         .db
-        .toggle_muted_user(ctx.telegram_id, mode.clone(), username.as_str())
+        .toggle_muted_user(ctx.telegram_id, mode.clone(), &username)
         .await
     {
         check_db_err(
@@ -165,7 +165,7 @@ async fn handle_toggle(
         return Ok(());
     }
 
-    let args = args!(user = username.clone(), action = "toggled");
+    let args = args!(user = username.to_string(), action = "toggled");
     answer_callback(
         ctx.bot,
         &ctx.q.id,
@@ -234,13 +234,13 @@ async fn handle_server_list(
 async fn handle_server_toggle(
     ctx: &MuteCtx<'_>,
     mode: MuteListMode,
-    username: String,
+    username: TtUsername,
     page: usize,
 ) -> ResponseResult<()> {
     if let Err(e) = ctx
         .state
         .db
-        .toggle_muted_user(ctx.telegram_id, mode.clone(), username.as_str())
+        .toggle_muted_user(ctx.telegram_id, mode.clone(), &username)
         .await
     {
         check_db_err(
@@ -256,7 +256,7 @@ async fn handle_server_toggle(
         return Ok(());
     }
 
-    let args = args!(user = username.clone(), action = "toggled");
+    let args = args!(user = username.to_string(), action = "toggled");
     answer_callback(
         ctx.bot,
         &ctx.q.id,
@@ -310,7 +310,7 @@ async fn load_muted_users(
     db: &crate::infra::db::Database,
     telegram_id: i64,
     mode: MuteListMode,
-) -> Vec<String> {
+) -> Vec<TtUsername> {
     db.get_muted_users_list(telegram_id, mode)
         .await
         .unwrap_or_else(|e| {
@@ -320,7 +320,7 @@ async fn load_muted_users(
 }
 
 fn load_accounts(
-    user_accounts: &std::sync::RwLock<std::collections::HashMap<String, UserAccount>>,
+    user_accounts: &std::sync::RwLock<std::collections::HashMap<TtUsername, UserAccount>>,
 ) -> Vec<UserAccount> {
     let mut accounts: Vec<UserAccount> = user_accounts
         .read()

@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT\n                    telegram_id as \"telegram_id!\",\n                    language_code as \"language_code!: LanguageCode\",\n                    notification_settings as \"notification_settings!: NotificationSetting\",\n                    mute_list_mode as \"mute_list_mode!: MuteListMode\",\n                    teamtalk_username as \"teamtalk_username?: TtUsername\",\n                    not_on_online_enabled as \"not_on_online_enabled!\",\n                    not_on_online_confirmed as \"not_on_online_confirmed!\",\n                    reply_queue_enabled as \"reply_queue_enabled!\"\n                FROM user_settings\n                WHERE telegram_id = ?\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "telegram_id!",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "language_code!: LanguageCode",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "notification_settings!: NotificationSetting",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "mute_list_mode!: MuteListMode",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "teamtalk_username?: TtUsername",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "not_on_online_enabled!",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "not_on_online_confirmed!",
+        "ordinal": 6,
+        "type_info": "Bool"
+      },
+      {
+        "name": "reply_queue_enabled!",
+        "ordinal": 7,
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "2993d61a00e28b6e36ac4b121faeb35093de0fe980c5b01f4cb1e6862fbcfa1a"
+}

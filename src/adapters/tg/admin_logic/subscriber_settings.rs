@@ -46,7 +46,7 @@ pub async fn send_sub_manage_tt_menu(
 
     let mut buttons = vec![];
     if let Some(user) = tt_user {
-        let args_btn = args!(user = user);
+        let args_btn = args!(user = user.to_string());
         buttons.push(vec![callback_button(
             locales::get_text(lang.as_str(), "btn-unlink", args_btn.as_ref()),
             CallbackAction::Subscriber(SubAction::Unlink {
@@ -83,7 +83,7 @@ pub async fn send_sub_link_account_list(
     bot: &Bot,
     msg: &Message,
     user_accounts: &std::sync::Arc<
-        std::sync::RwLock<std::collections::HashMap<String, UserAccount>>,
+        std::sync::RwLock<std::collections::HashMap<TtUsername, UserAccount>>,
     >,
     search_contexts: &std::sync::Arc<
         tokio::sync::Mutex<
@@ -315,10 +315,10 @@ pub async fn send_sub_mute_list(
     let settings = user_settings_service::get_or_create(db, target_id, lang).await;
     let mode = settings
         .as_ref()
-        .map(|s| user_settings_service::parse_mute_list_mode(&s.mute_list_mode))
+        .map(|s| s.mute_list_mode.clone())
         .unwrap_or(MuteListMode::Blacklist);
 
-    let muted: Vec<String> = match db.get_muted_users_list(target_id, mode.clone()).await {
+    let muted: Vec<TtUsername> = match db.get_muted_users_list(target_id, mode.clone()).await {
         Ok(list) => list,
         Err(e) => {
             tracing::error!(
@@ -338,7 +338,7 @@ pub async fn send_sub_mute_list(
     let keyboard = create_user_list_keyboard(
         &muted,
         page,
-        |username| (username.clone(), CallbackAction::NoOp), // Список просмотра, действия не нужны
+        |username| (username.to_string(), CallbackAction::NoOp), // Список просмотра, действия не нужны
         |p| {
             CallbackAction::Subscriber(SubAction::MuteView {
                 sub_id: target_id,

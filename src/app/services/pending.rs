@@ -1,8 +1,9 @@
+use crate::core::types::TtUsername;
 use anyhow::Result;
 
 #[allow(async_fn_in_trait)]
 pub trait PendingRepo: Sync {
-    async fn get_pending_reply(&self, reply_id: i64) -> Result<Option<(i32, Option<String>)>>;
+    async fn get_pending_reply(&self, reply_id: i64) -> Result<Option<(i32, Option<TtUsername>)>>;
     async fn touch_pending_reply(&self, reply_id: i64) -> Result<()>;
     async fn get_pending_channel_reply(
         &self,
@@ -14,7 +15,7 @@ pub trait PendingRepo: Sync {
 pub async fn get_pending_reply(
     db: &impl PendingRepo,
     reply_id: i64,
-) -> Result<Option<(i32, Option<String>)>> {
+) -> Result<Option<(i32, Option<TtUsername>)>> {
     db.get_pending_reply(reply_id).await
 }
 
@@ -34,7 +35,7 @@ pub async fn touch_pending_channel_reply(db: &impl PendingRepo, reply_id: i64) -
 }
 
 impl PendingRepo for crate::infra::db::Database {
-    async fn get_pending_reply(&self, reply_id: i64) -> Result<Option<(i32, Option<String>)>> {
+    async fn get_pending_reply(&self, reply_id: i64) -> Result<Option<(i32, Option<TtUsername>)>> {
         self.get_pending_reply(reply_id).await
     }
 

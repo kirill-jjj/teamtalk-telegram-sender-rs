@@ -1,5 +1,5 @@
 use super::Database;
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 
 #[tokio::test]
 async fn get_or_create_and_updates() {
@@ -8,7 +8,8 @@ async fn get_or_create_and_updates() {
     assert_eq!(user.telegram_id, 1);
 
     db.update_language(1, LanguageCode::Ru).await.unwrap();
-    let lang = db.get_user_lang_by_tt_user("missing").await;
+    let missing = TtUsername::new("missing");
+    let lang = db.get_user_lang_by_tt_user(&missing).await;
     assert!(lang.is_none());
 
     db.update_notification_setting(1, NotificationSetting::LeaveOff)
@@ -27,10 +28,11 @@ async fn toggle_noon_and_linking() {
     let second = db.toggle_noon(2).await.unwrap();
     assert_ne!(first, second);
 
-    db.link_tt_account(2, "bob").await.unwrap();
+    let bob = TtUsername::new("bob");
+    db.link_tt_account(2, &bob).await.unwrap();
     let username = db.get_tt_username_by_telegram_id(2).await.unwrap();
-    assert_eq!(username.as_deref(), Some("bob"));
-    let lang = db.get_user_lang_by_tt_user("bob").await;
+    assert_eq!(username.as_ref().map(TtUsername::as_str), Some("bob"));
+    let lang = db.get_user_lang_by_tt_user(&bob).await;
     assert!(lang.is_some());
 
     let confirmed: i64 = sqlx::query_scalar(
@@ -56,7 +58,8 @@ async fn delete_user_profile_clears_relations() {
     db.get_or_create_user(3, LanguageCode::En).await.unwrap();
     db.add_subscriber(3).await.unwrap();
     db.add_admin(3).await.unwrap();
-    db.toggle_muted_user(3, MuteListMode::Blacklist, "user")
+    let user = TtUsername::new("user");
+    db.toggle_muted_user(3, MuteListMode::Blacklist, &user)
         .await
         .unwrap();
     db.delete_user_profile(3).await.unwrap();
@@ -86,8 +89,9 @@ async fn tt_username_payload_is_literal() {
     let (db, path) = setup_db().await;
     db.get_or_create_user(11, LanguageCode::En).await.unwrap();
     let payload = "bob'; DROP TABLE user_settings; --";
-    db.link_tt_account(11, payload).await.unwrap();
-    let fetched = db.get_telegram_id_by_tt_user(payload).await;
+    let payload_username = TtUsername::new(payload);
+    db.link_tt_account(11, &payload_username).await.unwrap();
+    let fetched = db.get_telegram_id_by_tt_user(&payload_username).await;
     assert_eq!(fetched, Some(11));
 
     let other = db.get_or_create_user(12, LanguageCode::En).await.unwrap();

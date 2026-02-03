@@ -5,7 +5,7 @@ pub mod events;
 pub mod reports;
 
 use crate::bootstrap::config::Config;
-use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{BridgeEvent, LanguageCode, LiteUser, TtCommand, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use futures_util::StreamExt;
@@ -54,16 +54,16 @@ pub(super) fn resolve_channel_name(
 pub struct WorkerContext {
     pub config: Arc<Config>,
     pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    pub user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
     pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub db: Database,
     pub bot_username: Option<String>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
-    pub tt_lang_cache: Arc<RwLock<HashMap<String, LanguageCode>>>,
-    pub tt_tg_cache: Arc<RwLock<HashMap<String, i64>>>,
+    pub tt_lang_cache: Arc<RwLock<HashMap<TtUsername, LanguageCode>>>,
+    pub tt_tg_cache: Arc<RwLock<HashMap<TtUsername, i64>>>,
     pub tt_cache_stats: Arc<TtCacheStats>,
 }
 
@@ -77,8 +77,8 @@ pub struct TtCacheStats {
 pub struct RunTeamtalkArgs {
     pub config: Arc<Config>,
     pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    pub user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
     pub tx_bridge: tokio::sync::mpsc::Sender<BridgeEvent>,
     pub rx_cmd: Receiver<TtCommand>,
     pub tx_cmd_clone: Sender<TtCommand>,

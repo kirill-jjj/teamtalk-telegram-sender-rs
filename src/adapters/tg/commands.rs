@@ -123,7 +123,7 @@ impl<'a> CommandCtx<'a> {
                 return Ok(None);
             }
         };
-        let lang = LanguageCode::from_str_or_default(&settings.language_code, default_lang);
+        let lang = settings.language_code;
         let is_admin = if telegram_id == config.telegram.admin_chat_id {
             true
         } else {
@@ -231,7 +231,7 @@ impl<'a> CommandCtx<'a> {
                 .await
             }
             Ok(subscription_service::SubscribeOutcome::BannedTeamTalk { username }) => {
-                let args = args!(name = username);
+                let args = args!(name = username.to_string());
                 self.bot
                     .send_message(
                         self.msg.chat.id,
@@ -1067,7 +1067,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
     let default_lang = config.general.default_lang;
     let admin_lang = user_settings_service::get_or_create(db, telegram_id, default_lang)
         .await
-        .map(|u| LanguageCode::from_str_or_default(&u.language_code, default_lang))
+        .map(|u| u.language_code)
         .unwrap_or(default_lang);
 
     if maybe_handle_search_message(&bot, &msg, &state, admin_lang).await? {
@@ -1290,7 +1290,7 @@ async fn handle_user_reply(
         }
     };
 
-    let current_tt_user_id = tt_username.as_deref().map_or(Some(tt_user_id), |username| {
+    let current_tt_user_id = tt_username.as_ref().map_or(Some(tt_user_id), |username| {
         state
             .online_users_by_username
             .read()
@@ -1335,7 +1335,7 @@ async fn handle_user_reply(
         } else {
             "tg-reply-sent"
         }
-    } else if let Some(tt_username) = tt_username.as_deref() {
+    } else if let Some(tt_username) = tt_username.as_ref() {
         match reply_queue_service::is_reply_queue_enabled_for_tt_user(db, tt_username).await {
             Ok(true) => {
                 if let Err(e) = db

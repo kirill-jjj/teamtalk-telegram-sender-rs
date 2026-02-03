@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                id as \"id!\",\n                telegram_id as \"telegram_id?\",\n                teamtalk_username as \"teamtalk_username?\"\n            FROM ban_list\n            ORDER BY banned_at DESC\n            ",
+  "query": "\n            SELECT\n                id as \"id!\",\n                telegram_id as \"telegram_id?\",\n                teamtalk_username as \"teamtalk_username?: TtUsername\"\n            FROM ban_list\n            ORDER BY banned_at DESC\n            ",
   "describe": {
     "columns": [
       {
@@ -14,7 +14,7 @@
         "type_info": "Integer"
       },
       {
-        "name": "teamtalk_username?",
+        "name": "teamtalk_username?: TtUsername",
         "ordinal": 2,
         "type_info": "Text"
       }
@@ -28,5 +28,5 @@
       true
     ]
   },
-  "hash": "b69e003de240133b20df7945f8348ece4a3a715c23f0b82707defa2c972918a2"
+  "hash": "644992e0fddf8cd4ab25690e66564dd563bf00e443569d1c45aeb7238a00bcb1"
 }

@@ -30,12 +30,8 @@ pub async fn resolve_for_user(
         return Ok(None);
     }
 
-    let Ok(action) = DeeplinkAction::try_from(deeplink.action.as_str()) else {
-        return Ok(None);
-    };
-
     Ok(Some(ResolvedDeeplink {
-        action,
+        action: deeplink.action,
         payload: deeplink.payload,
     }))
 }

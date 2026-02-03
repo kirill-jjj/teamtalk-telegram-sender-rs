@@ -1,11 +1,12 @@
+use crate::core::types::TtUsername;
 use anyhow::Result;
 
 #[allow(async_fn_in_trait)]
 pub trait SubscriptionRepo: Sync {
     async fn is_telegram_id_banned(&self, telegram_id: i64) -> Result<bool>;
-    async fn is_teamtalk_username_banned(&self, username: &str) -> Result<bool>;
+    async fn is_teamtalk_username_banned(&self, username: &TtUsername) -> Result<bool>;
     async fn add_subscriber(&self, telegram_id: i64) -> Result<()>;
-    async fn link_tt_account(&self, telegram_id: i64, tt_username: &str) -> Result<()>;
+    async fn link_tt_account(&self, telegram_id: i64, tt_username: &TtUsername) -> Result<()>;
     async fn delete_user_profile(&self, telegram_id: i64) -> Result<()>;
     async fn is_subscribed(&self, telegram_id: i64) -> Result<bool>;
 }
@@ -13,7 +14,7 @@ pub trait SubscriptionRepo: Sync {
 #[derive(Debug, Clone)]
 pub enum SubscribeOutcome {
     BannedUser,
-    BannedTeamTalk { username: String },
+    BannedTeamTalk { username: TtUsername },
     SubscribedLinked,
     SubscribedGuest,
 }
@@ -27,17 +28,17 @@ pub async fn subscribe_via_deeplink(
         return Ok(SubscribeOutcome::BannedUser);
     }
 
-    if let Some(tt_username) = payload.as_deref()
-        && db.is_teamtalk_username_banned(tt_username).await?
+    if let Some(tt_username) = payload.as_deref().map(TtUsername::from)
+        && db.is_teamtalk_username_banned(&tt_username).await?
     {
         return Ok(SubscribeOutcome::BannedTeamTalk {
-            username: tt_username.to_string(),
+            username: tt_username,
         });
     }
 
     db.add_subscriber(telegram_id).await?;
 
-    if let Some(tt_username) = payload {
+    if let Some(tt_username) = payload.map(TtUsername::from) {
         db.link_tt_account(telegram_id, &tt_username).await?;
         Ok(SubscribeOutcome::SubscribedLinked)
     } else {
@@ -58,7 +59,7 @@ impl SubscriptionRepo for crate::infra::db::Database {
         self.is_telegram_id_banned(telegram_id).await
     }
 
-    async fn is_teamtalk_username_banned(&self, username: &str) -> Result<bool> {
+    async fn is_teamtalk_username_banned(&self, username: &TtUsername) -> Result<bool> {
         self.is_teamtalk_username_banned(username).await
     }
 
@@ -66,7 +67,7 @@ impl SubscriptionRepo for crate::infra::db::Database {
         self.add_subscriber(telegram_id).await
     }
 
-    async fn link_tt_account(&self, telegram_id: i64, tt_username: &str) -> Result<()> {
+    async fn link_tt_account(&self, telegram_id: i64, tt_username: &TtUsername) -> Result<()> {
         self.link_tt_account(telegram_id, tt_username).await
     }
 

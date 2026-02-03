@@ -1,4 +1,4 @@
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::LanguageCode;
 use anyhow::Result;
 
 pub async fn get_or_create(
@@ -26,14 +26,6 @@ impl UserSettingsRepo for crate::infra::db::Database {
     ) -> Result<crate::infra::db::types::UserSettings> {
         self.get_or_create_user(telegram_id, default_lang).await
     }
-}
-
-pub fn parse_notification_setting(raw: &str) -> NotificationSetting {
-    NotificationSetting::try_from(raw).unwrap_or(NotificationSetting::All)
-}
-
-pub fn parse_mute_list_mode(raw: &str) -> MuteListMode {
-    MuteListMode::try_from(raw).unwrap_or(MuteListMode::Blacklist)
 }
 
 #[cfg(test)]

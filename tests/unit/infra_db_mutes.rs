@@ -1,21 +1,22 @@
 use super::Database;
-use crate::core::types::{LanguageCode, MuteListMode};
+use crate::core::types::{LanguageCode, MuteListMode, TtUsername};
 
 #[tokio::test]
 async fn toggle_mute_list() {
     let (db, path) = setup_db().await;
     db.get_or_create_user(1, LanguageCode::En).await.unwrap();
 
-    db.toggle_muted_user(1, MuteListMode::Blacklist, "alice")
+    let alice = TtUsername::new("alice");
+    db.toggle_muted_user(1, MuteListMode::Blacklist, &alice)
         .await
         .unwrap();
     let list = db
         .get_muted_users_list(1, MuteListMode::Blacklist)
         .await
         .unwrap();
-    assert_eq!(list, vec!["alice".to_string()]);
+    assert_eq!(list, vec![alice.clone()]);
 
-    db.toggle_muted_user(1, MuteListMode::Blacklist, "alice")
+    db.toggle_muted_user(1, MuteListMode::Blacklist, &alice)
         .await
         .unwrap();
     let list = db
@@ -33,14 +34,15 @@ async fn mute_payload_is_literal() {
     let (db, path) = setup_db().await;
     db.get_or_create_user(9, LanguageCode::En).await.unwrap();
     let payload = "x'); DELETE FROM muted_users; --";
-    db.toggle_muted_user(9, MuteListMode::Blacklist, payload)
+    let payload_username = TtUsername::new(payload);
+    db.toggle_muted_user(9, MuteListMode::Blacklist, &payload_username)
         .await
         .unwrap();
     let list = db
         .get_muted_users_list(9, MuteListMode::Blacklist)
         .await
         .unwrap();
-    assert_eq!(list, vec![payload.to_string()]);
+    assert_eq!(list, vec![payload_username]);
 
     db.close().await;
     let _ = std::fs::remove_file(path);
@@ -75,10 +77,12 @@ async fn muted_list_is_empty_for_new_user() {
 async fn lists_are_separate_between_modes() {
     let (db, path) = setup_db().await;
     db.get_or_create_user(20, LanguageCode::En).await.unwrap();
-    db.toggle_muted_user(20, MuteListMode::Blacklist, "alice")
+    let alice = TtUsername::new("alice");
+    let bob = TtUsername::new("bob");
+    db.toggle_muted_user(20, MuteListMode::Blacklist, &alice)
         .await
         .unwrap();
-    db.toggle_muted_user(20, MuteListMode::Whitelist, "bob")
+    db.toggle_muted_user(20, MuteListMode::Whitelist, &bob)
         .await
         .unwrap();
 
@@ -91,8 +95,8 @@ async fn lists_are_separate_between_modes() {
         .await
         .unwrap();
 
-    assert_eq!(blacklist, vec!["alice".to_string()]);
-    assert_eq!(whitelist, vec!["bob".to_string()]);
+    assert_eq!(blacklist, vec![alice]);
+    assert_eq!(whitelist, vec![bob]);
 
     db.close().await;
     let _ = std::fs::remove_file(path);

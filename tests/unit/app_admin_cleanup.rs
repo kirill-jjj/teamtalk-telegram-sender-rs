@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::types::LanguageCode;
+use crate::core::types::{LanguageCode, TtUsername};
 use crate::infra::db::Database;
 use std::path::PathBuf;
 
@@ -20,11 +20,15 @@ async fn cleanup_deleted_user_removes_profile() {
     db.get_or_create_user(55, LanguageCode::En)
         .await
         .expect("create user");
-    db.link_tt_account(55, "sergey").await.expect("link tt");
-    assert_eq!(get_telegram_id_by_tt_user(&db, "sergey").await, Some(55));
+    let tt_username = TtUsername::new("sergey");
+    db.link_tt_account(55, &tt_username).await.expect("link tt");
+    assert_eq!(
+        get_telegram_id_by_tt_user(&db, &tt_username).await,
+        Some(55)
+    );
 
     cleanup_deleted_banned_user(&db, 55).await.expect("cleanup");
-    assert_eq!(get_telegram_id_by_tt_user(&db, "sergey").await, None);
+    assert_eq!(get_telegram_id_by_tt_user(&db, &tt_username).await, None);
 
     db.close().await;
     let _ = std::fs::remove_file(db_path);

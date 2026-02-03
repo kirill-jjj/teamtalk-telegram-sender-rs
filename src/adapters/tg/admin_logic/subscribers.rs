@@ -5,10 +5,9 @@ use crate::adapters::tg::keyboards::{
 use crate::adapters::tg::search::{
     SearchContext, SearchListType, append_search_hint, set_search_context_raw,
 };
-use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
@@ -20,7 +19,7 @@ use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 pub struct SubDisplayInfo {
     pub telegram_id: i64,
     pub display_name: String,
-    pub tt_username: Option<String>,
+    pub tt_username: Option<TtUsername>,
 }
 
 pub async fn send_subscribers_list(
@@ -260,9 +259,9 @@ async fn load_subscriber_settings(db: &Database, sub_id: i64) -> UserSettings {
             );
             UserSettings {
                 telegram_id: sub_id,
-                language_code: "en".to_string(),
-                notification_settings: "all".to_string(),
-                mute_list_mode: "blacklist".to_string(),
+                language_code: LanguageCode::En,
+                notification_settings: NotificationSetting::All,
+                mute_list_mode: MuteListMode::Blacklist,
                 teamtalk_username: None,
                 not_on_online_enabled: false,
                 not_on_online_confirmed: false,
@@ -276,8 +275,7 @@ fn build_subscriber_details_text(
     settings: &UserSettings,
     display_name: String,
 ) -> String {
-    let notif_setting =
-        user_settings_service::parse_notification_setting(&settings.notification_settings);
+    let notif_setting = settings.notification_settings.clone();
     let notif_text = match notif_setting {
         NotificationSetting::All => {
             locales::get_text(lang.as_str(), "btn-sub-all", args!(marker = "").as_ref())
@@ -293,19 +291,20 @@ fn build_subscriber_details_text(
         }
     };
 
-    let mute_mode = user_settings_service::parse_mute_list_mode(&settings.mute_list_mode);
+    let mute_mode = settings.mute_list_mode.clone();
     let mode_text = match mute_mode {
         MuteListMode::Blacklist => locales::get_text(lang.as_str(), "mode-blacklist", None),
         MuteListMode::Whitelist => locales::get_text(lang.as_str(), "mode-whitelist", None),
     };
-    let sub_lang = LanguageCode::from_str_or_default(&settings.language_code, LanguageCode::En);
+    let sub_lang = settings.language_code;
 
+    let tt_user = settings.teamtalk_username.as_ref().map_or_else(
+        || locales::get_text(lang.as_str(), "val-none", None),
+        ToString::to_string,
+    );
     let args = args!(
         name = display_name,
-        tt_user = settings
-            .teamtalk_username
-            .clone()
-            .unwrap_or_else(|| locales::get_text(lang.as_str(), "val-none", None)),
+        tt_user = tt_user,
         lang = sub_lang.as_str(),
         noon = if settings.not_on_online_enabled {
             locales::get_text(lang.as_str(), "status-enabled", None)

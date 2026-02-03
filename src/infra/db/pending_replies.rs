@@ -1,3 +1,4 @@
+use crate::core::types::TtUsername;
 use anyhow::Result;
 
 use super::Database;
@@ -7,14 +8,14 @@ impl Database {
         &self,
         tg_message_id: i64,
         tt_user_id: i32,
-        tt_username: Option<&str>,
+        tt_username: Option<&TtUsername>,
     ) -> Result<()> {
         sqlx::query(
             "INSERT OR IGNORE INTO pending_replies (tg_message_id, tt_user_id, tt_username) VALUES (?, ?, ?)",
         )
         .bind(tg_message_id)
         .bind(tt_user_id)
-        .bind(tt_username)
+        .bind(tt_username.map(TtUsername::as_str))
         .execute(&self.pool)
         .await?;
         Ok(())
@@ -23,8 +24,8 @@ impl Database {
     pub async fn get_pending_reply(
         &self,
         tg_message_id: i64,
-    ) -> Result<Option<(i32, Option<String>)>> {
-        let res = sqlx::query_as::<_, (i32, Option<String>)>(
+    ) -> Result<Option<(i32, Option<TtUsername>)>> {
+        let res = sqlx::query_as::<_, (i32, Option<TtUsername>)>(
             "SELECT tt_user_id, tt_username FROM pending_replies WHERE tg_message_id = ?",
         )
         .bind(tg_message_id)

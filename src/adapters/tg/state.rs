@@ -1,5 +1,5 @@
 use crate::bootstrap::config::Config;
-use crate::core::types::{LiteUser, TtCommand};
+use crate::core::types::{LiteUser, TtCommand, TtUsername};
 use crate::infra::db::Database;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -12,8 +12,8 @@ use tokio::sync::mpsc::Sender;
 pub struct AppState {
     pub db: Database,
     pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    pub user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
     pub search_contexts:
         Arc<Mutex<HashMap<teloxide::types::ChatId, crate::adapters::tg::search::SearchContext>>>,
     pub tx_tt: Sender<TtCommand>,

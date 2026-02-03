@@ -11,7 +11,10 @@ pub mod utils;
 use crate::adapters::tg::utils::notify_admin_error;
 use crate::app::services::user_settings as user_settings_service;
 use crate::bootstrap::config::Config;
-use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{
+    AdminErrorContext, LanguageCode, LiteUser, MuteListMode, NotificationSetting, TtCommand,
+    TtUsername,
+};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use std::collections::HashMap;
@@ -33,8 +36,8 @@ pub struct TgRunArgs {
     pub message_bot: Option<Bot>,
     pub db: Database,
     pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    pub online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    pub user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    pub online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    pub user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub config: Arc<Config>,
     pub cancel_token: tokio_util::sync::CancellationToken,
@@ -78,8 +81,8 @@ pub async fn run_tg_bot(args: TgRunArgs) {
 fn build_state(
     db: Database,
     online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
     tx_tt_cmd: Sender<TtCommand>,
     config: &Arc<Config>,
     cancel_token: &tokio_util::sync::CancellationToken,
@@ -231,9 +234,9 @@ async fn set_bot_commands(
                 );
                 crate::infra::db::types::UserSettings {
                     telegram_id: admin_id,
-                    language_code: default_lang.as_str().to_string(),
-                    notification_settings: "all".to_string(),
-                    mute_list_mode: "blacklist".to_string(),
+                    language_code: default_lang,
+                    notification_settings: NotificationSetting::All,
+                    mute_list_mode: MuteListMode::Blacklist,
                     teamtalk_username: None,
                     not_on_online_enabled: false,
                     not_on_online_confirmed: false,
@@ -241,8 +244,7 @@ async fn set_bot_commands(
                 }
             });
 
-        let admin_lang =
-            LanguageCode::from_str_or_default(&user_settings.language_code, default_lang);
+        let admin_lang = user_settings.language_code;
         let admin_cmds = get_admin_commands(admin_lang);
 
         bot.set_my_commands(admin_cmds)

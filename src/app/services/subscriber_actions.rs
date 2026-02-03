@@ -1,11 +1,11 @@
-use crate::core::types::{MuteListMode, NotificationSetting};
+use crate::core::types::{MuteListMode, NotificationSetting, TtUsername};
 use anyhow::Result;
 
 #[allow(async_fn_in_trait)]
 pub trait SubscriberActionsRepo: Sync {
     async fn delete_user_profile(&self, telegram_id: i64) -> Result<()>;
     async fn unlink_tt_account(&self, telegram_id: i64) -> Result<()>;
-    async fn link_tt_account(&self, telegram_id: i64, username: &str) -> Result<()>;
+    async fn link_tt_account(&self, telegram_id: i64, username: &TtUsername) -> Result<()>;
     async fn update_notification_setting(
         &self,
         telegram_id: i64,
@@ -25,7 +25,7 @@ pub async fn unlink_tt(db: &impl SubscriberActionsRepo, telegram_id: i64) -> Res
 pub async fn link_tt(
     db: &impl SubscriberActionsRepo,
     telegram_id: i64,
-    username: &str,
+    username: &TtUsername,
 ) -> Result<()> {
     db.link_tt_account(telegram_id, username).await
 }
@@ -55,7 +55,7 @@ impl SubscriberActionsRepo for crate::infra::db::Database {
         self.unlink_tt_account(telegram_id).await
     }
 
-    async fn link_tt_account(&self, telegram_id: i64, username: &str) -> Result<()> {
+    async fn link_tt_account(&self, telegram_id: i64, username: &TtUsername) -> Result<()> {
         self.link_tt_account(telegram_id, username).await
     }
 

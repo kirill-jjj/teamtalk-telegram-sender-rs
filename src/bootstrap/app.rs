@@ -1,5 +1,6 @@
 use crate::adapters;
 use crate::bootstrap::config::Config;
+use crate::core::types::TtUsername;
 use crate::infra::db::Database;
 use anyhow::{Result, anyhow};
 use std::collections::HashMap;
@@ -28,15 +29,15 @@ struct BotInit {
 
 struct SharedState {
     online_users: Arc<RwLock<HashMap<i32, crate::core::types::LiteUser>>>,
-    online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    all_user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    all_user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
 }
 
 struct TeamtalkWorkerConfig {
     config: Arc<Config>,
     online_users: Arc<RwLock<HashMap<i32, crate::core::types::LiteUser>>>,
-    online_users_by_username: Arc<RwLock<HashMap<String, i32>>>,
-    user_accounts: Arc<RwLock<HashMap<String, UserAccount>>>,
+    online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
+    user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
     tx_bridge: tokio_mpsc::Sender<crate::core::types::BridgeEvent>,
     rx_tt_cmd: tokio_mpsc::Receiver<crate::core::types::TtCommand>,
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
@@ -232,9 +233,9 @@ fn spawn_pending_cleanup_task(
 fn init_shared_state() -> SharedState {
     let online_users: Arc<RwLock<HashMap<i32, crate::core::types::LiteUser>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    let online_users_by_username: Arc<RwLock<HashMap<String, i32>>> =
+    let online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>> =
         Arc::new(RwLock::new(HashMap::new()));
-    let all_user_accounts: Arc<RwLock<HashMap<String, UserAccount>>> =
+    let all_user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>> =
         Arc::new(RwLock::new(HashMap::new()));
 
     SharedState {

@@ -181,10 +181,10 @@ async fn find_matches(
                     let mut match_key = s.display_name.clone();
                     if let Some(tt) = &s.tt_username {
                         match_key.push(' ');
-                        match_key.push_str(tt);
+                        match_key.push_str(tt.as_str());
                     }
                     SearchCandidate {
-                        label: format_display_subscriber(&s.display_name, s.tt_username.as_deref()),
+                        label: format_display_subscriber(&s.display_name, s.tt_username.as_ref()),
                         match_key,
                         action: CallbackAction::Subscriber(SubAction::Details {
                             sub_id: s.telegram_id,
@@ -199,15 +199,15 @@ async fn find_matches(
             accounts
                 .into_iter()
                 .map(|acc| {
-                    let username = acc.username;
-                    let label = username.clone();
+                    let username = TtUsername::new(acc.username);
+                    let label = username.to_string();
                     let match_key = label.clone();
                     SearchCandidate {
                         label,
                         match_key,
                         action: CallbackAction::Mute(MuteAction::ServerToggle {
                             mode: mode.clone(),
-                            username: TtUsername::new(username),
+                            username,
                             page: *page,
                         }),
                     }
@@ -227,15 +227,14 @@ async fn find_matches(
             muted
                 .into_iter()
                 .map(|username| {
-                    let label = username;
+                    let label = username.to_string();
                     let match_key = label.clone();
-                    let action_username = label.clone();
                     SearchCandidate {
                         label,
                         match_key,
                         action: CallbackAction::Mute(MuteAction::Toggle {
                             mode: mode.clone(),
-                            username: TtUsername::new(action_username),
+                            username,
                             page: *page,
                         }),
                     }
@@ -250,9 +249,9 @@ async fn find_matches(
             let settings = user_settings_service::get_or_create(&state.db, *sub_id, lang)
                 .await
                 .ok();
-            let mode = settings.as_ref().map_or(MuteListMode::Blacklist, |s| {
-                user_settings_service::parse_mute_list_mode(&s.mute_list_mode)
-            });
+            let mode = settings
+                .as_ref()
+                .map_or(MuteListMode::Blacklist, |s| s.mute_list_mode.clone());
             let muted = state
                 .db
                 .get_muted_users_list(*sub_id, mode)
@@ -261,7 +260,7 @@ async fn find_matches(
             muted
                 .into_iter()
                 .map(|username| {
-                    let label = username;
+                    let label = username.to_string();
                     let match_key = label.clone();
                     SearchCandidate {
                         label,
@@ -280,17 +279,16 @@ async fn find_matches(
             accounts
                 .into_iter()
                 .map(|acc| {
-                    let username = acc.username;
-                    let label = username;
+                    let username = TtUsername::new(acc.username);
+                    let label = username.to_string();
                     let match_key = label.clone();
-                    let action_username = label.clone();
                     SearchCandidate {
                         label,
                         match_key,
                         action: CallbackAction::Subscriber(SubAction::LinkPerform {
                             sub_id: *sub_id,
                             page: *page,
-                            username: TtUsername::new(action_username),
+                            username,
                         }),
                     }
                 })
@@ -305,7 +303,7 @@ async fn find_matches(
 
 fn ban_entry_candidate(entry: BanEntry) -> Option<SearchCandidate> {
     let username = entry.teamtalk_username?;
-    let label = username;
+    let label = username.to_string();
     let match_key = label.clone();
     Some(SearchCandidate {
         label,
@@ -317,7 +315,7 @@ fn ban_entry_candidate(entry: BanEntry) -> Option<SearchCandidate> {
     })
 }
 
-fn format_display_subscriber(display_name: &str, tt_username: Option<&str>) -> String {
+fn format_display_subscriber(display_name: &str, tt_username: Option<&TtUsername>) -> String {
     let mut parts = vec![display_name.to_string()];
     if let Some(tt) = tt_username {
         parts.push(format!("TT: {tt}"));
@@ -413,7 +411,7 @@ async fn handle_single_match(
                 ToggleMuteArgs {
                     telegram_id: *telegram_id,
                     mode: mode.clone(),
-                    username: username.to_string(),
+                    username: username.clone(),
                     page: *page,
                     server_list: true,
                     lang,
@@ -438,7 +436,7 @@ async fn handle_single_match(
                 ToggleMuteArgs {
                     telegram_id: *telegram_id,
                     mode: mode.clone(),
-                    username: username.to_string(),
+                    username: username.clone(),
                     page: *page,
                     server_list: false,
                     lang,
@@ -454,8 +452,7 @@ async fn handle_single_match(
             else {
                 return Ok(false);
             };
-            if let Err(e) =
-                subscriber_actions_service::link_tt(&state.db, *sub_id, username.as_str()).await
+            if let Err(e) = subscriber_actions_service::link_tt(&state.db, *sub_id, username).await
             {
                 notify_admin_error(
                     bot,
@@ -483,7 +480,7 @@ async fn handle_single_match(
 struct ToggleMuteArgs {
     telegram_id: i64,
     mode: MuteListMode,
-    username: String,
+    username: TtUsername,
     page: usize,
     server_list: bool,
     lang: LanguageCode,
@@ -497,7 +494,7 @@ async fn toggle_mute_and_render(
 ) -> ResponseResult<()> {
     if let Err(e) = state
         .db
-        .toggle_muted_user(args.telegram_id, args.mode.clone(), args.username.as_str())
+        .toggle_muted_user(args.telegram_id, args.mode.clone(), &args.username)
         .await
     {
         notify_admin_error(
@@ -512,7 +509,7 @@ async fn toggle_mute_and_render(
         return Ok(());
     }
 
-    let fmt_args = args!(user = args.username.clone(), action = "toggled");
+    let fmt_args = args!(user = args.username.to_string(), action = "toggled");
     let text = locales::get_text(args.lang.as_str(), "toast-user-muted", fmt_args.as_ref());
     bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
 
@@ -657,7 +654,9 @@ fn sorted_online_users(online_users: &RwLock<HashMap<i32, LiteUser>>) -> Vec<Lit
     users
 }
 
-fn load_accounts(user_accounts: &Arc<RwLock<HashMap<String, UserAccount>>>) -> Vec<UserAccount> {
+fn load_accounts(
+    user_accounts: &Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
+) -> Vec<UserAccount> {
     let mut accounts: Vec<UserAccount> = user_accounts
         .read()
         .unwrap_or_else(std::sync::PoisonError::into_inner)

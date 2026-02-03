@@ -102,8 +102,7 @@ pub async fn send_sub_settings(
                 return Ok(());
             }
         };
-    let current_notif =
-        user_settings_service::parse_notification_setting(&settings.notification_settings);
+    let current_notif = settings.notification_settings;
 
     let check_icon = locales::get_text(lang.as_str(), "icon-check-simple", None);
     let mk = |ns: NotificationSetting| {
@@ -464,7 +463,7 @@ pub struct RenderMuteListStringsArgs<'a> {
     pub bot: &'a Bot,
     pub msg: &'a Message,
     pub lang: LanguageCode,
-    pub items: &'a [String],
+    pub items: &'a [TtUsername],
     pub page: usize,
     pub title_key: &'a str,
     pub guest_username: Option<&'a str>,
@@ -472,7 +471,7 @@ pub struct RenderMuteListStringsArgs<'a> {
 }
 
 pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()> {
-    let muted_users: Vec<String> = match args
+    let muted_users: Vec<TtUsername> = match args
         .db
         .get_muted_users_list(args.telegram_id, args.mode.clone())
         .await
@@ -495,7 +494,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
         |acc| {
             let is_muted = match args.mode {
                 MuteListMode::Blacklist | MuteListMode::Whitelist => {
-                    muted_set.contains(&acc.username)
+                    muted_set.contains(&TtUsername::new(acc.username.clone()))
                 }
             };
             let icon_key = match (args.mode.clone(), is_muted) {
@@ -561,7 +560,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
     }
 
     let mut sorted_items = args.items.to_vec();
-    sorted_items.sort_by_key(|a| a.to_lowercase());
+    sorted_items.sort_by_key(|a| a.as_str().to_lowercase());
 
     let keyboard = create_user_list_keyboard(
         &sorted_items,
@@ -570,7 +569,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
             let display_name = if Some(username.as_str()) == args.guest_username {
                 locales::get_text(args.lang.as_str(), "display-guest-account", None)
             } else {
-                username.clone()
+                username.to_string()
             };
 
             let fmt_args = args!(name = display_name);
@@ -583,7 +582,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {
                     mode: args.mode.clone(),
-                    username: TtUsername::new(username.clone()),
+                    username: username.clone(),
                     page: args.page,
                 }),
             )

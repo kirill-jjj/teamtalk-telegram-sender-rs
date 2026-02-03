@@ -5,14 +5,6 @@ fn language_code_parse_and_display() {
     assert_eq!(LanguageCode::try_from("en").unwrap(), LanguageCode::En);
     assert_eq!(LanguageCode::try_from("RU").unwrap(), LanguageCode::Ru);
     assert!(LanguageCode::try_from("xx").is_err());
-    assert_eq!(
-        LanguageCode::from_str_or_default("xx", LanguageCode::Ru),
-        LanguageCode::Ru
-    );
-    assert_eq!(
-        LanguageCode::from_str_or_default("", LanguageCode::En),
-        LanguageCode::En
-    );
     assert_eq!(LanguageCode::En.to_string(), "en");
 }
 

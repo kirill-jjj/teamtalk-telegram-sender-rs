@@ -1,4 +1,4 @@
-use crate::core::types::{LanguageCode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use anyhow::Result;
 use sqlx::Row;
 use std::collections::HashMap;
@@ -16,10 +16,10 @@ impl Database {
             r#"
             SELECT
                 telegram_id as "telegram_id!",
-                language_code as "language_code!",
-                notification_settings as "notification_settings!",
-                mute_list_mode as "mute_list_mode!",
-                teamtalk_username,
+                language_code as "language_code!: LanguageCode",
+                notification_settings as "notification_settings!: NotificationSetting",
+                mute_list_mode as "mute_list_mode!: MuteListMode",
+                teamtalk_username as "teamtalk_username?: TtUsername",
                 not_on_online_enabled as "not_on_online_enabled!",
                 not_on_online_confirmed as "not_on_online_confirmed!",
                 reply_queue_enabled as "reply_queue_enabled!"
@@ -34,11 +34,10 @@ impl Database {
         if let Some(u) = user {
             Ok(u)
         } else {
-            let default_lang_code = default_lang.as_str();
             sqlx::query!(
                 "INSERT OR IGNORE INTO user_settings (telegram_id, language_code) VALUES (?, ?)",
                 telegram_id,
-                default_lang_code
+                default_lang
             )
             .execute(&self.pool)
             .await?;
@@ -48,10 +47,10 @@ impl Database {
                 r#"
                 SELECT
                     telegram_id as "telegram_id!",
-                    language_code as "language_code!",
-                    notification_settings as "notification_settings!",
-                    mute_list_mode as "mute_list_mode!",
-                    teamtalk_username,
+                    language_code as "language_code!: LanguageCode",
+                    notification_settings as "notification_settings!: NotificationSetting",
+                    mute_list_mode as "mute_list_mode!: MuteListMode",
+                    teamtalk_username as "teamtalk_username?: TtUsername",
                     not_on_online_enabled as "not_on_online_enabled!",
                     not_on_online_confirmed as "not_on_online_confirmed!",
                     reply_queue_enabled as "reply_queue_enabled!"
@@ -67,9 +66,10 @@ impl Database {
         }
     }
 
-    pub async fn get_user_lang_by_tt_user(&self, tt_username: &str) -> Option<LanguageCode> {
-        let res: Option<String> = match sqlx::query_scalar!(
-            "SELECT language_code FROM user_settings WHERE teamtalk_username = ?",
+    pub async fn get_user_lang_by_tt_user(&self, tt_username: &TtUsername) -> Option<LanguageCode> {
+        let tt_username = tt_username.as_str();
+        let res: Option<LanguageCode> = match sqlx::query_scalar!(
+            r#"SELECT language_code as "language_code!: LanguageCode" FROM user_settings WHERE teamtalk_username = ?"#,
             tt_username
         )
         .fetch_optional(&self.pool)
@@ -86,10 +86,11 @@ impl Database {
             }
         };
 
-        res.and_then(|lang| LanguageCode::try_from(lang.as_str()).ok())
+        res
     }
 
-    pub async fn get_telegram_id_by_tt_user(&self, tt_username: &str) -> Option<i64> {
+    pub async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<i64> {
+        let tt_username = tt_username.as_str();
         match sqlx::query_scalar!(
             r#"
             SELECT telegram_id as "telegram_id!"
@@ -113,9 +114,12 @@ impl Database {
         }
     }
 
-    pub async fn get_tt_username_by_telegram_id(&self, telegram_id: i64) -> Result<Option<String>> {
-        let res: Option<String> = match sqlx::query_scalar!(
-            "SELECT teamtalk_username FROM user_settings WHERE telegram_id = ?",
+    pub async fn get_tt_username_by_telegram_id(
+        &self,
+        telegram_id: i64,
+    ) -> Result<Option<TtUsername>> {
+        let res: Option<TtUsername> = match sqlx::query_scalar!(
+            r#"SELECT teamtalk_username as "teamtalk_username?: TtUsername" FROM user_settings WHERE telegram_id = ?"#,
             telegram_id
         )
         .fetch_optional(&self.pool)
@@ -135,7 +139,7 @@ impl Database {
         Ok(res)
     }
 
-    pub async fn load_tt_lang_cache(&self) -> Result<HashMap<String, LanguageCode>> {
+    pub async fn load_tt_lang_cache(&self) -> Result<HashMap<TtUsername, LanguageCode>> {
         let rows = sqlx::query(
             r"
             SELECT teamtalk_username, language_code
@@ -148,18 +152,16 @@ impl Database {
 
         let mut cache = HashMap::new();
         for row in rows {
-            let username: Option<String> = row.try_get("teamtalk_username").ok();
-            let language_code: Option<String> = row.try_get("language_code").ok();
-            if let (Some(username), Some(language_code)) = (username, language_code)
-                && let Ok(lang) = LanguageCode::try_from(language_code.as_str())
-            {
-                cache.insert(username, lang);
+            let username: Option<TtUsername> = row.try_get("teamtalk_username").ok();
+            let language_code: Option<LanguageCode> = row.try_get("language_code").ok();
+            if let (Some(username), Some(language_code)) = (username, language_code) {
+                cache.insert(username, language_code);
             }
         }
         Ok(cache)
     }
 
-    pub async fn load_tt_tg_cache(&self) -> Result<HashMap<String, i64>> {
+    pub async fn load_tt_tg_cache(&self) -> Result<HashMap<TtUsername, i64>> {
         let rows = sqlx::query(
             r"
             SELECT teamtalk_username, telegram_id
@@ -172,7 +174,7 @@ impl Database {
 
         let mut cache = HashMap::new();
         for row in rows {
-            let username: Option<String> = row.try_get("teamtalk_username").ok();
+            let username: Option<TtUsername> = row.try_get("teamtalk_username").ok();
             let telegram_id: Option<i64> = row.try_get("telegram_id").ok();
             if let (Some(username), Some(telegram_id)) = (username, telegram_id) {
                 cache.insert(username, telegram_id);
@@ -186,10 +188,9 @@ impl Database {
         telegram_id: i64,
         setting: NotificationSetting,
     ) -> Result<()> {
-        let setting_str = setting.to_string();
         sqlx::query!(
             "UPDATE user_settings SET notification_settings = ? WHERE telegram_id = ?",
-            setting_str,
+            setting,
             telegram_id
         )
         .execute(&self.pool)
@@ -198,10 +199,9 @@ impl Database {
     }
 
     pub async fn update_language(&self, telegram_id: i64, lang: LanguageCode) -> Result<()> {
-        let lang_code = lang.as_str();
         sqlx::query!(
             "UPDATE user_settings SET language_code = ? WHERE telegram_id = ?",
-            lang_code,
+            lang,
             telegram_id
         )
         .execute(&self.pool)
@@ -264,8 +264,13 @@ impl Database {
         Ok(new_bool)
     }
 
-    pub async fn link_tt_account(&self, telegram_id: i64, tt_username: &str) -> Result<()> {
-        sqlx::query!("UPDATE user_settings SET teamtalk_username = ?, not_on_online_confirmed = 1 WHERE telegram_id = ?", tt_username, telegram_id)
+    pub async fn link_tt_account(&self, telegram_id: i64, tt_username: &TtUsername) -> Result<()> {
+        let tt_username = tt_username.as_str();
+        sqlx::query!(
+            "UPDATE user_settings SET teamtalk_username = ?, not_on_online_confirmed = 1 WHERE telegram_id = ?",
+            tt_username,
+            telegram_id
+        )
             .execute(&self.pool)
             .await?;
         Ok(())

@@ -70,10 +70,7 @@ async fn load_user_lang(
                 return Ok(default_lang);
             }
         };
-    Ok(LanguageCode::from_str_or_default(
-        &user_settings.language_code,
-        default_lang,
-    ))
+    Ok(user_settings.language_code)
 }
 
 async fn ensure_subscribed(

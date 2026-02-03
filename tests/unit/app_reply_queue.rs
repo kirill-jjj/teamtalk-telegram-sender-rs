@@ -2,7 +2,7 @@ use crate::app::services::reply_queue::{
     ReplyQueueRepo, get_reply_queue_global_enabled, get_reply_queue_user_enabled,
     is_reply_queue_enabled_for_tt_user,
 };
-use crate::core::types::LanguageCode;
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::types::UserSettings;
 use anyhow::Result;
 use chrono::{Duration, Utc};
@@ -31,9 +31,9 @@ impl ReplyQueueRepo for FakeReplyQueueRepo {
     ) -> Result<UserSettings> {
         Ok(UserSettings {
             telegram_id,
-            language_code: "en".to_string(),
-            notification_settings: "all".to_string(),
-            mute_list_mode: "blacklist".to_string(),
+            language_code: LanguageCode::En,
+            notification_settings: NotificationSetting::All,
+            mute_list_mode: MuteListMode::Blacklist,
             teamtalk_username: None,
             not_on_online_enabled: false,
             not_on_online_confirmed: false,
@@ -45,7 +45,7 @@ impl ReplyQueueRepo for FakeReplyQueueRepo {
         Ok(())
     }
 
-    async fn get_telegram_id_by_tt_user(&self, _tt_username: &str) -> Option<i64> {
+    async fn get_telegram_id_by_tt_user(&self, _tt_username: &TtUsername) -> Option<i64> {
         self.tt_to_tg
     }
 }
@@ -87,8 +87,9 @@ async fn reply_queue_disabled_when_global_off() {
         user_enabled: true,
         tt_to_tg: Some(42),
     };
+    let tt_username = TtUsername::new("tt");
     assert!(
-        !is_reply_queue_enabled_for_tt_user(&repo, "tt")
+        !is_reply_queue_enabled_for_tt_user(&repo, &tt_username)
             .await
             .unwrap()
     );
@@ -101,8 +102,9 @@ async fn reply_queue_disabled_without_link() {
         user_enabled: true,
         tt_to_tg: None,
     };
+    let tt_username = TtUsername::new("tt");
     assert!(
-        !is_reply_queue_enabled_for_tt_user(&repo, "tt")
+        !is_reply_queue_enabled_for_tt_user(&repo, &tt_username)
             .await
             .unwrap()
     );
@@ -115,8 +117,9 @@ async fn reply_queue_enabled_when_global_and_user_on() {
         user_enabled: true,
         tt_to_tg: Some(7),
     };
+    let tt_username = TtUsername::new("tt");
     assert!(
-        is_reply_queue_enabled_for_tt_user(&repo, "tt")
+        is_reply_queue_enabled_for_tt_user(&repo, &tt_username)
             .await
             .unwrap()
     );

@@ -1,5 +1,5 @@
 use super::Database;
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 
 #[tokio::test]
 async fn subscriptions_basic_flow() {
@@ -35,14 +35,15 @@ async fn recipients_respect_notification_settings() {
     db.update_notification_setting(20, NotificationSetting::JoinOff)
         .await
         .unwrap();
+    let user = TtUsername::new("user");
     let join = db
-        .get_recipients_for_event("user", crate::core::types::NotificationType::Join)
+        .get_recipients_for_event(&user, crate::core::types::NotificationType::Join)
         .await
         .unwrap();
     assert!(join.is_empty());
 
     let leave = db
-        .get_recipients_for_event("user", crate::core::types::NotificationType::Leave)
+        .get_recipients_for_event(&user, crate::core::types::NotificationType::Leave)
         .await
         .unwrap();
     assert_eq!(leave.len(), 1);
@@ -62,11 +63,12 @@ async fn recipients_respect_mute_modes() {
         .unwrap();
 
     // blacklist + muted user => excluded
-    db.toggle_muted_user(30, MuteListMode::Blacklist, "bob")
+    let bob = TtUsername::new("bob");
+    db.toggle_muted_user(30, MuteListMode::Blacklist, &bob)
         .await
         .unwrap();
     let join = db
-        .get_recipients_for_event("bob", crate::core::types::NotificationType::Join)
+        .get_recipients_for_event(&bob, crate::core::types::NotificationType::Join)
         .await
         .unwrap();
     assert!(join.is_empty());
@@ -75,11 +77,11 @@ async fn recipients_respect_mute_modes() {
     db.update_mute_mode(30, MuteListMode::Whitelist)
         .await
         .unwrap();
-    db.toggle_muted_user(30, MuteListMode::Whitelist, "bob")
+    db.toggle_muted_user(30, MuteListMode::Whitelist, &bob)
         .await
         .unwrap();
     let join = db
-        .get_recipients_for_event("bob", crate::core::types::NotificationType::Join)
+        .get_recipients_for_event(&bob, crate::core::types::NotificationType::Join)
         .await
         .unwrap();
     assert_eq!(join.len(), 1);
@@ -97,8 +99,9 @@ async fn recipients_are_empty_when_notifications_disabled() {
         .await
         .unwrap();
 
+    let user = TtUsername::new("user");
     let join = db
-        .get_recipients_for_event("user", crate::core::types::NotificationType::Join)
+        .get_recipients_for_event(&user, crate::core::types::NotificationType::Join)
         .await
         .unwrap();
     assert!(join.is_empty());

@@ -3,7 +3,7 @@
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::args;
-use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand};
+use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand, TtUsername};
 use crate::infra::locales;
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
@@ -54,11 +54,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     users
                         .get(&from_uid)
                         .map(|u| u.username.clone())
-                        .unwrap_or_default()
+                        .unwrap_or_else(|| TtUsername::new(String::new()))
                 } else {
-                    String::new()
+                    TtUsername::new(String::new())
                 };
-                let reply_lang = if username.is_empty() {
+                let reply_lang = if username.as_str().is_empty() {
                     default_lang
                 } else if let Ok(cache) = tt_lang_cache.read()
                     && let Some(lang) = cache.get(&username)
@@ -83,11 +83,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                         .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                     lang
                 };
-                let is_admin = if username.is_empty() {
+                let is_admin = if username.as_str().is_empty() {
                     false
                 } else if admin_username
                     .as_ref()
-                    .map(|u| u == &username)
+                    .map(|u| u == username.as_str())
                     .unwrap_or(false)
                 {
                     true
@@ -186,13 +186,13 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let content = msg.text.trim();
             let from_uid = msg.from_id.0;
 
-            let (nick, username): (String, String) = if let Ok(users) = online_users.read() {
+            let (nick, username): (String, TtUsername) = if let Ok(users) = online_users.read() {
                 users
                     .get(&from_uid)
                     .map(|u| (u.nickname.clone(), u.username.clone()))
-                    .unwrap_or(("Unknown".to_string(), "".to_string()))
+                    .unwrap_or(("Unknown".to_string(), TtUsername::new(String::new())))
             } else {
-                ("Unknown".to_string(), "".to_string())
+                ("Unknown".to_string(), TtUsername::new(String::new()))
             };
 
             tracing::info!(
@@ -202,7 +202,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 "Received TT message"
             );
 
-            let reply_lang = if username.is_empty() {
+            let reply_lang = if username.as_str().is_empty() {
                 default_lang
             } else if let Ok(cache) = tt_lang_cache.read()
                 && let Some(lang) = cache.get(&username)
@@ -262,11 +262,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
 
             if cmd == "/sub" {
                 if let Some(bot_user) = &bot_username {
-                    let is_guest = username.is_empty()
+                    let is_guest = username.as_str().is_empty()
                         || tt_config
                             .guest_username
                             .as_ref()
-                            .map(|g| g == &username)
+                            .map(|g| g == username.as_str())
                             .unwrap_or(false);
 
                     let payload = if is_guest {
@@ -276,7 +276,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     };
 
                     let token = Uuid::now_v7().to_string().replace('-', "");
-                    let expected_telegram_id = if username.is_empty() {
+                    let expected_telegram_id = if username.as_str().is_empty() {
                         None
                     } else {
                         db.get_telegram_id_by_tt_user(&username).await
@@ -317,7 +317,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/unsub" {
                 if let Some(bot_user) = &bot_username {
                     let token = Uuid::now_v7().to_string().replace('-', "");
-                    let expected_telegram_id = if username.is_empty() {
+                    let expected_telegram_id = if username.as_str().is_empty() {
                         None
                     } else {
                         db.get_telegram_id_by_tt_user(&username).await
@@ -358,7 +358,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/help" {
                 let is_main_admin = admin_username
                     .as_ref()
-                    .map(|u| u == &username)
+                    .map(|u| u == username.as_str())
                     .unwrap_or(false);
                 let mut help_msg = locales::get_text(reply_lang.as_str(), "help-text", None);
                 if is_main_admin {
@@ -370,11 +370,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 send_reply(help_msg).await;
             } else if cmd == "/skip" {
-                let is_admin = if username.is_empty() {
+                let is_admin = if username.as_str().is_empty() {
                     false
                 } else if admin_username
                     .as_ref()
-                    .map(|u| u == &username)
+                    .map(|u| u == username.as_str())
                     .unwrap_or(false)
                 {
                     true
@@ -404,7 +404,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let text = locales::get_text(reply_lang.as_str(), "tt-skip-sent", None);
                 send_reply(text).await;
             } else if cmd == "/queue" {
-                if username.is_empty() {
+                if username.as_str().is_empty() {
                     let text = locales::get_text(reply_lang.as_str(), "tt-queue-no-link", None);
                     send_reply(text).await;
                     return;
@@ -423,7 +423,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 let is_admin = if admin_username
                     .as_ref()
-                    .map(|u| u == &username)
+                    .map(|u| u == username.as_str())
                     .unwrap_or(false)
                 {
                     true
@@ -554,7 +554,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/add_admin" {
                 let is_main_admin = admin_username
                     .as_ref()
-                    .map(|u| u == &username)
+                    .map(|u| u == username.as_str())
                     .unwrap_or(false);
                 if !is_main_admin {
                     let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);
@@ -603,7 +603,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/remove_admin" {
                 let is_main_admin = admin_username
                     .as_ref()
-                    .map(|u| u == &username)
+                    .map(|u| u == username.as_str())
                     .unwrap_or(false);
                 if !is_main_admin {
                     let text = locales::get_text(reply_lang.as_str(), "cmd-unauth", None);

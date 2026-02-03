@@ -1,3 +1,4 @@
+use crate::core::types::TtUsername;
 use anyhow::Result;
 use chrono::NaiveDateTime;
 
@@ -13,10 +14,11 @@ pub struct ReplyQueueItem {
 impl Database {
     pub async fn add_reply_queue_item(
         &self,
-        tt_username: &str,
+        tt_username: &TtUsername,
         admin_telegram_id: i64,
         message_text: &str,
     ) -> Result<()> {
+        let tt_username = tt_username.as_str();
         sqlx::query!(
             "INSERT INTO reply_queue (tt_username, admin_telegram_id, message_text) VALUES (?, ?, ?)",
             tt_username,
@@ -28,7 +30,11 @@ impl Database {
         Ok(())
     }
 
-    pub async fn get_reply_queue_for_user(&self, tt_username: &str) -> Result<Vec<ReplyQueueItem>> {
+    pub async fn get_reply_queue_for_user(
+        &self,
+        tt_username: &TtUsername,
+    ) -> Result<Vec<ReplyQueueItem>> {
+        let tt_username = tt_username.as_str();
         let rows = sqlx::query_as!(
             ReplyQueueItem,
             r#"
@@ -64,7 +70,8 @@ impl Database {
         Ok(removed)
     }
 
-    pub async fn clear_reply_queue_for_user(&self, tt_username: &str) -> Result<u64> {
+    pub async fn clear_reply_queue_for_user(&self, tt_username: &TtUsername) -> Result<u64> {
+        let tt_username = tt_username.as_str();
         let res = sqlx::query("DELETE FROM reply_queue WHERE tt_username = ?")
             .bind(tt_username)
             .execute(&self.pool)
