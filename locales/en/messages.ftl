@@ -36,7 +36,15 @@ cmd-unauth = You are not authorized to perform this action.
 cmd-broadcast-empty = Usage: /broadcast <text>
 cmd-broadcast-sent = Broadcast sent to TeamTalk.
 cmd-message-empty = Usage: /message <text>
-cmd-message-sent = Sent to { $sent } subscribers (failed: { $failed }).
+cmd-message-sent =
+    Sent to { $sent ->
+        [one] { NUMBER($sent) } subscriber
+       *[other] { NUMBER($sent) } subscribers
+    }{ $failed ->
+        [0] .
+        [one] (error: { NUMBER($failed) })
+       *[other] (errors: { NUMBER($failed) })
+    }
 cmd-not-subscribed = You are not subscribed. Request a link via <code>/sub</code> in TeamTalk.
 cmd-user-banned = Your Telegram account is banned from using this service.
 cmd-tt-banned = The TeamTalk username '{ $name }' is banned.
@@ -104,7 +112,8 @@ list-kick-title = Select a user to kick from { $server }:
 list-ban-title = Select a user to ban from { $server }:
 list-unban-title = Banned Users
 list-subs-title = Here is the list of subscribers.
-list-mute-title = Mute list for: { $name }
+list-mute-title = Mute list
+list-mute-title-for = Mute list for: { $name }
 list-all-accs-title = All Server Accounts
 list-link-title = Select a TeamTalk account to link to subscriber { $id }:
 list-empty = The list is empty.
@@ -114,7 +123,7 @@ list-mute-empty = The mute list is currently empty.
 list-search-hint = Type a username or nickname to search.
 list-search-empty = No matches for "{ $query }".
 list-search-title = Search results: "{ $query }"
-list-page = Page { $current }/{ $total }
+list-page = Page { NUMBER($current) }/{ NUMBER($total) }
 
 btn-prev = ⬅️ Prev
 btn-next = Next ➡️
@@ -175,23 +184,23 @@ tt-skip-sent = Skip command sent.
 # TT Commands & Responses
 tt-admin-added =
     { $count ->
-        [one] Successfully added { $count } admin.
-       *[other] Successfully added { $count } admins.
+        [one] Successfully added { NUMBER($count) } admin.
+       *[other] Successfully added { NUMBER($count) } admins.
     }
 tt-admin-add-fail =
     { $count ->
-        [one] Failed to add { $count } admin (already admin or invalid ID).
-       *[other] Failed to add { $count } admins (already admins or invalid IDs).
+        [one] Failed to add { NUMBER($count) } admin (already admin or invalid ID).
+       *[other] Failed to add { NUMBER($count) } admins (already admins or invalid IDs).
     }
 tt-admin-removed =
     { $count ->
-        [one] Successfully removed { $count } admin.
-       *[other] Successfully removed { $count } admins.
+        [one] Successfully removed { NUMBER($count) } admin.
+       *[other] Successfully removed { NUMBER($count) } admins.
     }
 tt-admin-remove-fail =
     { $count ->
-        [one] Failed to remove { $count } admin (not admin or invalid ID).
-       *[other] Failed to remove { $count } admins (not admins or invalid IDs).
+        [one] Failed to remove { NUMBER($count) } admin (not admin or invalid ID).
+       *[other] Failed to remove { NUMBER($count) } admins (not admins or invalid IDs).
     }
 tt-admin-no-ids = No valid admin IDs provided for adding or removing.
 tt-admin-help-header =
@@ -204,8 +213,8 @@ tt-admin-help-cmds =
 
 tt-report-header =
     There { $count ->
-        [one] is { $count } user
-       *[other] are { $count } users
+        [one] is { NUMBER($count) } user
+       *[other] are { NUMBER($count) } users
     } on the server { $server }:
 tt-report-unauth = (not in a channel)
 tt-sub-fail-nouser = Your TeamTalk account must have a username to subscribe.
@@ -287,15 +296,15 @@ cmd-queue-help = /queue on|off (admin), /queue me on|off, /queue clear [all]
 cmd-queue-no-link = Link your TeamTalk account first.
 resp-queue-user-enabled = Reply queue enabled.
 resp-queue-user-disabled = Reply queue disabled.
-resp-queue-user-already-enabled = Reply queue is already enabled.
-resp-queue-user-already-disabled = Reply queue is already disabled.
+resp-queue-user-already-enabled = { -queue-reply-already-enabled }
+resp-queue-user-already-disabled = { -queue-reply-already-disabled }
 resp-queue-global-enabled = Global reply queue enabled.
 resp-queue-global-disabled = Global reply queue disabled.
 resp-queue-global-already-enabled = Global reply queue is already enabled.
 resp-queue-global-already-disabled = Global reply queue is already disabled.
-resp-queue-global-disabled-user = Global reply queue is disabled by the admin.
-resp-queue-cleared = Queue cleared ({ $count }).
-resp-queue-cleared-all = Queue cleared for all ({ $count }).
+resp-queue-global-disabled-user = { -queue-global-disabled-user }
+resp-queue-cleared = { -queue-cleared($count) }
+resp-queue-cleared-all = { -queue-cleared-all($count) }
 
 queue-settings-title = Reply queue
 btn-queue-settings = Reply queue
@@ -310,12 +319,26 @@ tt-queue-help = /queue on|off, /queue me on|off, /queue clear [all]
 tt-queue-no-link = Link your Telegram account first.
 tt-queue-user-enabled = Personal queue enabled.
 tt-queue-user-disabled = Personal queue disabled.
-tt-queue-user-already-enabled = Reply queue is already enabled.
-tt-queue-user-already-disabled = Reply queue is already disabled.
+tt-queue-user-already-enabled = { -queue-reply-already-enabled }
+tt-queue-user-already-disabled = { -queue-reply-already-disabled }
 tt-queue-global-enabled = Global queue enabled.
 tt-queue-global-disabled = Global queue disabled.
 tt-queue-global-already-enabled = Global queue is already enabled.
 tt-queue-global-already-disabled = Global queue is already disabled.
-tt-queue-global-disabled-user = Global reply queue is disabled by the admin.
-tt-queue-cleared = Queue cleared ({ $count }).
-tt-queue-cleared-all = Queue cleared for all ({ $count }).
+tt-queue-global-disabled-user = { -queue-global-disabled-user }
+tt-queue-cleared = { -queue-cleared($count) }
+tt-queue-cleared-all = { -queue-cleared-all($count) }
+
+-queue-reply-already-enabled = Reply queue is already enabled.
+-queue-reply-already-disabled = Reply queue is already disabled.
+-queue-global-disabled-user = Global reply queue is disabled by the admin.
+-queue-cleared =
+    Queue cleared ({ $count ->
+        [one] { NUMBER($count) } item
+       *[other] { NUMBER($count) } items
+    }).
+-queue-cleared-all =
+    Queue cleared for all ({ $count ->
+        [one] { NUMBER($count) } item
+       *[other] { NUMBER($count) } items
+    }).

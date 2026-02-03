@@ -36,7 +36,17 @@ cmd-unauth = У вас нет прав для этого действия.
 cmd-broadcast-empty = Использование: /broadcast <текст>
 cmd-broadcast-sent = Сообщение отправлено в TeamTalk.
 cmd-message-empty = Использование: /message <текст>
-cmd-message-sent = Отправлено подписчикам: { $sent } (ошибки: { $failed }).
+cmd-message-sent =
+    { $sent ->
+        [one] Отправлено { NUMBER($sent) } подписчику
+        [few] Отправлено { NUMBER($sent) } подписчикам
+       *[many] Отправлено { NUMBER($sent) } подписчикам
+    }{ $failed ->
+        [0] .
+        [one] (ошибка: { NUMBER($failed) })
+        [few] (ошибки: { NUMBER($failed) })
+       *[many] (ошибок: { NUMBER($failed) })
+    }
 cmd-not-subscribed = Вы не подписаны. Запросите ссылку командой <code>/sub</code> в TeamTalk.
 cmd-user-banned = Ваш Telegram аккаунт заблокирован и не может использовать этот сервис.
 cmd-tt-banned = Имя пользователя TeamTalk '{ $name }' забанено.
@@ -104,7 +114,8 @@ list-kick-title = Выберите пользователя для кика с �
 list-ban-title = Выберите пользователя для бана на сервере { $server }:
 list-unban-title = Забаненные пользователи
 list-subs-title = Вот список подписчиков.
-list-mute-title = Список игнора для: { $name }
+list-mute-title = Список игнора
+list-mute-title-for = Список игнора для: { $name }
 list-all-accs-title = Все учетные записи сервера
 list-link-title = Выберите учетную запись TeamTalk для привязки к подписчику { $id }:
 list-empty = Список пуст.
@@ -114,7 +125,7 @@ list-mute-empty = Список игнора пуст.
 list-search-hint = Введите имя или ник для поиска.
 list-search-empty = Ничего не найдено по "{ $query }".
 list-search-title = Результаты поиска: "{ $query }"
-list-page = Страница { $current }/{ $total }
+list-page = Страница { NUMBER($current) }/{ NUMBER($total) }
 
 btn-prev = ⬅️ Назад
 btn-next = Вперед ➡️
@@ -175,27 +186,27 @@ tt-skip-sent = Команда пропуска отправлена.
 # TeamTalk Admin Commands
 tt-admin-added =
     { $count ->
-        [one] Успешно добавлен { $count } администратор.
-        [few] Успешно добавлены { $count } администратора.
-       *[many] Успешно добавлено { $count } администраторов.
+        [one] Успешно добавлен { NUMBER($count) } администратор.
+        [few] Успешно добавлены { NUMBER($count) } администратора.
+       *[many] Успешно добавлено { NUMBER($count) } администраторов.
     }
 tt-admin-add-fail =
     Не удалось добавить { $count ->
-        [one] { $count } администратора
-        [few] { $count } администратора
-       *[many] { $count } администраторов
+        [one] { NUMBER($count) } администратора
+        [few] { NUMBER($count) } администратора
+       *[many] { NUMBER($count) } администраторов
     } (уже администраторы или неверные ID).
 tt-admin-removed =
     { $count ->
-        [one] Успешно удален { $count } администратор.
-        [few] Успешно удалены { $count } администратора.
-       *[many] Успешно удалено { $count } администраторов.
+        [one] Успешно удален { NUMBER($count) } администратор.
+        [few] Успешно удалены { NUMBER($count) } администратора.
+       *[many] Успешно удалено { NUMBER($count) } администраторов.
     }
 tt-admin-remove-fail =
     Не удалось удалить { $count ->
-        [one] { $count } администратора
-        [few] { $count } администратора
-       *[many] { $count } администраторов
+        [one] { NUMBER($count) } администратора
+        [few] { NUMBER($count) } администратора
+       *[many] { NUMBER($count) } администраторов
     } (не администраторы или неверные ID).
 tt-admin-no-ids = Не указаны действительные ID администраторов для добавления или удаления.
 tt-admin-help-header =
@@ -208,9 +219,9 @@ tt-admin-help-cmds =
 
 tt-report-header =
     На сервере { $server } сейчас { $count ->
-        [one] { $count } пользователь
-        [few] { $count } пользователя
-       *[many] { $count } пользователей
+        [one] { NUMBER($count) } пользователь
+        [few] { NUMBER($count) } пользователя
+       *[many] { NUMBER($count) } пользователей
     }:
 tt-report-unauth = (не в канале)
 tt-sub-fail-nouser = У вашего аккаунта TeamTalk должен быть установлен username для подписки.
@@ -290,17 +301,17 @@ val-none = Нет
 cmd-desc-queue = Управление очередью.
 cmd-queue-help = /queue on|off (глобально), /queue me on|off, /queue clear [all]
 cmd-queue-no-link = Сначала привяжите аккаунт TeamTalk.
-resp-queue-user-enabled = Очередь ответов включена.
-resp-queue-user-disabled = Очередь ответов отключена.
-resp-queue-user-already-enabled = Очередь ответов уже включена.
-resp-queue-user-already-disabled = Очередь ответов уже отключена.
+resp-queue-user-enabled = { -queue-reply-enabled }
+resp-queue-user-disabled = { -queue-reply-disabled }
+resp-queue-user-already-enabled = { -queue-reply-already-enabled }
+resp-queue-user-already-disabled = { -queue-reply-already-disabled }
 resp-queue-global-enabled = Глобальная очередь ответов включена.
 resp-queue-global-disabled = Глобальная очередь ответов отключена.
 resp-queue-global-already-enabled = Глобальная очередь ответов уже включена.
 resp-queue-global-already-disabled = Глобальная очередь ответов уже отключена.
-resp-queue-global-disabled-user = Глобальная очередь ответов отключена администратором.
-resp-queue-cleared = Очередь очищена ({ $count }).
-resp-queue-cleared-all = Очередь очищена для всех ({ $count }).
+resp-queue-global-disabled-user = { -queue-global-disabled-user }
+resp-queue-cleared = { -queue-cleared($count) }
+resp-queue-cleared-all = { -queue-cleared-all($count) }
 
 queue-settings-title = Очередь ответов
 btn-queue-settings = Очередь ответов
@@ -313,14 +324,32 @@ tg-reply-queued = Сообщение получено и поставлено в
 
 tt-queue-help = /queue on|off, /queue me on|off, /queue clear [all]
 tt-queue-no-link = Сначала привяжите Telegram аккаунт.
-tt-queue-user-enabled = Очередь ответов включена.
-tt-queue-user-disabled = Очередь ответов отключена.
-tt-queue-user-already-enabled = Очередь ответов уже включена.
-tt-queue-user-already-disabled = Очередь ответов уже отключена.
+tt-queue-user-enabled = { -queue-reply-enabled }
+tt-queue-user-disabled = { -queue-reply-disabled }
+tt-queue-user-already-enabled = { -queue-reply-already-enabled }
+tt-queue-user-already-disabled = { -queue-reply-already-disabled }
 tt-queue-global-enabled = Глобальная очередь включена.
 tt-queue-global-disabled = Глобальная очередь отключена.
 tt-queue-global-already-enabled = Глобальная очередь уже включена.
 tt-queue-global-already-disabled = Глобальная очередь уже отключена.
-tt-queue-global-disabled-user = Глобальная очередь ответов отключена администратором.
-tt-queue-cleared = Очередь очищена ({ $count }).
-tt-queue-cleared-all = Очередь очищена для всех ({ $count }).
+tt-queue-global-disabled-user = { -queue-global-disabled-user }
+tt-queue-cleared = { -queue-cleared($count) }
+tt-queue-cleared-all = { -queue-cleared-all($count) }
+
+-queue-reply-enabled = Очередь ответов включена.
+-queue-reply-disabled = Очередь ответов отключена.
+-queue-reply-already-enabled = Очередь ответов уже включена.
+-queue-reply-already-disabled = Очередь ответов уже отключена.
+-queue-global-disabled-user = Глобальная очередь ответов отключена администратором.
+-queue-cleared =
+    Очередь очищена ({ $count ->
+        [one] { NUMBER($count) } элемент
+        [few] { NUMBER($count) } элемента
+       *[many] { NUMBER($count) } элементов
+    }).
+-queue-cleared-all =
+    Очередь очищена для всех ({ $count ->
+        [one] { NUMBER($count) } элемент
+        [few] { NUMBER($count) } элемента
+       *[many] { NUMBER($count) } элементов
+    }).

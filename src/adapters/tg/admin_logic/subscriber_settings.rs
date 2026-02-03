@@ -332,7 +332,7 @@ pub async fn send_sub_mute_list(
 
     let user_name = format!("{target_id}");
     let args = args!(name = user_name);
-    let base = locales::get_text(lang.as_str(), "list-mute-title", args.as_ref());
+    let base = locales::get_text(lang.as_str(), "list-mute-title-for", args.as_ref());
     let title = append_search_hint(&base, lang);
 
     let keyboard = create_user_list_keyboard(
