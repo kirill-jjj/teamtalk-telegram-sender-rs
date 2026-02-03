@@ -99,7 +99,9 @@ impl Application {
         spawn_pending_cleanup_task(db.clone(), 3600, 3600, cancel_token.clone());
 
         let local = LocalSet::new();
-        let client = tokio::task::block_in_place(Client::new)
+        let client = tokio::task::spawn_blocking(Client::new)
+            .await
+            .map_err(|e| anyhow!("Failed to join TeamTalk SDK init task: {e}"))?
             .map_err(|e| anyhow!("Failed to initialize TeamTalk SDK: {e}"))?;
 
         local
