@@ -1,0 +1,63 @@
+---
+source: crates/teamtalk/tests/types_snapshot_extra_tests.rs
+expression: user
+---
+User {
+    id: UserId(
+        1,
+    ),
+    username: "user",
+    nickname: "nick",
+    user_data: 0,
+    user_type: 0,
+    ip_address: "",
+    version: 0,
+    channel_id: ChannelId(
+        2,
+    ),
+    status: UserStatus {
+        presence: Question,
+        gender: Male,
+        video: false,
+        desktop: false,
+        streaming: false,
+        media_paused: false,
+    },
+    status_msg: "",
+    state: UserState(
+        0,
+    ),
+    local_subscriptions: Subscriptions(
+        0,
+    ),
+    peer_subscriptions: Subscriptions(
+        0,
+    ),
+    media_storage_dir: "",
+    volume_voice: 0,
+    volume_media: 0,
+    stopped_delay_voice: 0,
+    stopped_delay_media: 0,
+    sound_position_voice: [
+        0.0,
+        0.0,
+        0.0,
+    ],
+    sound_position_media: [
+        0.0,
+        0.0,
+        0.0,
+    ],
+    stereo_playback_voice: [
+        false,
+        false,
+    ],
+    stereo_playback_media: [
+        false,
+        false,
+    ],
+    buf_ms_voice: 0,
+    buf_ms_media: 0,
+    active_adaptive_delay: 0,
+    client_name: "",
+}

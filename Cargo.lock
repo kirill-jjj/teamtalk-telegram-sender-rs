@@ -3293,7 +3293,6 @@ dependencies = [
 [[package]]
 name = "teamtalk"
 version = "1.2.0"
-source = "git+https://github.com/BlindMaster24/TeamTalkRust.git?branch=main#c9333e2451fded4968ae978104761dddbc8bbd16"
 dependencies = [
  "dirs",
  "evalexpr",

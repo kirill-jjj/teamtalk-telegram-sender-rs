@@ -1,0 +1,22 @@
+---
+source: crates/teamtalk/tests/media_tests.rs
+expression: info
+---
+MediaFileInfo {
+    status: MFS_ERROR,
+    name: "snap.wav",
+    audio_fmt: AudioFormat {
+        nAudioFmt: AFF_WAVE_FORMAT,
+        nSampleRate: 44100,
+        nChannels: 1,
+    },
+    video_fmt: VideoFormat {
+        nWidth: 320,
+        nHeight: 240,
+        nFPS_Numerator: 0,
+        nFPS_Denominator: 0,
+        picFourCC: FOURCC_NONE,
+    },
+    duration_ms: 10,
+    elapsed_ms: 2,
+}

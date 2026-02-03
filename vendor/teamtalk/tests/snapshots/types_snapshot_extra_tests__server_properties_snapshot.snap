@@ -1,0 +1,26 @@
+---
+source: crates/teamtalk/tests/types_snapshot_extra_tests.rs
+expression: props
+---
+ServerProperties {
+    name: "srv",
+    motd: "motd",
+    motd_raw: "raw",
+    max_users: 10,
+    max_login_attempts: 0,
+    max_logins_per_ip: 0,
+    max_voice_tx: 0,
+    max_video_tx: 0,
+    max_media_tx: 0,
+    max_desktop_tx: 0,
+    max_total_tx: 0,
+    auto_save: true,
+    tcp_port: 0,
+    udp_port: 0,
+    user_timeout: 0,
+    version: "",
+    protocol_version: "",
+    login_delay: 0,
+    access_token: "",
+    log_events: 0,
+}

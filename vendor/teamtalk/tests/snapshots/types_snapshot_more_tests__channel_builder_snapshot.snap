@@ -1,0 +1,45 @@
+---
+source: crates/teamtalk/tests/types_snapshot_more_tests.rs
+expression: channel
+---
+Channel {
+    id: ChannelId(
+        0,
+    ),
+    parent_id: ChannelId(
+        0,
+    ),
+    name: "room",
+    topic: "topic",
+    channel_type: ChannelType(
+        65,
+    ),
+    has_password: false,
+    user_data: 0,
+    disk_quota: 0,
+    max_users: 10,
+    audio_codec: Opus(
+        OpusCodec {
+            sample_rate: 48000,
+            channels: 2,
+            application: 2049,
+            complexity: 10,
+            fec: true,
+            dtx: false,
+            bitrate: 64000,
+            vbr: true,
+            vbr_constraint: false,
+            tx_interval_msec: 20,
+            frame_size_msec: 10,
+        },
+    ),
+    audio_cfg: AudioConfig {
+        enable_agc: false,
+        gain_level: 0,
+    },
+    transmit_users: [],
+    transmit_users_queue: [],
+    queue_delay_ms: 0,
+    timeout_voice_ms: 0,
+    timeout_media_ms: 0,
+}

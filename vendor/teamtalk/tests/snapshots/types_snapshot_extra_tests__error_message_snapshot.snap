@@ -1,0 +1,8 @@
+---
+source: crates/teamtalk/tests/types_snapshot_extra_tests.rs
+expression: err
+---
+ErrorMessage {
+    code: -1,
+    message: "fail",
+}
