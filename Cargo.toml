@@ -68,6 +68,3 @@ missing_docs = "deny"
 
 [dev-dependencies]
 proptest = "1.9.0"
-
-[patch."https://github.com/BlindMaster24/TeamTalkRust.git"]
-teamtalk = { path = "vendor/teamtalk" }
