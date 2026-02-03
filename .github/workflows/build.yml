@@ -56,10 +56,23 @@ jobs:
         run: cargo sqlx prepare
 
       - name: Cargo Check
+        env:
+          RUSTFLAGS: "-Dwarnings"
         run: cargo check
 
       - name: Cargo Clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Set up Rust (nightly for udeps)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          toolchain: nightly
+
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps --locked
+
+      - name: Cargo Udeps
+        run: cargo +nightly udeps --all-targets
 
       - name: Cargo Test
         run: cargo test
