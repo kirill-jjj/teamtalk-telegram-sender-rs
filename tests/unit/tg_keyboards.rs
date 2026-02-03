@@ -60,9 +60,9 @@ fn create_user_list_keyboard_empty_list_only_shows_back() {
 fn confirm_cancel_keyboard_has_single_row_two_buttons() {
     let kb = confirm_cancel_keyboard(
         LanguageCode::En,
-        "btn-yes",
+        LocaleKey::BtnYes,
         CallbackAction::Menu(MenuAction::Help),
-        "btn-no",
+        LocaleKey::BtnNo,
         CallbackAction::Menu(MenuAction::Settings),
     );
     assert_eq!(kb.inline_keyboard.len(), 1);
@@ -73,7 +73,7 @@ fn confirm_cancel_keyboard_has_single_row_two_buttons() {
 fn back_button_keyboard_has_single_row() {
     let kb = back_button_keyboard(
         LanguageCode::En,
-        "btn-back",
+        LocaleKey::BtnBackMenu,
         CallbackAction::Menu(MenuAction::Settings),
     );
     assert_eq!(kb.inline_keyboard.len(), 1);

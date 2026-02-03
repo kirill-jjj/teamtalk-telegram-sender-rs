@@ -2,15 +2,9 @@
 use crate::args;
 
 #[test]
-fn get_text_falls_back_to_key() {
-    let text = get_text("en", "nonexistent-key", None);
-    assert!(text.contains("nonexistent-key"));
-}
-
-#[test]
 fn get_text_supports_known_langs() {
-    let text_en = get_text("en", "cmd-desc-help", None);
-    let text_ru = get_text("ru", "cmd-desc-help", None);
+    let text_en = get_text("en", LocaleKey::CmdDescHelp, None);
+    let text_ru = get_text("ru", LocaleKey::CmdDescHelp, None);
     assert!(!text_en.is_empty());
     assert!(!text_ru.is_empty());
 }
