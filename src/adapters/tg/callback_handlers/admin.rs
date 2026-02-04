@@ -11,6 +11,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::admin_cleanup as admin_cleanup_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
+use crate::core::types::TelegramId;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -60,7 +61,7 @@ async fn handle_kick_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let users = state.state.online_users_sorted().await;
+    let users = state.state.online_users_sorted().await.unwrap_or_default();
     let args = args!(server = state.config.teamtalk.display_name().to_string());
     let base = locales::get_text(
         lang.as_str(),
@@ -102,7 +103,7 @@ async fn handle_ban_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let users = state.state.online_users_sorted().await;
+    let users = state.state.online_users_sorted().await.unwrap_or_default();
     let args = args!(server = state.config.teamtalk.display_name().to_string());
     let base = locales::get_text(
         lang.as_str(),
@@ -171,7 +172,7 @@ async fn handle_ban_perform(
     user_id: i32,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let user = state.state.online_user_by_id(user_id).await;
+    let user = state.state.online_user_by_id(user_id).await.ok().flatten();
     let Some(u) = user else {
         return answer_callback(
             bot,
@@ -369,6 +370,6 @@ fn should_send_page(msg: &Message, page: usize) -> bool {
     page == 0 && !msg.text().unwrap_or("").contains("Page")
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

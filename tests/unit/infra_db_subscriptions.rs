@@ -1,15 +1,16 @@
 use super::Database;
+use crate::core::types::TelegramId;
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 
 #[tokio::test]
 async fn subscriptions_basic_flow() {
     let (db, path) = setup_db().await;
-    db.add_subscriber(10).await.unwrap();
-    assert!(db.is_subscribed(10).await.unwrap());
+    db.add_subscriber(TelegramId::from(10)).await.unwrap();
+    assert!(db.is_subscribed(TelegramId::from(10)).await.unwrap());
 
     let subs = db.get_subscribers().await.unwrap();
     assert_eq!(subs.len(), 1);
-    assert_eq!(subs[0].telegram_id, 10);
+    assert_eq!(subs[0].telegram_id, TelegramId::from(10));
 
     db.close().await;
     let _ = std::fs::remove_file(path);
@@ -18,8 +19,8 @@ async fn subscriptions_basic_flow() {
 #[tokio::test]
 async fn add_subscriber_is_idempotent() {
     let (db, path) = setup_db().await;
-    db.add_subscriber(99).await.unwrap();
-    db.add_subscriber(99).await.unwrap();
+    db.add_subscriber(TelegramId::from(99)).await.unwrap();
+    db.add_subscriber(TelegramId::from(99)).await.unwrap();
     let subs = db.get_subscribers().await.unwrap();
     assert_eq!(subs.len(), 1);
     db.close().await;
@@ -29,10 +30,12 @@ async fn add_subscriber_is_idempotent() {
 #[tokio::test]
 async fn recipients_respect_notification_settings() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(20, LanguageCode::En).await.unwrap();
-    db.add_subscriber(20).await.unwrap();
+    db.get_or_create_user(TelegramId::from(20), LanguageCode::En)
+        .await
+        .unwrap();
+    db.add_subscriber(TelegramId::from(20)).await.unwrap();
 
-    db.update_notification_setting(20, NotificationSetting::JoinOff)
+    db.update_notification_setting(TelegramId::from(20), NotificationSetting::JoinOff)
         .await
         .unwrap();
     let user = TtUsername::new("user");
@@ -55,16 +58,18 @@ async fn recipients_respect_notification_settings() {
 #[tokio::test]
 async fn recipients_respect_mute_modes() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(30, LanguageCode::En).await.unwrap();
-    db.add_subscriber(30).await.unwrap();
+    db.get_or_create_user(TelegramId::from(30), LanguageCode::En)
+        .await
+        .unwrap();
+    db.add_subscriber(TelegramId::from(30)).await.unwrap();
 
-    db.update_notification_setting(30, NotificationSetting::All)
+    db.update_notification_setting(TelegramId::from(30), NotificationSetting::All)
         .await
         .unwrap();
 
     // blacklist + muted user => excluded
     let bob = TtUsername::new("bob");
-    db.toggle_muted_user(30, MuteListMode::Blacklist, &bob)
+    db.toggle_muted_user(TelegramId::from(30), MuteListMode::Blacklist, &bob)
         .await
         .unwrap();
     let join = db
@@ -74,10 +79,10 @@ async fn recipients_respect_mute_modes() {
     assert!(join.is_empty());
 
     // whitelist + muted user => included
-    db.update_mute_mode(30, MuteListMode::Whitelist)
+    db.update_mute_mode(TelegramId::from(30), MuteListMode::Whitelist)
         .await
         .unwrap();
-    db.toggle_muted_user(30, MuteListMode::Whitelist, &bob)
+    db.toggle_muted_user(TelegramId::from(30), MuteListMode::Whitelist, &bob)
         .await
         .unwrap();
     let join = db
@@ -93,9 +98,11 @@ async fn recipients_respect_mute_modes() {
 #[tokio::test]
 async fn recipients_are_empty_when_notifications_disabled() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(40, LanguageCode::En).await.unwrap();
-    db.add_subscriber(40).await.unwrap();
-    db.update_notification_setting(40, NotificationSetting::None)
+    db.get_or_create_user(TelegramId::from(40), LanguageCode::En)
+        .await
+        .unwrap();
+    db.add_subscriber(TelegramId::from(40)).await.unwrap();
+    db.update_notification_setting(TelegramId::from(40), NotificationSetting::None)
         .await
         .unwrap();
 

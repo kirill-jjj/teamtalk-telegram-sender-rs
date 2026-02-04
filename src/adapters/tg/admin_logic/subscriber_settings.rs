@@ -7,7 +7,7 @@ use crate::adapters::tg::search::{
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teamtalk::types::UserAccount;
@@ -19,14 +19,14 @@ pub async fn send_sub_manage_tt_menu(
     msg: &Message,
     db: &Database,
     lang: LanguageCode,
-    sub_id: i64,
+    sub_id: TelegramId,
     return_page: usize,
 ) -> ResponseResult<()> {
     let settings = match user_settings_service::get_or_create(db, sub_id, LanguageCode::En).await {
         Ok(s) => s,
         Err(e) => {
             tracing::error!(
-                sub_id,
+                sub_id = sub_id.as_i64(),
                 error = %e,
                 "Failed to get or create user"
             );
@@ -100,7 +100,7 @@ pub async fn send_sub_link_account_list(
         >,
     >,
     lang: LanguageCode,
-    target_id: i64,
+    target_id: TelegramId,
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
@@ -168,7 +168,7 @@ pub async fn send_sub_lang_menu(
     bot: &Bot,
     msg: &Message,
     lang: LanguageCode,
-    target_id: i64,
+    target_id: TelegramId,
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
@@ -215,7 +215,7 @@ pub async fn send_sub_notif_menu(
     bot: &Bot,
     msg: &Message,
     lang: LanguageCode,
-    target_id: i64,
+    target_id: TelegramId,
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
@@ -287,7 +287,7 @@ pub async fn send_sub_mute_mode_menu(
     bot: &Bot,
     msg: &Message,
     lang: LanguageCode,
-    target_id: i64,
+    target_id: TelegramId,
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
@@ -341,7 +341,7 @@ pub async fn send_sub_mute_list(
         >,
     >,
     lang: LanguageCode,
-    target_id: i64,
+    target_id: TelegramId,
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
@@ -355,7 +355,7 @@ pub async fn send_sub_mute_list(
         Ok(list) => list,
         Err(e) => {
             tracing::error!(
-                target_id,
+                target_id = target_id.as_i64(),
                 error = %e,
                 "Failed to load muted users"
             );

@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::types::{LanguageCode, TtUsername};
+use crate::core::types::{LanguageCode, TelegramId, TtUsername};
 use crate::infra::db::Database;
 use std::path::PathBuf;
 
@@ -17,17 +17,21 @@ async fn setup_db() -> (Database, PathBuf) {
 #[tokio::test]
 async fn cleanup_deleted_user_removes_profile() {
     let (db, db_path) = setup_db().await;
-    db.get_or_create_user(55, LanguageCode::En)
+    db.get_or_create_user(TelegramId::from(55), LanguageCode::En)
         .await
         .expect("create user");
     let tt_username = TtUsername::new("sergey");
-    db.link_tt_account(55, &tt_username).await.expect("link tt");
+    db.link_tt_account(TelegramId::from(55), &tt_username)
+        .await
+        .expect("link tt");
     assert_eq!(
         get_telegram_id_by_tt_user(&db, &tt_username).await,
-        Some(55)
+        Some(TelegramId::from(55))
     );
 
-    cleanup_deleted_banned_user(&db, 55).await.expect("cleanup");
+    cleanup_deleted_banned_user(&db, TelegramId::from(55))
+        .await
+        .expect("cleanup");
     assert_eq!(get_telegram_id_by_tt_user(&db, &tt_username).await, None);
 
     db.close().await;

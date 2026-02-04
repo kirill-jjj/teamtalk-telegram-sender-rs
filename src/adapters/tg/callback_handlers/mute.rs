@@ -8,7 +8,7 @@ use crate::adapters::tg::utils::{answer_callback, check_db_err, notify_admin_err
 use crate::args;
 use crate::core::callbacks::MuteAction;
 use crate::core::types::{
-    ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername,
+    ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TelegramId, TtCommand, TtUsername,
 };
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -71,7 +71,7 @@ async fn handle_mode_set(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     mode: crate::core::types::MuteListMode,
 ) -> ResponseResult<()> {
@@ -107,7 +107,7 @@ async fn handle_list(
     bot: &Bot,
     msg: &Message,
     state: &AppState,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     mode: MuteListMode,
     page: usize,
@@ -212,14 +212,14 @@ async fn handle_server_list(
     bot: &Bot,
     msg: &Message,
     state: &AppState,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     mode: MuteListMode,
     page: usize,
 ) -> ResponseResult<()> {
     request_accounts(bot, state, telegram_id, lang).await;
 
-    let accounts = state.state.user_accounts_sorted().await;
+    let accounts = state.state.user_accounts_sorted().await.unwrap_or_default();
     let guest_username = state
         .config
         .teamtalk
@@ -296,7 +296,12 @@ async fn handle_server_toggle(
     )
     .await?;
 
-    let accounts = ctx.state.state.user_accounts_sorted().await;
+    let accounts = ctx
+        .state
+        .state
+        .user_accounts_sorted()
+        .await
+        .unwrap_or_default();
     let guest_username = ctx
         .state
         .config
@@ -324,11 +329,16 @@ struct MuteCtx<'a> {
     q: &'a CallbackQuery,
     msg: &'a Message,
     state: &'a AppState,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 }
 
-async fn request_accounts(bot: &Bot, state: &AppState, telegram_id: i64, lang: LanguageCode) {
+async fn request_accounts(
+    bot: &Bot,
+    state: &AppState,
+    telegram_id: TelegramId,
+    lang: LanguageCode,
+) {
     if let Err(e) = state.tx_tt.send(TtCommand::LoadAccounts).await {
         tracing::error!(error = %e, "Failed to request TT accounts");
         notify_admin_error(
@@ -345,17 +355,17 @@ async fn request_accounts(bot: &Bot, state: &AppState, telegram_id: i64, lang: L
 
 async fn load_muted_users(
     db: &crate::infra::db::Database,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     mode: MuteListMode,
 ) -> Vec<TtUsername> {
     db.get_muted_users_list(telegram_id, mode)
         .await
         .unwrap_or_else(|e| {
-            tracing::error!(telegram_id, error = %e, "Failed to load muted users");
+            tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load muted users");
             Vec::new()
         })
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

@@ -1,5 +1,5 @@
 use super::*;
-use crate::core::types::{MuteListMode, NotificationSetting, TtUsername};
+use crate::core::types::{MuteListMode, NotificationSetting, TelegramId, TtUsername};
 
 #[test]
 fn callback_roundtrip_menu() {
@@ -61,7 +61,7 @@ fn as_callback_data_converts_variants() {
 #[test]
 fn callback_includes_usernames() {
     let action = CallbackAction::Subscriber(SubAction::LinkPerform {
-        sub_id: 42,
+        sub_id: TelegramId::from(42),
         page: 0,
         username: TtUsername::from("alpha"),
     });
@@ -121,7 +121,7 @@ fn callback_handles_long_garbage() {
 fn callback_oversized_payload_encodes_as_noop() {
     let long_name = "x".repeat(200);
     let action = CallbackAction::Subscriber(SubAction::LinkPerform {
-        sub_id: 1,
+        sub_id: TelegramId::from(1),
         page: 0,
         username: TtUsername::from(long_name),
     });

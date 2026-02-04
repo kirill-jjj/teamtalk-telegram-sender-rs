@@ -1,18 +1,22 @@
 use super::Database;
-use crate::core::types::TtUsername;
+use crate::core::types::{TelegramId, TtUsername};
 
 #[tokio::test]
 async fn ban_lifecycle() {
     let (db, path) = setup_db().await;
     db.add_ban(
-        Some(10),
+        Some(TelegramId::from(10)),
         Some(TtUsername::new("user1")),
         Some("reason".to_string()),
     )
     .await
     .unwrap();
 
-    assert!(db.is_telegram_id_banned(10).await.unwrap());
+    assert!(
+        db.is_telegram_id_banned(TelegramId::from(10))
+            .await
+            .unwrap()
+    );
     let user1 = TtUsername::new("user1");
     let user1_upper = TtUsername::new("USER1");
     assert!(db.is_teamtalk_username_banned(&user1).await.unwrap());
@@ -23,7 +27,11 @@ async fn ban_lifecycle() {
     let ban_id = list[0].id;
 
     db.remove_ban_by_id(ban_id).await.unwrap();
-    assert!(!db.is_telegram_id_banned(10).await.unwrap());
+    assert!(
+        !db.is_telegram_id_banned(TelegramId::from(10))
+            .await
+            .unwrap()
+    );
 
     db.close().await;
     let _ = std::fs::remove_file(path);
@@ -32,7 +40,11 @@ async fn ban_lifecycle() {
 #[tokio::test]
 async fn ban_checks_false_for_unknown() {
     let (db, path) = setup_db().await;
-    assert!(!db.is_telegram_id_banned(404).await.unwrap());
+    assert!(
+        !db.is_telegram_id_banned(TelegramId::from(404))
+            .await
+            .unwrap()
+    );
     let nobody = TtUsername::new("nobody");
     assert!(!db.is_teamtalk_username_banned(&nobody).await.unwrap());
     db.close().await;

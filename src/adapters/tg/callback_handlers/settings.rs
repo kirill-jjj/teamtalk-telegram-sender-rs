@@ -9,7 +9,7 @@ use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
-use crate::core::types::{AdminErrorContext, LanguageCode, NotificationSetting};
+use crate::core::types::{AdminErrorContext, LanguageCode, NotificationSetting, TelegramId};
 use crate::infra::locales;
 use teloxide::prelude::*;
 use teloxide::types::InlineKeyboardMarkup;
@@ -107,7 +107,7 @@ async fn handle_lang_set(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     new_lang: LanguageCode,
 ) -> ResponseResult<()> {
@@ -143,7 +143,7 @@ async fn handle_sub_set(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     setting: NotificationSetting,
 ) -> ResponseResult<()> {
@@ -189,7 +189,7 @@ async fn handle_noon_toggle(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let user_settings = match user_settings_service::get_or_create(
@@ -271,7 +271,7 @@ async fn handle_mute_manage(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     match user_settings_service::get_or_create(&state.db, telegram_id, LanguageCode::En).await {
@@ -296,8 +296,8 @@ async fn handle_mute_manage(
     Ok(())
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }
 
 async fn handle_queue_toggle_user(
@@ -305,7 +305,7 @@ async fn handle_queue_toggle_user(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let settings = match user_settings_service::get_or_create(
@@ -413,7 +413,7 @@ async fn handle_queue_toggle_global(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let is_admin = is_admin(&state.db, &state.config, telegram_id).await;
@@ -464,7 +464,7 @@ async fn handle_queue_clear_self(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let settings = match user_settings_service::get_or_create(
@@ -535,7 +535,7 @@ async fn handle_queue_clear_all(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let is_admin = is_admin(&state.db, &state.config, telegram_id).await;
@@ -582,7 +582,7 @@ async fn handle_queue_clear_all(
 async fn is_admin(
     db: &crate::infra::db::Database,
     config: &crate::bootstrap::config::Config,
-    telegram_id: i64,
+    telegram_id: TelegramId,
 ) -> bool {
     if telegram_id == config.telegram.admin_chat_id {
         return true;

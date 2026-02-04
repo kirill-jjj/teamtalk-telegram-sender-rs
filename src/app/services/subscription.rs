@@ -1,15 +1,19 @@
-use crate::core::types::TtUsername;
+use crate::core::types::{TelegramId, TtUsername};
 use anyhow::Result;
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait SubscriptionRepo: Sync {
-    async fn is_telegram_id_banned(&self, telegram_id: i64) -> Result<bool>;
+    async fn is_telegram_id_banned(&self, telegram_id: TelegramId) -> Result<bool>;
     async fn is_teamtalk_username_banned(&self, username: &TtUsername) -> Result<bool>;
-    async fn add_subscriber(&self, telegram_id: i64) -> Result<()>;
-    async fn link_tt_account(&self, telegram_id: i64, tt_username: &TtUsername) -> Result<()>;
-    async fn delete_user_profile(&self, telegram_id: i64) -> Result<()>;
-    async fn is_subscribed(&self, telegram_id: i64) -> Result<bool>;
+    async fn add_subscriber(&self, telegram_id: TelegramId) -> Result<()>;
+    async fn link_tt_account(
+        &self,
+        telegram_id: TelegramId,
+        tt_username: &TtUsername,
+    ) -> Result<()>;
+    async fn delete_user_profile(&self, telegram_id: TelegramId) -> Result<()>;
+    async fn is_subscribed(&self, telegram_id: TelegramId) -> Result<bool>;
 }
 
 #[derive(Debug, Clone)]
@@ -22,7 +26,7 @@ pub enum SubscribeOutcome {
 
 pub async fn subscribe_via_deeplink(
     db: &impl SubscriptionRepo,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     payload: Option<String>,
 ) -> Result<SubscribeOutcome> {
     if db.is_telegram_id_banned(telegram_id).await? {
@@ -47,17 +51,17 @@ pub async fn subscribe_via_deeplink(
     }
 }
 
-pub async fn unsubscribe(db: &impl SubscriptionRepo, telegram_id: i64) -> Result<()> {
+pub async fn unsubscribe(db: &impl SubscriptionRepo, telegram_id: TelegramId) -> Result<()> {
     db.delete_user_profile(telegram_id).await
 }
 
-pub async fn is_subscribed(db: &impl SubscriptionRepo, telegram_id: i64) -> Result<bool> {
+pub async fn is_subscribed(db: &impl SubscriptionRepo, telegram_id: TelegramId) -> Result<bool> {
     db.is_subscribed(telegram_id).await
 }
 
 #[async_trait]
 impl SubscriptionRepo for crate::infra::db::Database {
-    async fn is_telegram_id_banned(&self, telegram_id: i64) -> Result<bool> {
+    async fn is_telegram_id_banned(&self, telegram_id: TelegramId) -> Result<bool> {
         self.is_telegram_id_banned(telegram_id).await
     }
 
@@ -65,19 +69,23 @@ impl SubscriptionRepo for crate::infra::db::Database {
         self.is_teamtalk_username_banned(username).await
     }
 
-    async fn add_subscriber(&self, telegram_id: i64) -> Result<()> {
+    async fn add_subscriber(&self, telegram_id: TelegramId) -> Result<()> {
         self.add_subscriber(telegram_id).await
     }
 
-    async fn link_tt_account(&self, telegram_id: i64, tt_username: &TtUsername) -> Result<()> {
+    async fn link_tt_account(
+        &self,
+        telegram_id: TelegramId,
+        tt_username: &TtUsername,
+    ) -> Result<()> {
         self.link_tt_account(telegram_id, tt_username).await
     }
 
-    async fn delete_user_profile(&self, telegram_id: i64) -> Result<()> {
+    async fn delete_user_profile(&self, telegram_id: TelegramId) -> Result<()> {
         self.delete_user_profile(telegram_id).await
     }
 
-    async fn is_subscribed(&self, telegram_id: i64) -> Result<bool> {
+    async fn is_subscribed(&self, telegram_id: TelegramId) -> Result<bool> {
         self.is_subscribed(telegram_id).await
     }
 }

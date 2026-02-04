@@ -13,6 +13,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
+use crate::core::types::TelegramId;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::db::Database;
 use crate::infra::locales;
@@ -35,7 +36,7 @@ struct SubCtx<'a> {
     >,
     lang: LanguageCode,
     q_id: &'a teloxide::types::CallbackQueryId,
-    admin_chat_id: i64,
+    admin_chat_id: TelegramId,
 }
 
 pub async fn handle_subscriber_actions(
@@ -110,13 +111,13 @@ impl SubCtx<'_> {
         }
     }
 
-    async fn details(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn details(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         send_subscriber_details(self.sub_details_args(sub_id, page)).await?;
         answer_callback_empty(self.bot, self.q_id).await?;
         Ok(())
     }
 
-    async fn admin_add_confirm(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn admin_add_confirm(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if !self.is_main_admin() {
             answer_callback_empty(self.bot, self.q_id).await?;
             return Ok(());
@@ -141,7 +142,7 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn admin_remove_confirm(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn admin_remove_confirm(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if !self.is_main_admin() {
             answer_callback_empty(self.bot, self.q_id).await?;
             return Ok(());
@@ -166,7 +167,7 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn admin_add(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn admin_add(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if !self.is_main_admin() {
             answer_callback_empty(self.bot, self.q_id).await?;
             return Ok(());
@@ -199,7 +200,7 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn admin_remove(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn admin_remove(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if !self.is_main_admin() {
             answer_callback_empty(self.bot, self.q_id).await?;
             return Ok(());
@@ -232,7 +233,7 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn delete(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn delete(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if check_db_err(
             self.bot,
             &self.q_id.0,
@@ -269,7 +270,7 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn ban(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn ban(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         let tt_user = match self.db.get_tt_username_by_telegram_id(sub_id).await {
             Ok(u) => u,
             Err(e) => {
@@ -307,7 +308,7 @@ impl SubCtx<'_> {
 
         if let Err(e) = subscriber_actions_service::delete_user(self.db, sub_id).await {
             tracing::error!(
-                telegram_id = sub_id,
+                telegram_id = sub_id.as_i64(),
                 tt_username = ?tt_user,
                 error = %e,
                 "Partial failure during ban"
@@ -337,11 +338,11 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn manage_tt(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn manage_tt(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         send_sub_manage_tt_menu(self.bot, self.msg, self.db, self.lang, sub_id, page).await
     }
 
-    async fn unlink(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn unlink(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if check_db_err(
             self.bot,
             &self.q_id.0,
@@ -370,7 +371,12 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn link_list(&self, sub_id: i64, page: usize, list_page: usize) -> ResponseResult<()> {
+    async fn link_list(
+        &self,
+        sub_id: TelegramId,
+        page: usize,
+        list_page: usize,
+    ) -> ResponseResult<()> {
         if let Err(e) = self.tx_tt.send(TtCommand::LoadAccounts).await {
             tracing::error!(error = %e, "Failed to request TT accounts");
             notify_admin_error(
@@ -383,7 +389,11 @@ impl SubCtx<'_> {
             )
             .await;
         }
-        let accounts = self.state_handle.user_accounts_sorted().await;
+        let accounts = self
+            .state_handle
+            .user_accounts_sorted()
+            .await
+            .unwrap_or_default();
         send_sub_link_account_list(
             self.bot,
             self.msg,
@@ -401,7 +411,7 @@ impl SubCtx<'_> {
 
     async fn link_perform(
         &self,
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         username: crate::core::types::TtUsername,
     ) -> ResponseResult<()> {
@@ -433,13 +443,13 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn lang_menu(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn lang_menu(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         send_sub_lang_menu(self.bot, self.msg, self.lang, sub_id, page).await
     }
 
     async fn lang_set(
         &self,
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         new_lang: LanguageCode,
     ) -> ResponseResult<()> {
@@ -471,13 +481,13 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn notif_menu(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn notif_menu(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         send_sub_notif_menu(self.bot, self.msg, self.lang, sub_id, page).await
     }
 
     async fn notif_set(
         &self,
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         val: crate::core::types::NotificationSetting,
     ) -> ResponseResult<()> {
@@ -509,7 +519,7 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn noon_toggle(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn noon_toggle(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         if check_db_err(
             self.bot,
             &self.q_id.0,
@@ -541,13 +551,13 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn mode_menu(&self, sub_id: i64, page: usize) -> ResponseResult<()> {
+    async fn mode_menu(&self, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
         send_sub_mute_mode_menu(self.bot, self.msg, self.lang, sub_id, page).await
     }
 
     async fn mode_set(
         &self,
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         mode: crate::core::types::MuteListMode,
     ) -> ResponseResult<()> {
@@ -579,7 +589,12 @@ impl SubCtx<'_> {
         Ok(())
     }
 
-    async fn mute_view(&self, sub_id: i64, page: usize, view_page: usize) -> ResponseResult<()> {
+    async fn mute_view(
+        &self,
+        sub_id: TelegramId,
+        page: usize,
+        view_page: usize,
+    ) -> ResponseResult<()> {
         send_sub_mute_list(
             self.bot,
             self.msg,
@@ -598,7 +613,7 @@ impl SubCtx<'_> {
         self.admin_chat_id == self.config.telegram.admin_chat_id
     }
 
-    fn sub_details_args(&self, sub_id: i64, page: usize) -> SubscriberDetailsArgs<'_> {
+    fn sub_details_args(&self, sub_id: TelegramId, page: usize) -> SubscriberDetailsArgs<'_> {
         SubscriberDetailsArgs {
             bot: self.bot,
             msg: self.msg,
@@ -612,6 +627,6 @@ impl SubCtx<'_> {
     }
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

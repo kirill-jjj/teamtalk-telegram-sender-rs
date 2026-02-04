@@ -13,7 +13,7 @@ use crate::app::services::user_settings as user_settings_service;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
 use crate::core::types::{
-    AdminErrorContext, LanguageCode, MuteListMode, NotificationSetting, TtCommand,
+    AdminErrorContext, LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtCommand,
 };
 use crate::infra::db::Database;
 use crate::infra::locales;
@@ -101,7 +101,7 @@ fn make_error_handler(
                 notify_admin_error(
                     &admin_bot,
                     &admin_config,
-                    0,
+                    TelegramId::from(0),
                     AdminErrorContext::UpdateListener,
                     &err_str,
                     default_lang,
@@ -209,7 +209,7 @@ async fn set_bot_commands(
             .await
             .unwrap_or_else(|e| {
                 tracing::error!(
-                    admin_id,
+                    admin_id = admin_id.as_i64(),
                     error = %e,
                     "Failed to load admin settings"
                 );
@@ -230,12 +230,12 @@ async fn set_bot_commands(
 
         bot.set_my_commands(admin_cmds)
             .scope(BotCommandScope::Chat {
-                chat_id: Recipient::Id(teloxide::types::ChatId(admin_id)),
+                chat_id: Recipient::Id(teloxide::types::ChatId(admin_id.as_i64())),
             })
             .await
             .unwrap_or_else(|e| {
                 tracing::error!(
-                    admin_id,
+                    admin_id = admin_id.as_i64(),
                     error = %e,
                     "Failed to set admin commands"
                 );

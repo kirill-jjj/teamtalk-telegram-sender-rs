@@ -17,7 +17,9 @@ use crate::app::services::subscription as subscription_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, UnsubAction};
-use crate::core::types::{AdminErrorContext, DeeplinkAction, LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{
+    AdminErrorContext, DeeplinkAction, LanguageCode, LiteUser, TelegramId, TtCommand,
+};
 use crate::infra::locales;
 use std::time::{SystemTime, UNIX_EPOCH};
 use teloxide::net::Download;
@@ -77,8 +79,8 @@ pub async fn answer_command(
     Ok(())
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }
 
 struct CommandCtx<'a> {
@@ -88,7 +90,7 @@ struct CommandCtx<'a> {
     db: &'a crate::infra::db::Database,
     config: &'a crate::bootstrap::config::Config,
     tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     is_admin: bool,
 }
@@ -98,36 +100,37 @@ impl<'a> CommandCtx<'a> {
         bot: &'a Bot,
         msg: &'a Message,
         state: &'a AppState,
-        telegram_id: i64,
+        telegram_id: TelegramId,
     ) -> ResponseResult<Option<Self>> {
         let db = &state.db;
         let config = &state.config;
         let default_lang = config.general.default_lang;
-        let settings =
-            match user_settings_service::get_or_create(db, telegram_id, default_lang).await {
-                Ok(s) => s,
-                Err(e) => {
-                    tracing::error!(telegram_id, error = %e, "Failed to get or create user");
-                    notify_admin_error(
-                        bot,
-                        config,
-                        telegram_id,
-                        AdminErrorContext::Command,
-                        &e.to_string(),
-                        default_lang,
-                    )
-                    .await;
-                    send_text_key(
-                        bot,
-                        msg.chat.id,
-                        default_lang,
-                        locales::LocaleKey::CmdError,
-                        Some(msg.id),
-                    )
-                    .await?;
-                    return Ok(None);
-                }
-            };
+        let settings = match user_settings_service::get_or_create(db, telegram_id, default_lang)
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to get or create user");
+                notify_admin_error(
+                    bot,
+                    config,
+                    telegram_id,
+                    AdminErrorContext::Command,
+                    &e.to_string(),
+                    default_lang,
+                )
+                .await;
+                send_text_key(
+                    bot,
+                    msg.chat.id,
+                    default_lang,
+                    locales::LocaleKey::CmdError,
+                    Some(msg.id),
+                )
+                .await?;
+                return Ok(None);
+            }
+        };
         let lang = settings.language_code;
         let is_admin = if telegram_id == config.telegram.admin_chat_id {
             true
@@ -430,7 +433,12 @@ impl<'a> CommandCtx<'a> {
             .await?;
             return Ok(());
         }
-        let users: Vec<LiteUser> = self.state.state.online_users_sorted().await;
+        let users: Vec<LiteUser> = self
+            .state
+            .state
+            .online_users_sorted()
+            .await
+            .unwrap_or_default();
 
         let is_kick = matches!(cmd, Command::Kick);
         let title_key = if is_kick {
@@ -680,13 +688,13 @@ impl<'a> CommandCtx<'a> {
             if sub.telegram_id == self.telegram_id {
                 continue;
             }
-            let chat_id = ChatId(sub.telegram_id);
+            let chat_id = ChatId(sub.telegram_id.as_i64());
             match self.bot.send_message(chat_id, text.clone()).await {
                 Ok(_) => sent += 1,
                 Err(e) => {
                     failed += 1;
                     tracing::warn!(
-                        telegram_id = sub.telegram_id,
+                        telegram_id = sub.telegram_id.as_i64(),
                         error = %e,
                         "Failed to send broadcast message"
                     );
@@ -1103,7 +1111,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: AppState) -> Response
 async fn is_admin(
     db: &crate::infra::db::Database,
     config: &crate::bootstrap::config::Config,
-    telegram_id: i64,
+    telegram_id: TelegramId,
 ) -> bool {
     if telegram_id == config.telegram.admin_chat_id {
         return true;
@@ -1121,7 +1129,7 @@ async fn handle_admin_reply(
     bot: &Bot,
     msg: &Message,
     state: &AppState,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     admin_lang: LanguageCode,
 ) -> ResponseResult<()> {
     let config = &state.config;
@@ -1189,7 +1197,7 @@ struct ChannelReplyCtx<'a> {
     bot: &'a Bot,
     msg: &'a Message,
     state: &'a AppState,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     admin_lang: LanguageCode,
 }
 
@@ -1287,7 +1295,7 @@ async fn handle_user_reply(
     bot: &Bot,
     msg: &Message,
     state: &AppState,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     admin_lang: LanguageCode,
     reply_id: i64,
     text: &str,
@@ -1317,12 +1325,20 @@ async fn handle_user_reply(
             .state
             .user_id_by_username(username)
             .await
+            .ok()
+            .flatten()
             .or(Some(tt_user_id))
     } else {
         Some(tt_user_id)
     };
     let is_online = if let Some(id) = current_tt_user_id {
-        state.state.online_user_by_id(id).await.is_some()
+        state
+            .state
+            .online_user_by_id(id)
+            .await
+            .ok()
+            .flatten()
+            .is_some()
     } else {
         false
     };

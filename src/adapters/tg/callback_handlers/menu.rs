@@ -2,6 +2,7 @@ use crate::adapters::tg::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback_empty, notify_admin_error};
 use crate::core::callbacks::{CallbackAction, MenuAction, UnsubAction};
+use crate::core::types::TelegramId;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -73,6 +74,6 @@ pub async fn handle_menu(
     Ok(())
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

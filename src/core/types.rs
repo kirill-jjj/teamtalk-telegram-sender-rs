@@ -108,6 +108,39 @@ pub enum MuteListMode {
     Whitelist,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type)]
+#[serde(transparent)]
+#[sqlx(transparent)]
+pub struct TelegramId(i64);
+
+impl TelegramId {
+    pub const fn new(value: i64) -> Self {
+        Self(value)
+    }
+
+    pub const fn as_i64(self) -> i64 {
+        self.0
+    }
+}
+
+impl From<i64> for TelegramId {
+    fn from(value: i64) -> Self {
+        Self(value)
+    }
+}
+
+impl From<TelegramId> for i64 {
+    fn from(value: TelegramId) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Display for TelegramId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActionStatus {
     Toggled,

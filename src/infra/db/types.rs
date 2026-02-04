@@ -1,11 +1,11 @@
 use crate::core::types::{
-    DeeplinkAction, LanguageCode, MuteListMode, NotificationSetting, TtUsername,
+    DeeplinkAction, LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUsername,
 };
 use chrono::NaiveDateTime;
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct UserSettings {
-    pub telegram_id: i64,
+    pub telegram_id: TelegramId,
     pub language_code: LanguageCode,
     pub notification_settings: NotificationSetting,
     pub mute_list_mode: MuteListMode,
@@ -19,19 +19,19 @@ pub struct UserSettings {
 pub struct Deeplink {
     pub action: DeeplinkAction,
     pub payload: Option<String>,
-    pub expected_telegram_id: Option<i64>,
+    pub expected_telegram_id: Option<TelegramId>,
     pub expiry_time: NaiveDateTime,
 }
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct BanEntry {
     pub id: i64,
-    pub telegram_id: Option<i64>,
+    pub telegram_id: Option<TelegramId>,
     pub teamtalk_username: Option<TtUsername>,
 }
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct SubscriberInfo {
-    pub telegram_id: i64,
+    pub telegram_id: TelegramId,
     pub teamtalk_username: Option<TtUsername>,
 }

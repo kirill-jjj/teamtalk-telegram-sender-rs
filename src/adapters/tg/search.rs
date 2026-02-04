@@ -10,7 +10,7 @@ use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MuteAction, SubAction};
 use crate::core::types::{
-    ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername,
+    ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TelegramId, TtCommand, TtUsername,
 };
 use crate::infra::db::types::BanEntry;
 use crate::infra::locales;
@@ -34,22 +34,22 @@ pub enum SearchListType {
     Unban,
     Subscribers,
     MuteServer {
-        telegram_id: i64,
+        telegram_id: TelegramId,
         mode: MuteListMode,
         page: usize,
     },
     MuteLocal {
-        telegram_id: i64,
+        telegram_id: TelegramId,
         mode: MuteListMode,
         page: usize,
     },
     SubMuteView {
-        sub_id: i64,
+        sub_id: TelegramId,
         sub_page: usize,
         view_page: usize,
     },
     LinkList {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
 }
@@ -147,7 +147,7 @@ async fn find_matches(
     let normalized_query = query.to_lowercase();
     let mut candidates = match list_type {
         SearchListType::Kick => {
-            let users = state.state.online_users_sorted().await;
+            let users = state.state.online_users_sorted().await.unwrap_or_default();
             users
                 .into_iter()
                 .map(|u| SearchCandidate {
@@ -158,7 +158,7 @@ async fn find_matches(
                 .collect()
         }
         SearchListType::Ban => {
-            let users = state.state.online_users_sorted().await;
+            let users = state.state.online_users_sorted().await.unwrap_or_default();
             users
                 .into_iter()
                 .map(|u| SearchCandidate {
@@ -198,7 +198,7 @@ async fn find_matches(
                 .collect()
         }
         SearchListType::MuteServer { mode, page, .. } => {
-            let accounts = state.state.user_accounts_sorted().await;
+            let accounts = state.state.user_accounts_sorted().await.unwrap_or_default();
             accounts
                 .into_iter()
                 .map(|acc| {
@@ -278,7 +278,7 @@ async fn find_matches(
                 .collect()
         }
         SearchListType::LinkList { sub_id, page } => {
-            let accounts = state.state.user_accounts_sorted().await;
+            let accounts = state.state.user_accounts_sorted().await.unwrap_or_default();
             accounts
                 .into_iter()
                 .map(|acc| {
@@ -401,9 +401,8 @@ async fn handle_single_match(
             else {
                 return Ok(false);
             };
-            let requester_id = msg.from.as_ref().map_or(0, |u| u.id.0);
-            let is_main_admin = i64::try_from(requester_id).unwrap_or(i64::MAX)
-                == state.config.telegram.admin_chat_id;
+            let requester_id = tg_user_id_i64(msg.from.as_ref().map_or(0, |u| u.id.0));
+            let is_main_admin = requester_id == state.config.telegram.admin_chat_id;
             subscribers_logic::send_subscriber_details(subscribers_logic::SubscriberDetailsArgs {
                 bot,
                 msg,
@@ -504,7 +503,7 @@ async fn handle_single_match(
 }
 
 struct ToggleMuteArgs {
-    telegram_id: i64,
+    telegram_id: TelegramId,
     mode: MuteListMode,
     username: TtUsername,
     page: usize,
@@ -547,7 +546,7 @@ async fn toggle_mute_and_render(
     bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
 
     if args.server_list {
-        let accounts = state.state.user_accounts_sorted().await;
+        let accounts = state.state.user_accounts_sorted().await.unwrap_or_default();
         let guest_username = state
             .config
             .teamtalk
@@ -693,6 +692,6 @@ fn back_action(list_type: &SearchListType) -> CallbackAction {
     }
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

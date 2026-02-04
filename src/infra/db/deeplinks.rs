@@ -2,6 +2,7 @@ use anyhow::Result;
 use chrono::{Duration, Utc};
 
 use super::{Database, types::Deeplink};
+use crate::core::types::TelegramId;
 
 impl Database {
     pub async fn create_deeplink(
@@ -9,7 +10,7 @@ impl Database {
         token: &str,
         action: crate::core::types::DeeplinkAction,
         payload: Option<&str>,
-        expected_telegram_id: Option<i64>,
+        expected_telegram_id: Option<TelegramId>,
         ttl_seconds: i64,
     ) -> Result<()> {
         let expiry = Utc::now() + Duration::seconds(ttl_seconds);
@@ -33,7 +34,7 @@ impl Database {
             SELECT
                 action as "action!: crate::core::types::DeeplinkAction",
                 payload,
-                expected_telegram_id,
+                expected_telegram_id as "expected_telegram_id?: crate::core::types::TelegramId",
                 expiry_time as "expiry_time!"
             FROM deeplinks WHERE token = ?
             "#,

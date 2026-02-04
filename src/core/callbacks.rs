@@ -4,6 +4,8 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+use crate::core::types::TelegramId;
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, From)]
 pub enum CallbackAction {
     Menu(MenuAction),
@@ -54,84 +56,84 @@ pub enum SettingsAction {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum SubAction {
     Details {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     AdminAddConfirm {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     AdminAdd {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     AdminRemoveConfirm {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     AdminRemove {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     Delete {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     Ban {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     ManageTt {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     Unlink {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     LinkList {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         list_page: usize,
     },
     LinkPerform {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         username: TtUsername,
     },
     LangMenu {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     LangSet {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         lang: LanguageCode,
     },
     NotifMenu {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     NotifSet {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         val: NotificationSetting,
     },
     NoonToggle {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     ModeMenu {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
     },
     ModeSet {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         mode: MuteListMode,
     },
     MuteView {
-        sub_id: i64,
+        sub_id: TelegramId,
         page: usize,
         view_page: usize,
     },

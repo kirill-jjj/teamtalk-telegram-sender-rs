@@ -4,7 +4,7 @@ use crate::adapters::tg::utils::notify_admin_error;
 use crate::app::services::subscription as subscriptions_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::core::callbacks::CallbackAction;
-use crate::core::types::{AdminErrorContext, LanguageCode};
+use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
 use crate::infra::locales;
 use std::str::FromStr;
 use teloxide::prelude::*;
@@ -33,15 +33,15 @@ pub async fn answer_callback(bot: Bot, q: CallbackQuery, state: AppState) -> Res
     Ok(())
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }
 
 async fn load_user_lang(
     bot: &Bot,
     db: &crate::infra::db::Database,
     config: &crate::bootstrap::config::Config,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     default_lang: LanguageCode,
     query_id: teloxide::types::CallbackQueryId,
 ) -> ResponseResult<LanguageCode> {
@@ -50,7 +50,7 @@ async fn load_user_lang(
             Ok(settings) => settings,
             Err(e) => {
                 tracing::error!(
-                    telegram_id,
+                    telegram_id = telegram_id.as_i64(),
                     error = %e,
                     "Failed to get/create user in callback"
                 );
@@ -81,7 +81,7 @@ async fn ensure_subscribed(
     bot: &Bot,
     db: &crate::infra::db::Database,
     config: &crate::bootstrap::config::Config,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     query_id: teloxide::types::CallbackQueryId,
 ) -> ResponseResult<bool> {
@@ -100,7 +100,7 @@ async fn ensure_subscribed(
         }
         Err(e) => {
             tracing::error!(
-                telegram_id,
+                telegram_id = telegram_id.as_i64(),
                 error = %e,
                 "Failed to check subscription"
             );

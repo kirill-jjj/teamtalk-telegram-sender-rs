@@ -1,5 +1,6 @@
 use super::*;
 use crate::core::types::DeeplinkAction;
+use crate::core::types::TelegramId;
 use crate::infra::db::{Database, types::Deeplink};
 use async_trait::async_trait;
 use std::path::PathBuf;
@@ -21,26 +22,28 @@ async fn resolve_for_user_honors_expected_id() {
         "token123",
         DeeplinkAction::Subscribe,
         Some("payload"),
-        Some(42),
+        Some(TelegramId::from(42)),
         60,
     )
     .await
     .expect("insert deeplink");
 
-    let denied = resolve_for_user(&db, "token123", 7).await.expect("resolve");
+    let denied = resolve_for_user(&db, "token123", TelegramId::from(7))
+        .await
+        .expect("resolve");
     assert!(denied.is_none());
 
     db.create_deeplink(
         "token123",
         DeeplinkAction::Subscribe,
         Some("payload"),
-        Some(42),
+        Some(TelegramId::from(42)),
         60,
     )
     .await
     .expect("insert deeplink");
 
-    let allowed = resolve_for_user(&db, "token123", 42)
+    let allowed = resolve_for_user(&db, "token123", TelegramId::from(42))
         .await
         .expect("resolve")
         .expect("expected deeplink");
@@ -70,10 +73,12 @@ async fn resolve_rejects_wrong_expected_id() {
         deeplink: Some(Deeplink {
             action: DeeplinkAction::Subscribe,
             payload: Some("payload".to_string()),
-            expected_telegram_id: Some(10),
+            expected_telegram_id: Some(TelegramId::from(10)),
             expiry_time: chrono::Utc::now().naive_utc(),
         }),
     };
-    let res = resolve_for_user(&repo, "t", 42).await.unwrap();
+    let res = resolve_for_user(&repo, "t", TelegramId::from(42))
+        .await
+        .unwrap();
     assert!(res.is_none());
 }

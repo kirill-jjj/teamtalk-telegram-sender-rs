@@ -1,4 +1,4 @@
-use crate::core::types::NotificationType;
+use crate::core::types::{NotificationType, TelegramId};
 use anyhow::Result;
 
 use super::{
@@ -7,7 +7,7 @@ use super::{
 };
 
 impl Database {
-    pub async fn add_subscriber(&self, telegram_id: i64) -> Result<()> {
+    pub async fn add_subscriber(&self, telegram_id: TelegramId) -> Result<()> {
         sqlx::query!(
             "INSERT OR IGNORE INTO subscribed_users (telegram_id) VALUES (?)",
             telegram_id
@@ -17,7 +17,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn is_subscribed(&self, telegram_id: i64) -> Result<bool> {
+    pub async fn is_subscribed(&self, telegram_id: TelegramId) -> Result<bool> {
         let record = sqlx::query!(
             "SELECT count(*) as count FROM subscribed_users WHERE telegram_id = ?",
             telegram_id
@@ -32,7 +32,7 @@ impl Database {
             SubscriberInfo,
             r#"
             SELECT
-                su.telegram_id as "telegram_id!",
+                su.telegram_id as "telegram_id!: TelegramId",
                 us.teamtalk_username as "teamtalk_username?: crate::core::types::TtUsername"
             FROM subscribed_users su
             LEFT JOIN user_settings us ON su.telegram_id = us.telegram_id
@@ -58,7 +58,7 @@ impl Database {
             UserSettings,
             r#"
             SELECT
-                us.telegram_id as "telegram_id!",
+                us.telegram_id as "telegram_id!: TelegramId",
                 us.language_code as "language_code!: crate::core::types::LanguageCode",
                 us.notification_settings as "notification_settings!: crate::core::types::NotificationSetting",
                 us.mute_list_mode as "mute_list_mode!: crate::core::types::MuteListMode",

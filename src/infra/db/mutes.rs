@@ -1,10 +1,14 @@
-use crate::core::types::MuteListMode;
+use crate::core::types::{MuteListMode, TelegramId};
 use anyhow::Result;
 
 use super::Database;
 
 impl Database {
-    pub async fn update_mute_mode(&self, telegram_id: i64, mode: MuteListMode) -> Result<()> {
+    pub async fn update_mute_mode(
+        &self,
+        telegram_id: TelegramId,
+        mode: MuteListMode,
+    ) -> Result<()> {
         sqlx::query!(
             "UPDATE user_settings SET mute_list_mode = ? WHERE telegram_id = ?",
             mode,
@@ -17,7 +21,7 @@ impl Database {
 
     pub async fn get_muted_users_list(
         &self,
-        telegram_id: i64,
+        telegram_id: TelegramId,
         mode: MuteListMode,
     ) -> Result<Vec<crate::core::types::TtUsername>> {
         let rows: Vec<String> = sqlx::query_scalar!(
@@ -35,7 +39,7 @@ impl Database {
 
     pub async fn toggle_muted_user(
         &self,
-        telegram_id: i64,
+        telegram_id: TelegramId,
         mode: MuteListMode,
         username: &crate::core::types::TtUsername,
     ) -> Result<()> {

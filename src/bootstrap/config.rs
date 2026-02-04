@@ -1,4 +1,4 @@
-use crate::core::types::{LanguageCode, TtChannelName, TtUsername};
+use crate::core::types::{LanguageCode, TelegramId, TtChannelName, TtUsername};
 use serde::Deserialize;
 use serde_with::{NoneAsEmptyString, serde_as};
 use teamtalk::types::UserGender;
@@ -93,7 +93,7 @@ pub struct DatabaseConfig {
 pub struct TelegramConfig {
     pub event_token: Option<String>,
     pub message_token: Option<String>,
-    pub admin_chat_id: i64,
+    pub admin_chat_id: TelegramId,
 }
 
 #[derive(Deserialize, Clone)]

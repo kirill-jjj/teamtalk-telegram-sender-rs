@@ -1,12 +1,23 @@
-use crate::core::types::{LanguageCode, LiteUser, TtChannelName, TtUsername};
+use crate::core::types::{LanguageCode, LiteUser, TelegramId, TtChannelName, TtUsername};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use teamtalk::types::UserAccount;
+use thiserror::Error;
 use tokio::sync::{mpsc, oneshot};
 
 #[derive(Clone)]
 pub struct StateHandle {
     tx: mpsc::Sender<StateCmd>,
+}
+
+pub type StateResult<T> = Result<T, StateError>;
+
+#[derive(Debug, Error)]
+pub enum StateError {
+    #[error("state channel closed")]
+    ChannelClosed,
+    #[error("state response dropped")]
+    ResponseDropped,
 }
 
 enum StateCmd {
@@ -56,7 +67,7 @@ enum StateCmd {
         cache: HashMap<TtUsername, LanguageCode>,
     },
     PreloadTgCache {
-        cache: HashMap<TtUsername, i64>,
+        cache: HashMap<TtUsername, TelegramId>,
     },
     GetLangCached {
         username: TtUsername,
@@ -64,7 +75,7 @@ enum StateCmd {
     },
     GetTgCached {
         username: TtUsername,
-        resp: oneshot::Sender<Option<i64>>,
+        resp: oneshot::Sender<Option<TelegramId>>,
     },
     SetLangCached {
         username: TtUsername,
@@ -72,7 +83,7 @@ enum StateCmd {
     },
     SetTgCached {
         username: TtUsername,
-        tg_id: i64,
+        tg_id: TelegramId,
     },
     GetCacheStats {
         resp: oneshot::Sender<TtCacheStatsSnapshot>,
@@ -121,7 +132,7 @@ impl StateHandle {
         let _ = self.tx.try_send(StateCmd::UpsertUserAccount { account });
     }
 
-    pub async fn online_users_sorted(&self) -> Vec<LiteUser> {
+    pub async fn online_users_sorted(&self) -> StateResult<Vec<LiteUser>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -129,12 +140,12 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return Vec::new();
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.unwrap_or_default()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn online_user_by_id(&self, user_id: i32) -> Option<LiteUser> {
+    pub async fn online_user_by_id(&self, user_id: i32) -> StateResult<Option<LiteUser>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -142,12 +153,12 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return None;
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.ok().flatten()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn user_id_by_username(&self, username: &TtUsername) -> Option<i32> {
+    pub async fn user_id_by_username(&self, username: &TtUsername) -> StateResult<Option<i32>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -158,12 +169,12 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return None;
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.ok().flatten()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn is_username_online(&self, username: &TtUsername) -> bool {
+    pub async fn is_username_online(&self, username: &TtUsername) -> StateResult<bool> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -174,12 +185,12 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return false;
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.unwrap_or(false)
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn remove_online_user(&self, user_id: i32) -> Option<LiteUser> {
+    pub async fn remove_online_user(&self, user_id: i32) -> StateResult<Option<LiteUser>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -190,12 +201,12 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return None;
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.ok().flatten()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn user_accounts_sorted(&self) -> Vec<UserAccount> {
+    pub async fn user_accounts_sorted(&self) -> StateResult<Vec<UserAccount>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -203,20 +214,23 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return Vec::new();
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.unwrap_or_default()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
     pub fn preload_lang_cache(&self, cache: HashMap<TtUsername, LanguageCode>) {
         let _ = self.tx.try_send(StateCmd::PreloadLangCache { cache });
     }
 
-    pub fn preload_tg_cache(&self, cache: HashMap<TtUsername, i64>) {
+    pub fn preload_tg_cache(&self, cache: HashMap<TtUsername, TelegramId>) {
         let _ = self.tx.try_send(StateCmd::PreloadTgCache { cache });
     }
 
-    pub async fn get_lang_cached(&self, username: &TtUsername) -> Option<LanguageCode> {
+    pub async fn get_lang_cached(
+        &self,
+        username: &TtUsername,
+    ) -> StateResult<Option<LanguageCode>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -227,12 +241,12 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return None;
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.ok().flatten()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn get_tg_cached(&self, username: &TtUsername) -> Option<i64> {
+    pub async fn get_tg_cached(&self, username: &TtUsername) -> StateResult<Option<TelegramId>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -243,20 +257,20 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return None;
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.ok().flatten()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
     pub fn set_lang_cached(&self, username: TtUsername, lang: LanguageCode) {
         let _ = self.tx.try_send(StateCmd::SetLangCached { username, lang });
     }
 
-    pub fn set_tg_cached(&self, username: TtUsername, tg_id: i64) {
+    pub fn set_tg_cached(&self, username: TtUsername, tg_id: TelegramId) {
         let _ = self.tx.try_send(StateCmd::SetTgCached { username, tg_id });
     }
 
-    pub async fn cache_stats(&self) -> TtCacheStatsSnapshot {
+    pub async fn cache_stats(&self) -> StateResult<TtCacheStatsSnapshot> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -264,9 +278,9 @@ impl StateHandle {
             .await
             .is_err()
         {
-            return TtCacheStatsSnapshot::default();
+            return Err(StateError::ChannelClosed);
         }
-        rx.await.unwrap_or_default()
+        rx.await.map_err(|_| StateError::ResponseDropped)
     }
 }
 
@@ -282,7 +296,7 @@ struct StateStore {
     online_users_by_username: HashMap<TtUsername, i32>,
     user_accounts: HashMap<TtUsername, UserAccount>,
     tt_lang_cache: HashMap<TtUsername, LanguageCode>,
-    tt_tg_cache: HashMap<TtUsername, i64>,
+    tt_tg_cache: HashMap<TtUsername, TelegramId>,
     stats: TtCacheStats,
 }
 

@@ -1,4 +1,4 @@
-use crate::core::types::DeeplinkAction;
+use crate::core::types::{DeeplinkAction, TelegramId};
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -19,7 +19,7 @@ pub struct ResolvedDeeplink {
 pub async fn resolve_for_user(
     db: &impl DeeplinkRepo,
     token: &str,
-    telegram_id: i64,
+    telegram_id: TelegramId,
 ) -> Result<Option<ResolvedDeeplink>> {
     let Some(deeplink) = db.resolve_deeplink(token).await? else {
         return Ok(None);

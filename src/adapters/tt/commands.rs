@@ -49,11 +49,15 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let username = state_handle
                     .online_user_by_id(from_uid)
                     .await
+                    .ok()
+                    .flatten()
                     .map(|u| u.username)
                     .unwrap_or_else(|| TtUsername::new(String::new()));
                 let reply_lang = if username.as_str().is_empty() {
                     default_lang
-                } else if let Some(lang) = state_handle.get_lang_cached(&username).await {
+                } else if let Some(lang) =
+                    state_handle.get_lang_cached(&username).await.ok().flatten()
+                {
                     lang
                 } else {
                     let lang = db
@@ -71,7 +75,9 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .unwrap_or(false)
                 {
                     true
-                } else if let Some(tg_id) = state_handle.get_tg_cached(&username).await {
+                } else if let Some(tg_id) =
+                    state_handle.get_tg_cached(&username).await.ok().flatten()
+                {
                     db.get_all_admins()
                         .await
                         .map(|admins| admins.contains(&tg_id))
@@ -150,6 +156,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let (nick, username): (String, TtUsername) = state_handle
                 .online_user_by_id(from_uid)
                 .await
+                .ok()
+                .flatten()
                 .map(|u| (u.nickname, u.username))
                 .unwrap_or(("Unknown".to_string(), TtUsername::new(String::new())));
 
@@ -162,7 +170,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
 
             let reply_lang = if username.as_str().is_empty() {
                 default_lang
-            } else if let Some(lang) = state_handle.get_lang_cached(&username).await {
+            } else if let Some(lang) = state_handle.get_lang_cached(&username).await.ok().flatten()
+            {
                 lang
             } else {
                 let lang = db
@@ -568,7 +577,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = match db.add_admin(tg_id).await {
+                        let success = match db
+                            .add_admin(crate::core::types::TelegramId::from(tg_id))
+                            .await
+                        {
                             Ok(val) => val,
                             Err(e) => {
                                 tracing::error!(
@@ -628,7 +640,10 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 let mut failed_count = 0;
                 for id_str in &parts[1..] {
                     if let Ok(tg_id) = id_str.parse::<i64>() {
-                        let success = match db.remove_admin(tg_id).await {
+                        let success = match db
+                            .remove_admin(crate::core::types::TelegramId::from(tg_id))
+                            .await
+                        {
                             Ok(val) => val,
                             Err(e) => {
                                 tracing::error!(

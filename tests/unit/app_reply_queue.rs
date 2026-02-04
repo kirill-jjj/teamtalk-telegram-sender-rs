@@ -2,6 +2,7 @@ use crate::app::services::reply_queue::{
     ReplyQueueRepo, get_reply_queue_global_enabled, get_reply_queue_user_enabled,
     is_reply_queue_enabled_for_tt_user,
 };
+use crate::core::types::TelegramId;
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::app_settings::AppSettingKey;
 use crate::infra::db::types::UserSettings;
@@ -13,7 +14,7 @@ use chrono::{Duration, Utc};
 struct FakeReplyQueueRepo {
     global_value: Option<String>,
     user_enabled: bool,
-    tt_to_tg: Option<i64>,
+    tt_to_tg: Option<TelegramId>,
 }
 
 #[async_trait]
@@ -28,7 +29,7 @@ impl ReplyQueueRepo for FakeReplyQueueRepo {
 
     async fn get_or_create_user(
         &self,
-        telegram_id: i64,
+        telegram_id: TelegramId,
         _default_lang: LanguageCode,
     ) -> Result<UserSettings> {
         Ok(UserSettings {
@@ -43,11 +44,15 @@ impl ReplyQueueRepo for FakeReplyQueueRepo {
         })
     }
 
-    async fn update_reply_queue_enabled(&self, _telegram_id: i64, _enabled: bool) -> Result<()> {
+    async fn update_reply_queue_enabled(
+        &self,
+        _telegram_id: TelegramId,
+        _enabled: bool,
+    ) -> Result<()> {
         Ok(())
     }
 
-    async fn get_telegram_id_by_tt_user(&self, _tt_username: &TtUsername) -> Option<i64> {
+    async fn get_telegram_id_by_tt_user(&self, _tt_username: &TtUsername) -> Option<TelegramId> {
         self.tt_to_tg
     }
 }
@@ -79,7 +84,11 @@ async fn user_enabled_reads_settings() {
         user_enabled: true,
         tt_to_tg: None,
     };
-    assert!(get_reply_queue_user_enabled(&repo, 1).await.unwrap());
+    assert!(
+        get_reply_queue_user_enabled(&repo, TelegramId::from(1))
+            .await
+            .unwrap()
+    );
 }
 
 #[tokio::test]
@@ -87,7 +96,7 @@ async fn reply_queue_disabled_when_global_off() {
     let repo = FakeReplyQueueRepo {
         global_value: Some("0".to_string()),
         user_enabled: true,
-        tt_to_tg: Some(42),
+        tt_to_tg: Some(TelegramId::from(42)),
     };
     let tt_username = TtUsername::new("tt");
     assert!(
@@ -117,7 +126,7 @@ async fn reply_queue_enabled_when_global_and_user_on() {
     let repo = FakeReplyQueueRepo {
         global_value: Some("1".to_string()),
         user_enabled: true,
-        tt_to_tg: Some(7),
+        tt_to_tg: Some(TelegramId::from(7)),
     };
     let tt_username = TtUsername::new("tt");
     assert!(

@@ -2,7 +2,7 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback, answer_callback_empty, notify_admin_error};
 use crate::app::services::subscription as subscription_service;
 use crate::core::callbacks::UnsubAction;
-use crate::core::types::{AdminErrorContext, LanguageCode};
+use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -24,7 +24,7 @@ pub async fn handle_unsub_action(
         UnsubAction::Confirm => {
             if let Err(e) = subscription_service::unsubscribe(db, telegram_id).await {
                 tracing::error!(
-                    telegram_id,
+                    telegram_id = telegram_id.as_i64(),
                     error = %e,
                     "Failed to unsubscribe user"
                 );
@@ -73,6 +73,6 @@ pub async fn handle_unsub_action(
     Ok(())
 }
 
-fn tg_user_id_i64(user_id: u64) -> i64 {
-    i64::try_from(user_id).unwrap_or(i64::MAX)
+fn tg_user_id_i64(user_id: u64) -> TelegramId {
+    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

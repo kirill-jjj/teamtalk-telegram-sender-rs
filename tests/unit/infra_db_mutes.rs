@@ -1,26 +1,28 @@
 use super::Database;
-use crate::core::types::{LanguageCode, MuteListMode, TtUsername};
+use crate::core::types::{LanguageCode, MuteListMode, TelegramId, TtUsername};
 
 #[tokio::test]
 async fn toggle_mute_list() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(1, LanguageCode::En).await.unwrap();
+    db.get_or_create_user(TelegramId::from(1), LanguageCode::En)
+        .await
+        .unwrap();
 
     let alice = TtUsername::new("alice");
-    db.toggle_muted_user(1, MuteListMode::Blacklist, &alice)
+    db.toggle_muted_user(TelegramId::from(1), MuteListMode::Blacklist, &alice)
         .await
         .unwrap();
     let list = db
-        .get_muted_users_list(1, MuteListMode::Blacklist)
+        .get_muted_users_list(TelegramId::from(1), MuteListMode::Blacklist)
         .await
         .unwrap();
     assert_eq!(list, vec![alice.clone()]);
 
-    db.toggle_muted_user(1, MuteListMode::Blacklist, &alice)
+    db.toggle_muted_user(TelegramId::from(1), MuteListMode::Blacklist, &alice)
         .await
         .unwrap();
     let list = db
-        .get_muted_users_list(1, MuteListMode::Blacklist)
+        .get_muted_users_list(TelegramId::from(1), MuteListMode::Blacklist)
         .await
         .unwrap();
     assert!(list.is_empty());
@@ -32,14 +34,20 @@ async fn toggle_mute_list() {
 #[tokio::test]
 async fn mute_payload_is_literal() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(9, LanguageCode::En).await.unwrap();
-    let payload = "x'); DELETE FROM muted_users; --";
-    let payload_username = TtUsername::new(payload);
-    db.toggle_muted_user(9, MuteListMode::Blacklist, &payload_username)
+    db.get_or_create_user(TelegramId::from(9), LanguageCode::En)
         .await
         .unwrap();
+    let payload = "x'); DELETE FROM muted_users; --";
+    let payload_username = TtUsername::new(payload);
+    db.toggle_muted_user(
+        TelegramId::from(9),
+        MuteListMode::Blacklist,
+        &payload_username,
+    )
+    .await
+    .unwrap();
     let list = db
-        .get_muted_users_list(9, MuteListMode::Blacklist)
+        .get_muted_users_list(TelegramId::from(9), MuteListMode::Blacklist)
         .await
         .unwrap();
     assert_eq!(list, vec![payload_username]);
@@ -51,8 +59,10 @@ async fn mute_payload_is_literal() {
 #[tokio::test]
 async fn update_mute_mode() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(2, LanguageCode::En).await.unwrap();
-    db.update_mute_mode(2, MuteListMode::Whitelist)
+    db.get_or_create_user(TelegramId::from(2), LanguageCode::En)
+        .await
+        .unwrap();
+    db.update_mute_mode(TelegramId::from(2), MuteListMode::Whitelist)
         .await
         .unwrap();
 
@@ -63,9 +73,11 @@ async fn update_mute_mode() {
 #[tokio::test]
 async fn muted_list_is_empty_for_new_user() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(15, LanguageCode::En).await.unwrap();
+    db.get_or_create_user(TelegramId::from(15), LanguageCode::En)
+        .await
+        .unwrap();
     let list = db
-        .get_muted_users_list(15, MuteListMode::Blacklist)
+        .get_muted_users_list(TelegramId::from(15), MuteListMode::Blacklist)
         .await
         .unwrap();
     assert!(list.is_empty());
@@ -76,22 +88,24 @@ async fn muted_list_is_empty_for_new_user() {
 #[tokio::test]
 async fn lists_are_separate_between_modes() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(20, LanguageCode::En).await.unwrap();
-    let alice = TtUsername::new("alice");
-    let bob = TtUsername::new("bob");
-    db.toggle_muted_user(20, MuteListMode::Blacklist, &alice)
+    db.get_or_create_user(TelegramId::from(20), LanguageCode::En)
         .await
         .unwrap();
-    db.toggle_muted_user(20, MuteListMode::Whitelist, &bob)
+    let alice = TtUsername::new("alice");
+    let bob = TtUsername::new("bob");
+    db.toggle_muted_user(TelegramId::from(20), MuteListMode::Blacklist, &alice)
+        .await
+        .unwrap();
+    db.toggle_muted_user(TelegramId::from(20), MuteListMode::Whitelist, &bob)
         .await
         .unwrap();
 
     let blacklist = db
-        .get_muted_users_list(20, MuteListMode::Blacklist)
+        .get_muted_users_list(TelegramId::from(20), MuteListMode::Blacklist)
         .await
         .unwrap();
     let whitelist = db
-        .get_muted_users_list(20, MuteListMode::Whitelist)
+        .get_muted_users_list(TelegramId::from(20), MuteListMode::Whitelist)
         .await
         .unwrap();
 

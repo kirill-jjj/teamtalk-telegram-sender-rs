@@ -1,4 +1,4 @@
-use crate::core::types::{LanguageCode, TtUsername};
+use crate::core::types::{LanguageCode, TelegramId, TtUsername};
 use crate::infra::db::app_settings::AppSettingKey;
 use crate::infra::db::reply_queue::ReplyQueueItem;
 use anyhow::Result;
@@ -11,11 +11,15 @@ pub trait ReplyQueueRepo: Sync {
     async fn set_app_setting(&self, key: AppSettingKey, value: &str) -> Result<()>;
     async fn get_or_create_user(
         &self,
-        telegram_id: i64,
+        telegram_id: TelegramId,
         default_lang: LanguageCode,
     ) -> Result<crate::infra::db::types::UserSettings>;
-    async fn update_reply_queue_enabled(&self, telegram_id: i64, enabled: bool) -> Result<()>;
-    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<i64>;
+    async fn update_reply_queue_enabled(
+        &self,
+        telegram_id: TelegramId,
+        enabled: bool,
+    ) -> Result<()>;
+    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<TelegramId>;
 }
 
 pub async fn get_reply_queue_global_enabled(db: &impl ReplyQueueRepo) -> Result<bool> {
@@ -33,7 +37,7 @@ pub async fn set_reply_queue_global_enabled(db: &impl ReplyQueueRepo, enabled: b
 
 pub async fn get_reply_queue_user_enabled(
     db: &impl ReplyQueueRepo,
-    telegram_id: i64,
+    telegram_id: TelegramId,
 ) -> Result<bool> {
     let user = db.get_or_create_user(telegram_id, LanguageCode::En).await?;
     Ok(user.reply_queue_enabled)
@@ -41,7 +45,7 @@ pub async fn get_reply_queue_user_enabled(
 
 pub async fn set_reply_queue_user_enabled(
     db: &impl ReplyQueueRepo,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     enabled: bool,
 ) -> Result<()> {
     db.update_reply_queue_enabled(telegram_id, enabled).await
@@ -72,18 +76,22 @@ impl ReplyQueueRepo for crate::infra::db::Database {
 
     async fn get_or_create_user(
         &self,
-        telegram_id: i64,
+        telegram_id: TelegramId,
         default_lang: LanguageCode,
     ) -> Result<crate::infra::db::types::UserSettings> {
         self.get_or_create_user(telegram_id, default_lang).await
     }
 
-    async fn update_reply_queue_enabled(&self, telegram_id: i64, enabled: bool) -> Result<()> {
+    async fn update_reply_queue_enabled(
+        &self,
+        telegram_id: TelegramId,
+        enabled: bool,
+    ) -> Result<()> {
         self.update_reply_queue_enabled(telegram_id, enabled).await
     }
 
     #[allow(clippy::use_self)]
-    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<i64> {
+    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<TelegramId> {
         crate::infra::db::Database::get_telegram_id_by_tt_user(self, tt_username).await
     }
 }

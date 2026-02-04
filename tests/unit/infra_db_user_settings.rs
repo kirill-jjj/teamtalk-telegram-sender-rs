@@ -1,18 +1,23 @@
 use super::Database;
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUsername};
 
 #[tokio::test]
 async fn get_or_create_and_updates() {
     let (db, path) = setup_db().await;
-    let user = db.get_or_create_user(1, LanguageCode::En).await.unwrap();
-    assert_eq!(user.telegram_id, 1);
+    let user = db
+        .get_or_create_user(TelegramId::from(1), LanguageCode::En)
+        .await
+        .unwrap();
+    assert_eq!(user.telegram_id, TelegramId::from(1));
 
-    db.update_language(1, LanguageCode::Ru).await.unwrap();
+    db.update_language(TelegramId::from(1), LanguageCode::Ru)
+        .await
+        .unwrap();
     let missing = TtUsername::new("missing");
     let lang = db.get_user_lang_by_tt_user(&missing).await;
     assert!(lang.is_none());
 
-    db.update_notification_setting(1, NotificationSetting::LeaveOff)
+    db.update_notification_setting(TelegramId::from(1), NotificationSetting::LeaveOff)
         .await
         .unwrap();
 
@@ -23,14 +28,19 @@ async fn get_or_create_and_updates() {
 #[tokio::test]
 async fn toggle_noon_and_linking() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(2, LanguageCode::En).await.unwrap();
-    let first = db.toggle_noon(2).await.unwrap();
-    let second = db.toggle_noon(2).await.unwrap();
+    db.get_or_create_user(TelegramId::from(2), LanguageCode::En)
+        .await
+        .unwrap();
+    let first = db.toggle_noon(TelegramId::from(2)).await.unwrap();
+    let second = db.toggle_noon(TelegramId::from(2)).await.unwrap();
     assert_ne!(first, second);
 
     let bob = TtUsername::new("bob");
-    db.link_tt_account(2, &bob).await.unwrap();
-    let username = db.get_tt_username_by_telegram_id(2).await.unwrap();
+    db.link_tt_account(TelegramId::from(2), &bob).await.unwrap();
+    let username = db
+        .get_tt_username_by_telegram_id(TelegramId::from(2))
+        .await
+        .unwrap();
     assert_eq!(username.as_ref().map(TtUsername::as_str), Some("bob"));
     let lang = db.get_user_lang_by_tt_user(&bob).await;
     assert!(lang.is_some());
@@ -38,14 +48,17 @@ async fn toggle_noon_and_linking() {
     let confirmed: i64 = sqlx::query_scalar(
         "SELECT CAST(not_on_online_confirmed AS INTEGER) FROM user_settings WHERE telegram_id = ?",
     )
-    .bind(2_i64)
+    .bind(TelegramId::from(2).as_i64())
     .fetch_one(&db.pool)
     .await
     .unwrap();
     assert!(confirmed >= 0);
 
-    db.unlink_tt_account(2).await.unwrap();
-    let username = db.get_tt_username_by_telegram_id(2).await.unwrap();
+    db.unlink_tt_account(TelegramId::from(2)).await.unwrap();
+    let username = db
+        .get_tt_username_by_telegram_id(TelegramId::from(2))
+        .await
+        .unwrap();
     assert!(username.is_none());
 
     db.close().await;
@@ -55,26 +68,33 @@ async fn toggle_noon_and_linking() {
 #[tokio::test]
 async fn delete_user_profile_clears_relations() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(3, LanguageCode::En).await.unwrap();
-    db.add_subscriber(3).await.unwrap();
-    db.add_admin(3).await.unwrap();
-    let user = TtUsername::new("user");
-    db.toggle_muted_user(3, MuteListMode::Blacklist, &user)
+    db.get_or_create_user(TelegramId::from(3), LanguageCode::En)
         .await
         .unwrap();
-    db.delete_user_profile(3).await.unwrap();
+    db.add_subscriber(TelegramId::from(3)).await.unwrap();
+    db.add_admin(TelegramId::from(3)).await.unwrap();
+    let user = TtUsername::new("user");
+    db.toggle_muted_user(TelegramId::from(3), MuteListMode::Blacklist, &user)
+        .await
+        .unwrap();
+    db.delete_user_profile(TelegramId::from(3)).await.unwrap();
 
-    assert!(!db.is_subscribed(3).await.unwrap());
-    assert!(!db.get_all_admins().await.unwrap().contains(&3));
+    assert!(!db.is_subscribed(TelegramId::from(3)).await.unwrap());
     assert!(
-        db.get_muted_users_list(3, MuteListMode::Blacklist)
+        !db.get_all_admins()
+            .await
+            .unwrap()
+            .contains(&TelegramId::from(3))
+    );
+    assert!(
+        db.get_muted_users_list(TelegramId::from(3), MuteListMode::Blacklist)
             .await
             .unwrap()
             .is_empty()
     );
 
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM user_settings WHERE telegram_id = ?")
-        .bind(3_i64)
+        .bind(TelegramId::from(3).as_i64())
         .fetch_one(&db.pool)
         .await
         .unwrap_or(0);
@@ -87,15 +107,22 @@ async fn delete_user_profile_clears_relations() {
 #[tokio::test]
 async fn tt_username_payload_is_literal() {
     let (db, path) = setup_db().await;
-    db.get_or_create_user(11, LanguageCode::En).await.unwrap();
+    db.get_or_create_user(TelegramId::from(11), LanguageCode::En)
+        .await
+        .unwrap();
     let payload = "bob'; DROP TABLE user_settings; --";
     let payload_username = TtUsername::new(payload);
-    db.link_tt_account(11, &payload_username).await.unwrap();
+    db.link_tt_account(TelegramId::from(11), &payload_username)
+        .await
+        .unwrap();
     let fetched = db.get_telegram_id_by_tt_user(&payload_username).await;
-    assert_eq!(fetched, Some(11));
+    assert_eq!(fetched, Some(TelegramId::from(11)));
 
-    let other = db.get_or_create_user(12, LanguageCode::En).await.unwrap();
-    assert_eq!(other.telegram_id, 12);
+    let other = db
+        .get_or_create_user(TelegramId::from(12), LanguageCode::En)
+        .await
+        .unwrap();
+    assert_eq!(other.telegram_id, TelegramId::from(12));
 
     db.close().await;
     let _ = std::fs::remove_file(path);

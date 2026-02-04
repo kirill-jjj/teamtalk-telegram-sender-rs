@@ -227,7 +227,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
             if let Ok(cache) = db_for_refresh.load_tt_tg_cache().await {
                 state_refresh.preload_tg_cache(cache);
             }
-            let stats = state_refresh.cache_stats().await;
+            let stats = state_refresh.cache_stats().await.unwrap_or_default();
             tracing::info!(
                 component = "tt_worker",
                 lang_hits = stats.lang_hits,

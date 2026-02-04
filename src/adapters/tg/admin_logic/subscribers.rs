@@ -7,7 +7,7 @@ use crate::adapters::tg::search::{
 };
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
+use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
@@ -17,7 +17,7 @@ use teloxide::types::{InlineKeyboardMarkup, ParseMode};
 
 #[derive(Clone)]
 pub struct SubDisplayInfo {
-    pub telegram_id: i64,
+    pub telegram_id: TelegramId,
     pub display_name: String,
     pub tt_username: Option<TtUsername>,
 }
@@ -200,11 +200,14 @@ pub async fn prepare_display_list(
 ) -> Vec<SubDisplayInfo> {
     let mut display_list = Vec::new();
     for sub in subs {
-        let display_name = match bot.get_chat(teloxide::types::ChatId(sub.telegram_id)).await {
+        let display_name = match bot
+            .get_chat(teloxide::types::ChatId(sub.telegram_id.as_i64()))
+            .await
+        {
             Ok(chat) => format_tg_user(&chat),
             Err(e) => {
                 tracing::error!(
-                    telegram_id = sub.telegram_id,
+                    telegram_id = sub.telegram_id.as_i64(),
                     error = %e,
                     "Failed to load Telegram user"
                 );
@@ -230,10 +233,10 @@ pub struct SubscriberDetailsArgs<'a> {
     pub msg: &'a Message,
     pub db: &'a Database,
     pub lang: LanguageCode,
-    pub sub_id: i64,
+    pub sub_id: TelegramId,
     pub return_page: usize,
     pub is_main_admin: bool,
-    pub admin_chat_id: i64,
+    pub admin_chat_id: TelegramId,
 }
 
 pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> ResponseResult<()> {
@@ -241,14 +244,18 @@ pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> Respons
 
     let display_name = (args
         .bot
-        .get_chat(teloxide::types::ChatId(args.sub_id))
+        .get_chat(teloxide::types::ChatId(args.sub_id.as_i64()))
         .await)
         .map_or_else(|_| args.sub_id.to_string(), |chat| format_tg_user(&chat));
 
     let is_admin = match args.db.get_all_admins().await {
         Ok(admins) => admins.contains(&args.sub_id),
         Err(e) => {
-            tracing::error!(sub_id = args.sub_id, error = %e, "Failed to load admins list");
+            tracing::error!(
+                sub_id = args.sub_id.as_i64(),
+                error = %e,
+                "Failed to load admins list"
+            );
             false
         }
     };
@@ -270,12 +277,12 @@ pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> Respons
     Ok(())
 }
 
-async fn load_subscriber_settings(db: &Database, sub_id: i64) -> UserSettings {
+async fn load_subscriber_settings(db: &Database, sub_id: TelegramId) -> UserSettings {
     db.get_or_create_user(sub_id, LanguageCode::En)
         .await
         .unwrap_or_else(|e| {
             tracing::error!(
-                sub_id,
+                sub_id = sub_id.as_i64(),
                 error = %e,
                 "Failed to load subscriber settings"
             );
@@ -365,11 +372,11 @@ fn build_subscriber_details_text(
 
 fn build_subscriber_details_keyboard(
     lang: LanguageCode,
-    sub_id: i64,
+    sub_id: TelegramId,
     return_page: usize,
     is_admin: bool,
     is_main_admin: bool,
-    admin_chat_id: i64,
+    admin_chat_id: TelegramId,
 ) -> InlineKeyboardMarkup {
     let btn = |text_key: locales::LocaleKey, action: SubAction| {
         callback_button(

@@ -87,7 +87,7 @@ pub async fn run_bridge(
         cancel_token,
     } = ctx;
     let default_lang = config.general.default_lang;
-    let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
+    let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id.as_i64());
     let deps = BridgeDeps {
         db: &db_clone,
         state: &state,
@@ -269,7 +269,11 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         && sub.not_on_online_confirmed
         && let Some(linked_tt) = &sub.teamtalk_username
     {
-        let is_online = ctx.state.is_username_online(linked_tt).await;
+        let is_online = ctx
+            .state
+            .is_username_online(linked_tt)
+            .await
+            .unwrap_or(false);
         if is_online {
             send_silent = true;
         }
@@ -277,13 +281,13 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
 
     let res = ctx
         .bot
-        .send_message(teloxide::types::ChatId(sub.telegram_id), text)
+        .send_message(teloxide::types::ChatId(sub.telegram_id.as_i64()), text)
         .parse_mode(teloxide::types::ParseMode::Html)
         .disable_notification(send_silent)
         .await;
 
     if let Ok(msg) = &res
-        && sub.telegram_id == ctx.admin_id.0
+        && sub.telegram_id.as_i64() == ctx.admin_id.0
         && !ctx.related_tt_username.as_str().is_empty()
         && let Err(e) = ctx
             .db
@@ -302,7 +306,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
     if let Err(e) = res {
         tracing::warn!(
             component = "bridge",
-            telegram_id = sub.telegram_id,
+            telegram_id = sub.telegram_id.as_i64(),
             tt_username = ?sub.teamtalk_username,
             error = %e,
             "Failed to send notification"
@@ -313,7 +317,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
                 ApiError::BotBlocked | ApiError::UserDeactivated | ApiError::ChatNotFound => {
                     tracing::info!(
                         component = "bridge",
-                        telegram_id = sub.telegram_id,
+                        telegram_id = sub.telegram_id.as_i64(),
                         tt_username = ?sub.teamtalk_username,
                         api_error = ?api_err,
                         "Cleaning up unreachable user"
@@ -322,7 +326,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
                     if let Err(db_err) = ctx.db.delete_user_profile(sub.telegram_id).await {
                         tracing::error!(
                             component = "bridge",
-                            telegram_id = sub.telegram_id,
+                            telegram_id = sub.telegram_id.as_i64(),
                             tt_username = ?sub.teamtalk_username,
                             error = %db_err,
                             "DB error during auto-cleanup"
@@ -330,7 +334,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
                     } else {
                         tracing::info!(
                             component = "bridge",
-                            telegram_id = sub.telegram_id,
+                            telegram_id = sub.telegram_id.as_i64(),
                             tt_username = ?sub.teamtalk_username,
                             "Profile removed successfully"
                         );
@@ -358,7 +362,10 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
 
     let admin_settings = deps
         .db
-        .get_or_create_user(deps.admin_id.0, deps.default_lang)
+        .get_or_create_user(
+            crate::core::types::TelegramId::from(deps.admin_id.0),
+            deps.default_lang,
+        )
         .await;
     let admin_lang = match admin_settings {
         Ok(u) => u.language_code,
@@ -452,7 +459,10 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
 
     let admin_settings = deps
         .db
-        .get_or_create_user(deps.admin_id.0, deps.default_lang)
+        .get_or_create_user(
+            crate::core::types::TelegramId::from(deps.admin_id.0),
+            deps.default_lang,
+        )
         .await;
     let admin_lang = match admin_settings {
         Ok(u) => u.language_code,

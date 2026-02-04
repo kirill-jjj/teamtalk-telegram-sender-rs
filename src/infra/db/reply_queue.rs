@@ -1,4 +1,4 @@
-use crate::core::types::TtUsername;
+use crate::core::types::{TelegramId, TtUsername};
 use anyhow::Result;
 use chrono::NaiveDateTime;
 
@@ -15,7 +15,7 @@ impl Database {
     pub async fn add_reply_queue_item(
         &self,
         tt_username: &TtUsername,
-        admin_telegram_id: i64,
+        admin_telegram_id: TelegramId,
         message_text: &str,
     ) -> Result<()> {
         let tt_username = tt_username.as_str();

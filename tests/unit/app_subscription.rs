@@ -1,6 +1,7 @@
 use crate::app::services::subscription::{
     SubscribeOutcome, SubscriptionRepo, is_subscribed, subscribe_via_deeplink, unsubscribe,
 };
+use crate::core::types::TelegramId;
 use crate::core::types::TtUsername;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -14,7 +15,7 @@ struct FakeRepo {
 
 #[async_trait]
 impl SubscriptionRepo for FakeRepo {
-    async fn is_telegram_id_banned(&self, _telegram_id: i64) -> Result<bool> {
+    async fn is_telegram_id_banned(&self, _telegram_id: TelegramId) -> Result<bool> {
         Ok(self.banned_tg)
     }
 
@@ -22,19 +23,23 @@ impl SubscriptionRepo for FakeRepo {
         Ok(self.banned_tt)
     }
 
-    async fn add_subscriber(&self, _telegram_id: i64) -> Result<()> {
+    async fn add_subscriber(&self, _telegram_id: TelegramId) -> Result<()> {
         Ok(())
     }
 
-    async fn link_tt_account(&self, _telegram_id: i64, _tt_username: &TtUsername) -> Result<()> {
+    async fn link_tt_account(
+        &self,
+        _telegram_id: TelegramId,
+        _tt_username: &TtUsername,
+    ) -> Result<()> {
         Ok(())
     }
 
-    async fn delete_user_profile(&self, _telegram_id: i64) -> Result<()> {
+    async fn delete_user_profile(&self, _telegram_id: TelegramId) -> Result<()> {
         Ok(())
     }
 
-    async fn is_subscribed(&self, _telegram_id: i64) -> Result<bool> {
+    async fn is_subscribed(&self, _telegram_id: TelegramId) -> Result<bool> {
         Ok(self.subscribed)
     }
 }
@@ -45,7 +50,9 @@ async fn subscribe_banned_user_short_circuits() {
         banned_tg: true,
         ..Default::default()
     };
-    let outcome = subscribe_via_deeplink(&repo, 1, None).await.unwrap();
+    let outcome = subscribe_via_deeplink(&repo, TelegramId::from(1), None)
+        .await
+        .unwrap();
     assert!(matches!(outcome, SubscribeOutcome::BannedUser));
 }
 
@@ -55,7 +62,7 @@ async fn subscribe_banned_teamtalk_user_short_circuits() {
         banned_tt: true,
         ..Default::default()
     };
-    let outcome = subscribe_via_deeplink(&repo, 1, Some("tt".to_string()))
+    let outcome = subscribe_via_deeplink(&repo, TelegramId::from(1), Some("tt".to_string()))
         .await
         .unwrap();
     assert!(matches!(outcome, SubscribeOutcome::BannedTeamTalk { .. }));
@@ -64,14 +71,16 @@ async fn subscribe_banned_teamtalk_user_short_circuits() {
 #[tokio::test]
 async fn subscribe_guest_when_no_payload() {
     let repo = FakeRepo::default();
-    let outcome = subscribe_via_deeplink(&repo, 1, None).await.unwrap();
+    let outcome = subscribe_via_deeplink(&repo, TelegramId::from(1), None)
+        .await
+        .unwrap();
     assert!(matches!(outcome, SubscribeOutcome::SubscribedGuest));
 }
 
 #[tokio::test]
 async fn subscribe_linked_when_payload_present() {
     let repo = FakeRepo::default();
-    let outcome = subscribe_via_deeplink(&repo, 1, Some("tt".to_string()))
+    let outcome = subscribe_via_deeplink(&repo, TelegramId::from(1), Some("tt".to_string()))
         .await
         .unwrap();
     assert!(matches!(outcome, SubscribeOutcome::SubscribedLinked));
@@ -83,11 +92,11 @@ async fn is_subscribed_delegates() {
         subscribed: true,
         ..Default::default()
     };
-    assert!(is_subscribed(&repo, 1).await.unwrap());
+    assert!(is_subscribed(&repo, TelegramId::from(1)).await.unwrap());
 }
 
 #[tokio::test]
 async fn unsubscribe_delegates() {
     let repo = FakeRepo::default();
-    unsubscribe(&repo, 1).await.unwrap();
+    unsubscribe(&repo, TelegramId::from(1)).await.unwrap();
 }

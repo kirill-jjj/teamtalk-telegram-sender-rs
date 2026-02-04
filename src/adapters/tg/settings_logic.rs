@@ -6,6 +6,7 @@ use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, MuteAction, SettingsAction};
+use crate::core::types::TelegramId;
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
@@ -74,7 +75,7 @@ pub async fn send_sub_settings(
     bot: &Bot,
     msg: &Message,
     db: &Database,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let settings =
@@ -82,7 +83,7 @@ pub async fn send_sub_settings(
             Ok(s) => {
                 tracing::debug!(
                     component = "ui",
-                    telegram_id,
+                    telegram_id = telegram_id.as_i64(),
                     enabled = s.not_on_online_enabled,
                     "Fetched settings"
                 );
@@ -90,7 +91,7 @@ pub async fn send_sub_settings(
             }
             Err(e) => {
                 tracing::error!(
-                    telegram_id,
+                    telegram_id = telegram_id.as_i64(),
                     error = %e,
                     "Failed to get or create user"
                 );
@@ -172,7 +173,7 @@ pub async fn send_notif_settings(
     bot: &Bot,
     msg: &Message,
     db: &Database,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let settings =
@@ -180,7 +181,7 @@ pub async fn send_notif_settings(
             Ok(s) => {
                 tracing::debug!(
                     component = "ui",
-                    telegram_id,
+                    telegram_id = telegram_id.as_i64(),
                     enabled = s.not_on_online_enabled,
                     "Fetched settings"
                 );
@@ -188,7 +189,7 @@ pub async fn send_notif_settings(
             }
             Err(e) => {
                 tracing::error!(
-                    telegram_id,
+                    telegram_id = telegram_id.as_i64(),
                     error = %e,
                     "Failed to get or create user"
                 );
@@ -243,24 +244,25 @@ pub async fn send_queue_settings(
     bot: &Bot,
     msg: &Message,
     db: &Database,
-    telegram_id: i64,
+    telegram_id: TelegramId,
     lang: LanguageCode,
     is_admin: bool,
 ) -> ResponseResult<()> {
-    let settings =
-        match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En).await {
-            Ok(s) => s,
-            Err(e) => {
-                tracing::error!(telegram_id, error = %e, "Failed to get or create user");
-                bot.edit_message_text(
-                    msg.chat.id,
-                    msg.id,
-                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                )
-                .await?;
-                return Ok(());
-            }
-        };
+    let settings = match user_settings_service::get_or_create(db, telegram_id, LanguageCode::En)
+        .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to get or create user");
+            bot.edit_message_text(
+                msg.chat.id,
+                msg.id,
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
 
     if settings.teamtalk_username.is_none() {
         bot.edit_message_text(
@@ -463,7 +465,7 @@ pub struct RenderMuteListArgs<'a> {
     pub bot: &'a Bot,
     pub msg: &'a Message,
     pub db: &'a Database,
-    pub telegram_id: i64,
+    pub telegram_id: TelegramId,
     pub lang: LanguageCode,
     pub accounts: &'a [UserAccount],
     pub page: usize,
@@ -492,7 +494,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
         Ok(list) => list,
         Err(e) => {
             tracing::error!(
-                telegram_id = args.telegram_id,
+                telegram_id = args.telegram_id.as_i64(),
                 error = %e,
                 "Failed to load muted users"
             );

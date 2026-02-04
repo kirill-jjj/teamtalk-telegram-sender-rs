@@ -1,16 +1,17 @@
 use super::Database;
+use crate::core::types::TelegramId;
 
 #[tokio::test]
 async fn add_and_remove_admin() {
     let (db, path) = setup_db().await;
-    assert!(db.add_admin(100).await.unwrap());
-    assert!(!db.add_admin(100).await.unwrap());
+    assert!(db.add_admin(TelegramId::from(100)).await.unwrap());
+    assert!(!db.add_admin(TelegramId::from(100)).await.unwrap());
 
     let admins = db.get_all_admins().await.unwrap();
-    assert!(admins.contains(&100));
+    assert!(admins.contains(&TelegramId::from(100)));
 
-    assert!(db.remove_admin(100).await.unwrap());
-    assert!(!db.remove_admin(100).await.unwrap());
+    assert!(db.remove_admin(TelegramId::from(100)).await.unwrap());
+    assert!(!db.remove_admin(TelegramId::from(100)).await.unwrap());
 
     db.close().await;
     let _ = std::fs::remove_file(path);
@@ -19,11 +20,11 @@ async fn add_and_remove_admin() {
 #[tokio::test]
 async fn add_extreme_admin_ids() {
     let (db, path) = setup_db().await;
-    assert!(db.add_admin(i64::MAX).await.unwrap());
-    assert!(db.add_admin(i64::MIN).await.unwrap());
+    assert!(db.add_admin(TelegramId::from(i64::MAX)).await.unwrap());
+    assert!(db.add_admin(TelegramId::from(i64::MIN)).await.unwrap());
     let admins = db.get_all_admins().await.unwrap();
-    assert!(admins.contains(&i64::MAX));
-    assert!(admins.contains(&i64::MIN));
+    assert!(admins.contains(&TelegramId::from(i64::MAX)));
+    assert!(admins.contains(&TelegramId::from(i64::MIN)));
     db.close().await;
     let _ = std::fs::remove_file(path);
 }

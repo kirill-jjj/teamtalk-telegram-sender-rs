@@ -1,4 +1,4 @@
-use crate::core::types::TtUsername;
+use crate::core::types::{TelegramId, TtUsername};
 use anyhow::Result;
 use chrono::Utc;
 
@@ -7,7 +7,7 @@ use super::{Database, types::BanEntry};
 impl Database {
     pub async fn add_ban(
         &self,
-        telegram_id: Option<i64>,
+        telegram_id: Option<TelegramId>,
         teamtalk_username: Option<TtUsername>,
         reason: Option<String>,
     ) -> Result<()> {
@@ -30,7 +30,7 @@ impl Database {
             r#"
             SELECT
                 id as "id!",
-                telegram_id as "telegram_id?",
+                telegram_id as "telegram_id?: TelegramId",
                 teamtalk_username as "teamtalk_username?: TtUsername"
             FROM ban_list
             ORDER BY banned_at DESC
@@ -48,7 +48,7 @@ impl Database {
         Ok(())
     }
 
-    pub async fn is_telegram_id_banned(&self, telegram_id: i64) -> Result<bool> {
+    pub async fn is_telegram_id_banned(&self, telegram_id: TelegramId) -> Result<bool> {
         let record = sqlx::query!(
             "SELECT count(*) as count FROM ban_list WHERE telegram_id = ?",
             telegram_id

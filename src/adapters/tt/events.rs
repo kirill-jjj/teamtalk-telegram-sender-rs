@@ -90,7 +90,7 @@ pub(super) fn handle_sdk_event(
                 let new_username = TtUsername::new(user.username.clone());
                 let new_nickname = user.nickname.clone();
                 tokio::task::spawn_local(async move {
-                    if let Some(existing) = state.online_user_by_id(user_id).await {
+                    if let Some(existing) = state.online_user_by_id(user_id).await.ok().flatten() {
                         if existing.username != new_username {
                             state.notify_update_user_username(user_id, new_username.clone());
                         }
@@ -278,7 +278,7 @@ pub(super) fn handle_sdk_event(
                 let is_self = user.id == client.my_id();
                 let tt_config = tt_config.clone();
                 tokio::task::spawn_local(async move {
-                    let removed = state.remove_online_user(user_id).await;
+                    let removed = state.remove_online_user(user_id).await.ok().flatten();
                     if let Some(u) = removed
                         && !is_self
                         && is_ready
