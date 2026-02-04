@@ -3,7 +3,7 @@ use crate::bootstrap::config::Config;
 use crate::core::types::TtUsername;
 use crate::infra::db::Database;
 use anyhow::{Result, anyhow};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use teamtalk::Client;
 use teloxide::{Bot, prelude::Requester};
@@ -53,28 +53,24 @@ struct TelegramRunContext {
 }
 
 impl Application {
-    pub async fn build(config_path: String) -> Result<Self> {
-        tracing::info!(path = %config_path, "Loading config");
+    pub async fn build(config_path: PathBuf) -> Result<Self> {
+        tracing::info!(path = %config_path.display(), "Loading config");
 
         let config_content = std::fs::read_to_string(&config_path)?;
         let mut config: Config = toml::from_str(&config_content)?;
 
-        let config_path_obj = Path::new(&config_path);
-        let config_dir = config_path_obj.parent().unwrap_or_else(|| Path::new("."));
+        let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
 
-        let db_path_buf = if Path::new(&config.database.db_file).is_absolute() {
-            Path::new(&config.database.db_file).to_path_buf()
+        let db_path_buf = if config.database.db_file.is_absolute() {
+            config.database.db_file.clone()
         } else {
             config_dir.join(&config.database.db_file)
         };
 
-        let db_path_str = db_path_buf
-            .to_str()
-            .ok_or_else(|| anyhow!("Invalid DB path"))?
-            .to_string();
+        let db_path_str = db_path_buf.to_string_lossy().to_string();
         tracing::info!(db_path = %db_path_str, "Database path");
 
-        config.database.db_file.clone_from(&db_path_str);
+        config.database.db_file = db_path_buf;
 
         let config = Arc::new(config);
         let db = Database::new(&db_path_str).await?;

@@ -508,8 +508,8 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
             .add_pending_channel_reply(
                 TgMessageId::from(msg.id.0),
                 data.channel_id,
-                data.channel_name.as_str(),
-                data.server_name.as_str(),
+                &data.channel_name,
+                &data.server_name,
                 &data.msg_content,
             )
             .await

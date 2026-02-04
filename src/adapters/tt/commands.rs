@@ -71,7 +71,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     false
                 } else if admin_username
                     .as_ref()
-                    .map(|u| u == username.as_str())
+                    .map(|u| u == &username)
                     .unwrap_or(false)
                 {
                     true
@@ -318,7 +318,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/help" {
                 let is_main_admin = admin_username
                     .as_ref()
-                    .map(|u| u == username.as_str())
+                    .map(|u| u == &username)
                     .unwrap_or(false);
                 let mut help_msg =
                     locales::get_text(reply_lang.as_str(), locales::LocaleKey::HelpText, None);
@@ -342,7 +342,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     false
                 } else if admin_username
                     .as_ref()
-                    .map(|u| u == username.as_str())
+                    .map(|u| u == &username)
                     .unwrap_or(false)
                 {
                     true
@@ -409,7 +409,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                 }
                 let is_admin = if admin_username
                     .as_ref()
-                    .map(|u| u == username.as_str())
+                    .map(|u| u == &username)
                     .unwrap_or(false)
                 {
                     true
@@ -556,7 +556,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/add_admin" {
                 let is_main_admin = admin_username
                     .as_ref()
-                    .map(|u| u == username.as_str())
+                    .map(|u| u == &username)
                     .unwrap_or(false);
                 if !is_main_admin {
                     let text =
@@ -619,7 +619,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             } else if cmd == "/remove_admin" {
                 let is_main_admin = admin_username
                     .as_ref()
-                    .map(|u| u == username.as_str())
+                    .map(|u| u == &username)
                     .unwrap_or(false);
                 if !is_main_admin {
                     let text =

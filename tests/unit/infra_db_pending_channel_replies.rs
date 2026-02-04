@@ -1,5 +1,5 @@
 use super::Database;
-use crate::core::types::{TgMessageId, TtChannelId};
+use crate::core::types::{TgMessageId, TtChannelId, TtChannelName, TtServerName};
 
 #[tokio::test]
 async fn pending_channel_reply_roundtrip() {
@@ -7,8 +7,8 @@ async fn pending_channel_reply_roundtrip() {
     db.add_pending_channel_reply(
         TgMessageId::from(10),
         TtChannelId::from(1),
-        "chan",
-        "srv",
+        &TtChannelName::try_from("chan").unwrap(),
+        &TtServerName::from("srv"),
         "text",
     )
     .await
@@ -19,8 +19,8 @@ async fn pending_channel_reply_roundtrip() {
         .unwrap()
         .unwrap();
     assert_eq!(data.0, TtChannelId::from(1));
-    assert_eq!(data.1, "chan");
-    assert_eq!(data.2, "srv");
+    assert_eq!(data.1, TtChannelName::try_from("chan").unwrap());
+    assert_eq!(data.2, TtServerName::from("srv"));
     assert_eq!(data.3, "text");
 
     db.touch_pending_channel_reply(TgMessageId::from(10))
@@ -39,8 +39,8 @@ async fn cleanup_keeps_recent_when_ttl_large() {
     db.add_pending_channel_reply(
         TgMessageId::from(11),
         TtChannelId::from(2),
-        "chan2",
-        "srv2",
+        &TtChannelName::try_from("chan2").unwrap(),
+        &TtServerName::from("srv2"),
         "text2",
     )
     .await

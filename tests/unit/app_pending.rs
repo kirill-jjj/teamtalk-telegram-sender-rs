@@ -2,14 +2,16 @@ use crate::app::services::pending::{
     PendingRepo, get_pending_channel_reply, get_pending_reply, touch_pending_channel_reply,
     touch_pending_reply,
 };
-use crate::core::types::{TgMessageId, TtChannelId, TtUserId, TtUsername};
+use crate::core::types::{
+    TgMessageId, TtChannelId, TtChannelName, TtServerName, TtUserId, TtUsername,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 
 #[derive(Default)]
 struct FakePendingRepo {
     reply: Option<(TtUserId, Option<TtUsername>)>,
-    channel_reply: Option<(TtChannelId, String, String, String)>,
+    channel_reply: Option<(TtChannelId, TtChannelName, TtServerName, String)>,
 }
 
 #[async_trait]
@@ -28,7 +30,7 @@ impl PendingRepo for FakePendingRepo {
     async fn get_pending_channel_reply(
         &self,
         _reply_id: TgMessageId,
-    ) -> Result<Option<(TtChannelId, String, String, String)>> {
+    ) -> Result<Option<(TtChannelId, TtChannelName, TtServerName, String)>> {
         Ok(self.channel_reply.clone())
     }
 
@@ -57,8 +59,8 @@ async fn pending_channel_reply_delegates() {
     let repo = FakePendingRepo {
         channel_reply: Some((
             TtChannelId::from(9),
-            "chan".to_string(),
-            "srv".to_string(),
+            TtChannelName::try_from("chan").unwrap(),
+            TtServerName::from("srv"),
             "msg".to_string(),
         )),
         ..Default::default()
@@ -70,8 +72,8 @@ async fn pending_channel_reply_delegates() {
         res,
         Some((
             TtChannelId::from(9),
-            "chan".to_string(),
-            "srv".to_string(),
+            TtChannelName::try_from("chan").unwrap(),
+            TtServerName::from("srv"),
             "msg".to_string()
         ))
     );

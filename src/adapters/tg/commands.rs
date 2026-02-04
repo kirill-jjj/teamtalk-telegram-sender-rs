@@ -1498,7 +1498,7 @@ async fn stream_voice(
         .tx_tt
         .send(TtCommand::EnqueueStream {
             channel_id,
-            file_path: temp_path.to_string_lossy().to_string(),
+            file_path: temp_path,
             duration_ms,
             announce_text,
         })

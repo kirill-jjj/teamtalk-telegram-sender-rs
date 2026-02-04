@@ -1,4 +1,6 @@
-use crate::core::types::{TgMessageId, TtChannelId, TtUserId, TtUsername};
+use crate::core::types::{
+    TgMessageId, TtChannelId, TtChannelName, TtServerName, TtUserId, TtUsername,
+};
 use anyhow::Result;
 use async_trait::async_trait;
 
@@ -12,7 +14,7 @@ pub trait PendingRepo: Sync {
     async fn get_pending_channel_reply(
         &self,
         reply_id: TgMessageId,
-    ) -> Result<Option<(TtChannelId, String, String, String)>>;
+    ) -> Result<Option<(TtChannelId, TtChannelName, TtServerName, String)>>;
     async fn touch_pending_channel_reply(&self, reply_id: TgMessageId) -> Result<()>;
 }
 
@@ -30,7 +32,7 @@ pub async fn touch_pending_reply(db: &impl PendingRepo, reply_id: TgMessageId) -
 pub async fn get_pending_channel_reply(
     db: &impl PendingRepo,
     reply_id: TgMessageId,
-) -> Result<Option<(TtChannelId, String, String, String)>> {
+) -> Result<Option<(TtChannelId, TtChannelName, TtServerName, String)>> {
     db.get_pending_channel_reply(reply_id).await
 }
 
@@ -57,7 +59,7 @@ impl PendingRepo for crate::infra::db::Database {
     async fn get_pending_channel_reply(
         &self,
         reply_id: TgMessageId,
-    ) -> Result<Option<(TtChannelId, String, String, String)>> {
+    ) -> Result<Option<(TtChannelId, TtChannelName, TtServerName, String)>> {
         self.get_pending_channel_reply(reply_id).await
     }
 

@@ -1,18 +1,21 @@
 use super::*;
 use crate::bootstrap::config::TeamTalkConfig;
+use crate::core::types::{
+    TtChannelName, TtClientName, TtHostName, TtLoginName, TtNickname, TtPassword, TtServerName,
+};
 
 fn base_config() -> TeamTalkConfig {
     TeamTalkConfig {
-        host_name: "host".to_string(),
+        host_name: TtHostName::from("host"),
         port: 1,
         encrypted: false,
-        user_name: "u".to_string(),
-        password: "p".to_string(),
-        channel: "/".to_string(),
+        user_name: TtLoginName::from("u"),
+        password: TtPassword::from("p"),
+        channel: TtChannelName::try_from("/").unwrap(),
         channel_password: None,
-        nick_name: "n".to_string(),
+        nick_name: TtNickname::from("n"),
         status_text: String::new(),
-        client_name: "c".to_string(),
+        client_name: TtClientName::from("c"),
         server_name: None,
         global_ignore_usernames: Vec::new(),
         guest_username: None,
@@ -22,7 +25,7 @@ fn base_config() -> TeamTalkConfig {
 #[test]
 fn resolve_server_name_prefers_config_server_name() {
     let mut cfg = base_config();
-    cfg.server_name = Some("cfg".to_string());
+    cfg.server_name = Some(TtServerName::from("cfg"));
     let name = resolve_server_name(&cfg, Some("real"));
     assert_eq!(name, "cfg");
 }
@@ -30,7 +33,7 @@ fn resolve_server_name_prefers_config_server_name() {
 #[test]
 fn resolve_server_name_uses_real_name_when_config_empty() {
     let mut cfg = base_config();
-    cfg.server_name = Some(String::new());
+    cfg.server_name = Some(TtServerName::from(""));
     let name = resolve_server_name(&cfg, Some("real"));
     assert_eq!(name, "real");
 }

@@ -5,8 +5,8 @@ use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_na
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::bootstrap::config::GenderConfig;
 use crate::core::types::{
-    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand, TtNickname, TtUserId,
-    TtUsername,
+    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtChannelPassword, TtCommand,
+    TtNickname, TtUserId, TtUsername,
 };
 use chrono::Utc;
 use std::time::{Duration, Instant};
@@ -33,9 +33,9 @@ pub(super) fn handle_sdk_event(
             reconnect_handler.mark_connected();
             client.login(
                 tt_config.nick_name.as_str(),
-                &tt_config.user_name,
-                &tt_config.password,
-                &tt_config.client_name,
+                tt_config.user_name.as_str(),
+                tt_config.password.as_str(),
+                tt_config.client_name.as_str(),
             );
         }
         e if e.is_reconnect_needed_with(&[Event::MySelfKicked]) => {
@@ -58,8 +58,14 @@ pub(super) fn handle_sdk_event(
             client.set_status(status, &tt_config.status_text);
             let chan_id = client.get_channel_id_from_path(tt_config.channel.as_str());
             if chan_id.0 > 0 {
-                let cmd_id = client
-                    .join_channel(chan_id, tt_config.channel_password.as_deref().unwrap_or(""));
+                let cmd_id = client.join_channel(
+                    chan_id,
+                    tt_config
+                        .channel_password
+                        .as_ref()
+                        .map(TtChannelPassword::as_str)
+                        .unwrap_or(""),
+                );
                 if cmd_id <= 0 {
                     tracing::error!(
                         component = "tt_worker",

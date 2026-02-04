@@ -66,7 +66,10 @@ async fn main() -> Result<()> {
                     );
                     async move {
                         tracing::info!(component = "main", "Starting application");
-                        let app = bootstrap::app::Application::build(config_path).await?;
+                        let app = bootstrap::app::Application::build(std::path::PathBuf::from(
+                            &config_path,
+                        ))
+                        .await?;
                         app.run(token).await
                     }
                     .instrument(span)

@@ -1,8 +1,10 @@
 use crate::core::types::{
-    LanguageCode, TelegramId, TtChannelName, TtNickname, TtServerName, TtUsername,
+    LanguageCode, TelegramId, TtChannelName, TtChannelPassword, TtClientName, TtHostName,
+    TtLoginName, TtNickname, TtPassword, TtServerName, TtUsername,
 };
 use serde::Deserialize;
 use serde_with::{NoneAsEmptyString, serde_as};
+use std::path::PathBuf;
 use teamtalk::types::UserGender;
 
 #[derive(Deserialize, Clone)]
@@ -26,7 +28,7 @@ pub struct GeneralConfig {
 
     #[serde(default)]
     #[serde_as(as = "NoneAsEmptyString")]
-    pub admin_username: Option<String>,
+    pub admin_username: Option<TtUsername>,
 
     #[serde(default)]
     pub gender: GenderConfig,
@@ -88,7 +90,7 @@ const fn default_deeplink_cleanup_interval_seconds() -> u64 {
 
 #[derive(Deserialize, Clone)]
 pub struct DatabaseConfig {
-    pub db_file: String,
+    pub db_file: PathBuf,
 }
 
 #[derive(Deserialize, Clone)]
@@ -100,17 +102,17 @@ pub struct TelegramConfig {
 
 #[derive(Deserialize, Clone)]
 pub struct TeamTalkConfig {
-    pub host_name: String,
+    pub host_name: TtHostName,
     pub port: u32,
     pub encrypted: bool,
-    pub user_name: String,
-    pub password: String,
+    pub user_name: TtLoginName,
+    pub password: TtPassword,
     pub channel: TtChannelName,
-    pub channel_password: Option<String>,
+    pub channel_password: Option<TtChannelPassword>,
     pub nick_name: TtNickname,
     #[serde(default)]
     pub status_text: String,
-    pub client_name: String,
+    pub client_name: TtClientName,
     pub server_name: Option<TtServerName>,
     #[serde(default)]
     pub global_ignore_usernames: Vec<TtUsername>,
@@ -123,7 +125,7 @@ impl TeamTalkConfig {
             .as_ref()
             .map(TtServerName::as_str)
             .filter(|s| !s.is_empty())
-            .unwrap_or(&self.host_name)
+            .unwrap_or(self.host_name.as_str())
     }
 }
 

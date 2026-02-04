@@ -1,4 +1,4 @@
-use crate::core::types::{TgMessageId, TtChannelId};
+use crate::core::types::{TgMessageId, TtChannelId, TtChannelName, TtServerName};
 use anyhow::Result;
 
 use super::Database;
@@ -9,8 +9,8 @@ impl Database {
         &self,
         tg_message_id: TgMessageId,
         channel_id: TtChannelId,
-        channel_name: &str,
-        server_name: &str,
+        channel_name: &TtChannelName,
+        server_name: &TtServerName,
         original_text: &str,
     ) -> Result<()> {
         sqlx::query(
@@ -18,8 +18,8 @@ impl Database {
         )
         .bind(tg_message_id.as_i32())
         .bind(channel_id.as_i32())
-        .bind(channel_name)
-        .bind(server_name)
+        .bind(channel_name.as_str())
+        .bind(server_name.as_str())
         .bind(original_text)
         .execute(&self.pool)
         .await?;
@@ -29,7 +29,7 @@ impl Database {
     pub async fn get_pending_channel_reply(
         &self,
         tg_message_id: TgMessageId,
-    ) -> Result<Option<(TtChannelId, String, String, String)>> {
+    ) -> Result<Option<(TtChannelId, TtChannelName, TtServerName, String)>> {
         let row = sqlx::query(
             r"
             SELECT
@@ -48,8 +48,8 @@ impl Database {
         Ok(row.map(|r| {
             (
                 TtChannelId::from(r.get::<i32, _>("channel_id")),
-                r.get::<String, _>("channel_name"),
-                r.get::<String, _>("server_name"),
+                TtChannelName::from(r.get::<String, _>("channel_name")),
+                TtServerName::from(r.get::<String, _>("server_name")),
                 r.get::<String, _>("original_text"),
             )
         }))

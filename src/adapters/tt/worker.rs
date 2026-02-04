@@ -5,6 +5,7 @@ use super::{events, reports};
 use crate::core::types::{TtChannelId, TtCommand};
 use futures_util::StreamExt;
 use std::collections::VecDeque;
+use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use teamtalk::Client;
@@ -18,7 +19,7 @@ use tokio::time::interval;
 struct StreamItem {
     stream_id: u64,
     channel_id: TtChannelId,
-    file_path: String,
+    file_path: PathBuf,
     duration_ms: u32,
     announce_text: Option<String>,
 }
@@ -272,7 +273,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         "Connecting to TeamTalk"
     );
 
-    if let Err(e) = client.connect(&tt_host_name, tt_port, tt_port, tt_encrypted) {
+    if let Err(e) = client.connect(tt_host_name.as_str(), tt_port, tt_port, tt_encrypted) {
         tracing::error!(
             host = %tt_host_name,
             port = tt_port,
@@ -306,11 +307,15 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                 offset_ms: 0,
                 paused: false,
             };
-            let started =
-                client.start_streaming_media_file_to_channel_ex(&item.file_path, &playback, None);
+            let file_path = item.file_path.to_string_lossy();
+            let started = client.start_streaming_media_file_to_channel_ex(
+                file_path.as_ref(),
+                &playback,
+                None,
+            );
             if !started {
                 tracing::error!(
-                    file_path = %item.file_path,
+                    file_path = %item.file_path.display(),
                     "Failed to start streaming"
                 );
                 let delete_path = item.file_path.clone();
@@ -345,7 +350,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                             attempts += 1;
                             if attempts >= 10 {
                                 tracing::error!(
-                                    file_path = %delete_path,
+                                    file_path = %delete_path.display(),
                                     error = %e,
                                     "Failed to delete streamed file"
                                 );
@@ -355,7 +360,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
                         }
                         Err(e) => {
                             tracing::error!(
-                                file_path = %delete_path,
+                                file_path = %delete_path.display(),
                                 error = %e,
                                 "Failed to join blocking file delete task"
                             );
@@ -381,7 +386,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
 
     let driver = tokio::task::spawn_local(async move {
         let connect_params = ConnectParams {
-            host: &tt_host_name_for_driver,
+            host: tt_host_name_for_driver.as_str(),
             tcp: tt_port_for_driver,
             udp: tt_port_for_driver,
             encrypted: tt_encrypted_for_driver,
