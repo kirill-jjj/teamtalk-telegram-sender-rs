@@ -19,7 +19,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
     let tx_tt_cmd = ctx.tx_tt_cmd.clone();
 
     let db = ctx.db.clone();
-    let online_users = ctx.online_users.clone();
+    let state_handle = ctx.state.clone();
 
     let default_lang = ctx.config.general.default_lang;
     let admin_username = ctx.config.general.admin_username.clone();
@@ -44,20 +44,17 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let from_uid = msg.from_id.0;
             let channel_id = msg.channel_id.0;
             let db = db.clone();
-            let online_users = online_users.clone();
+            let state_handle = state_handle.clone();
             let tx_tt_cmd = tx_tt_cmd.clone();
             let tt_lang_cache = tt_lang_cache.clone();
             let tt_tg_cache = tt_tg_cache.clone();
             spawn_local(async move {
                 let _permit = tt_msg_sem.acquire_owned().await;
-                let username = if let Ok(users) = online_users.read() {
-                    users
-                        .get(&from_uid)
-                        .map(|u| u.username.clone())
-                        .unwrap_or_else(|| TtUsername::new(String::new()))
-                } else {
-                    TtUsername::new(String::new())
-                };
+                let username = state_handle
+                    .online_user_by_id(from_uid)
+                    .await
+                    .map(|u| u.username)
+                    .unwrap_or_else(|| TtUsername::new(String::new()));
                 let reply_lang = if username.as_str().is_empty() {
                     default_lang
                 } else if let Ok(cache) = tt_lang_cache.read()
@@ -186,14 +183,11 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let content = msg.text.trim();
             let from_uid = msg.from_id.0;
 
-            let (nick, username): (String, TtUsername) = if let Ok(users) = online_users.read() {
-                users
-                    .get(&from_uid)
-                    .map(|u| (u.nickname.clone(), u.username.clone()))
-                    .unwrap_or(("Unknown".to_string(), TtUsername::new(String::new())))
-            } else {
-                ("Unknown".to_string(), TtUsername::new(String::new()))
-            };
+            let (nick, username): (String, TtUsername) = state_handle
+                .online_user_by_id(from_uid)
+                .await
+                .map(|u| (u.nickname, u.username))
+                .unwrap_or(("Unknown".to_string(), TtUsername::new(String::new())));
 
             tracing::info!(
                 component = "tt_worker",

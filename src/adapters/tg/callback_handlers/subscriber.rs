@@ -3,7 +3,7 @@ use crate::adapters::tg::admin_logic::subscriber_settings::{
     send_sub_mute_mode_menu, send_sub_notif_menu,
 };
 use crate::adapters::tg::admin_logic::subscribers::{
-    edit_subscribers_list, send_subscriber_details, SubscriberDetailsArgs,
+    SubscriberDetailsArgs, edit_subscribers_list, send_subscriber_details,
 };
 use crate::adapters::tg::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
@@ -13,7 +13,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
-use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand, TtUsername};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -23,9 +23,7 @@ struct SubCtx<'a> {
     msg: &'a Message,
     db: &'a Database,
     config: &'a crate::bootstrap::config::Config,
-    user_accounts: &'a std::sync::Arc<
-        std::sync::RwLock<std::collections::HashMap<TtUsername, teamtalk::types::UserAccount>>,
-    >,
+    state_handle: &'a crate::app::state::StateHandle,
     tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
     search_contexts: &'a std::sync::Arc<
         tokio::sync::Mutex<
@@ -51,7 +49,6 @@ pub async fn handle_subscriber_actions(
         return Ok(());
     };
     let db = &state.db;
-    let user_accounts = &state.user_accounts;
     let tx_tt = &state.tx_tt;
     let config = &state.config;
     let admin_chat_id = tg_user_id_i64(q.from.id.0);
@@ -61,7 +58,7 @@ pub async fn handle_subscriber_actions(
         msg: &msg,
         db,
         config,
-        user_accounts,
+        state_handle: &state.state,
         tx_tt,
         search_contexts: &state.search_contexts,
         lang,
@@ -386,10 +383,11 @@ impl SubCtx<'_> {
             )
             .await;
         }
+        let accounts = self.state_handle.user_accounts_sorted().await;
         send_sub_link_account_list(
             self.bot,
             self.msg,
-            self.user_accounts,
+            accounts,
             self.search_contexts,
             self.lang,
             sub_id,

@@ -90,9 +90,7 @@ pub async fn send_sub_manage_tt_menu(
 pub async fn send_sub_link_account_list(
     bot: &Bot,
     msg: &Message,
-    user_accounts: &std::sync::Arc<
-        std::sync::RwLock<std::collections::HashMap<TtUsername, UserAccount>>,
-    >,
+    accounts: Vec<UserAccount>,
     search_contexts: &std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
@@ -106,12 +104,7 @@ pub async fn send_sub_link_account_list(
     sub_page: usize,
     page: usize,
 ) -> ResponseResult<()> {
-    let mut accounts: Vec<UserAccount> = user_accounts
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .values()
-        .cloned()
-        .collect();
+    let mut accounts = accounts;
     accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
 
     let keyboard = create_user_list_keyboard(

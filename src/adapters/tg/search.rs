@@ -10,13 +10,12 @@ use crate::app::services::user_settings as user_settings_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MuteAction, SubAction};
 use crate::core::types::{
-    ActionStatus, AdminErrorContext, LanguageCode, LiteUser, MuteListMode, TtCommand, TtUsername,
+    ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername,
 };
 use crate::infra::db::types::BanEntry;
 use crate::infra::locales;
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
-use teamtalk::types::UserAccount;
+use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::sugar::request::RequestReplyExt;
 use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup, MessageId};
@@ -148,7 +147,7 @@ async fn find_matches(
     let normalized_query = query.to_lowercase();
     let mut candidates = match list_type {
         SearchListType::Kick => {
-            let users = sorted_online_users(&state.online_users);
+            let users = state.state.online_users_sorted().await;
             users
                 .into_iter()
                 .map(|u| SearchCandidate {
@@ -159,7 +158,7 @@ async fn find_matches(
                 .collect()
         }
         SearchListType::Ban => {
-            let users = sorted_online_users(&state.online_users);
+            let users = state.state.online_users_sorted().await;
             users
                 .into_iter()
                 .map(|u| SearchCandidate {
@@ -199,7 +198,7 @@ async fn find_matches(
                 .collect()
         }
         SearchListType::MuteServer { mode, page, .. } => {
-            let accounts = load_accounts(&state.user_accounts);
+            let accounts = state.state.user_accounts_sorted().await;
             accounts
                 .into_iter()
                 .map(|acc| {
@@ -279,7 +278,7 @@ async fn find_matches(
                 .collect()
         }
         SearchListType::LinkList { sub_id, page } => {
-            let accounts = load_accounts(&state.user_accounts);
+            let accounts = state.state.user_accounts_sorted().await;
             accounts
                 .into_iter()
                 .map(|acc| {
@@ -548,7 +547,7 @@ async fn toggle_mute_and_render(
     bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
 
     if args.server_list {
-        let accounts = load_accounts(&state.user_accounts);
+        let accounts = state.state.user_accounts_sorted().await;
         let guest_username = state
             .config
             .teamtalk
@@ -692,30 +691,6 @@ fn back_action(list_type: &SearchListType) -> CallbackAction {
             })
         }
     }
-}
-
-fn sorted_online_users(online_users: &RwLock<HashMap<i32, LiteUser>>) -> Vec<LiteUser> {
-    let mut users: Vec<LiteUser> = online_users
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .values()
-        .cloned()
-        .collect();
-    users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
-    users
-}
-
-fn load_accounts(
-    user_accounts: &Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
-) -> Vec<UserAccount> {
-    let mut accounts: Vec<UserAccount> = user_accounts
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .values()
-        .cloned()
-        .collect();
-    accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
-    accounts
 }
 
 fn tg_user_id_i64(user_id: u64) -> i64 {

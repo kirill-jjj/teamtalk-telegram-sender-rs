@@ -10,17 +10,14 @@ pub mod utils;
 
 use crate::adapters::tg::utils::notify_admin_error;
 use crate::app::services::user_settings as user_settings_service;
+use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
 use crate::core::types::{
-    AdminErrorContext, LanguageCode, LiteUser, MuteListMode, NotificationSetting, TtCommand,
-    TtUsername,
+    AdminErrorContext, LanguageCode, MuteListMode, NotificationSetting, TtCommand,
 };
 use crate::infra::db::Database;
 use crate::infra::locales;
-use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::RwLock;
-use teamtalk::types::UserAccount;
 use teloxide::error_handlers::ErrorHandler;
 use teloxide::{
     prelude::*,
@@ -35,9 +32,7 @@ pub struct TgRunArgs {
     pub event_bot: Bot,
     pub message_bot: Option<Bot>,
     pub db: Database,
-    pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    pub online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
-    pub user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
+    pub state: StateHandle,
     pub tx_tt_cmd: Sender<TtCommand>,
     pub config: Arc<Config>,
     pub cancel_token: tokio_util::sync::CancellationToken,
@@ -48,22 +43,12 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         event_bot,
         message_bot,
         db,
-        online_users,
-        online_users_by_username,
-        user_accounts,
+        state,
         tx_tt_cmd,
         config,
         cancel_token,
     } = args;
-    let state = build_state(
-        db.clone(),
-        online_users,
-        online_users_by_username,
-        user_accounts,
-        tx_tt_cmd,
-        &config,
-        &cancel_token,
-    );
+    let state = build_state(db.clone(), state, tx_tt_cmd, &config, &cancel_token);
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
         tracing::error!(error = %e, "Failed to set bot commands");
@@ -80,18 +65,14 @@ pub async fn run_tg_bot(args: TgRunArgs) {
 
 fn build_state(
     db: Database,
-    online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
-    online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
-    user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
+    state: StateHandle,
     tx_tt_cmd: Sender<TtCommand>,
     config: &Arc<Config>,
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> AppState {
     AppState {
         db,
-        online_users,
-        online_users_by_username,
-        user_accounts,
+        state,
         search_contexts: crate::adapters::tg::search::new_search_contexts(),
         tx_tt: tx_tt_cmd,
         config: config.clone(),

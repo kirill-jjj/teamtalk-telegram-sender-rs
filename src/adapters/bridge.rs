@@ -1,12 +1,12 @@
+use crate::app::state::StateHandle;
 use crate::args;
 use crate::bootstrap::config::Config;
-use crate::core::types::{self, BridgeEvent, LanguageCode, LiteUser, TtChannelName, TtUsername};
+use crate::core::types::{self, BridgeEvent, LanguageCode, TtChannelName, TtUsername};
 use crate::infra::db::{Database, types::UserSettings};
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 use teloxide::ApiError;
 use teloxide::RequestError;
 use teloxide::sugar::request::RequestReplyExt;
@@ -16,7 +16,7 @@ use tokio::task::JoinSet;
 
 struct BridgeDeps<'a> {
     db: &'a Database,
-    online_users: &'a Arc<RwLock<HashMap<i32, LiteUser>>>,
+    state: &'a StateHandle,
     event_bot: Option<&'a Bot>,
     msg_bot: Option<&'a Bot>,
     message_token_present: bool,
@@ -55,7 +55,7 @@ struct WhoReportData {
 
 struct BroadcastTaskCtx {
     bot: Bot,
-    online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    state: StateHandle,
     db: Database,
     admin_id: teloxide::types::ChatId,
     related_tt_username: TtUsername,
@@ -63,7 +63,7 @@ struct BroadcastTaskCtx {
 
 pub struct BridgeContext {
     pub db: Database,
-    pub online_users: Arc<RwLock<HashMap<i32, LiteUser>>>,
+    pub state: StateHandle,
     pub config: Arc<Config>,
     pub event_bot: Option<Bot>,
     pub msg_bot: Option<Bot>,
@@ -78,7 +78,7 @@ pub async fn run_bridge(
 ) {
     let BridgeContext {
         db: db_clone,
-        online_users,
+        state,
         config,
         event_bot,
         msg_bot,
@@ -90,7 +90,7 @@ pub async fn run_bridge(
     let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id);
     let deps = BridgeDeps {
         db: &db_clone,
-        online_users: &online_users,
+        state: &state,
         event_bot: event_bot.as_ref(),
         msg_bot: msg_bot.as_ref(),
         message_token_present,
@@ -228,7 +228,7 @@ async fn handle_broadcast(deps: &BridgeDeps<'_>, data: BroadcastData) {
     for sub in recipients {
         let task_ctx = BroadcastTaskCtx {
             bot: bot.clone(),
-            online_users: deps.online_users.clone(),
+            state: deps.state.clone(),
             db: deps.db.clone(),
             admin_id: deps.admin_id,
             related_tt_username: data.related_tt_username.clone(),
@@ -269,12 +269,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         && sub.not_on_online_confirmed
         && let Some(linked_tt) = &sub.teamtalk_username
     {
-        let is_online = ctx
-            .online_users
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .values()
-            .any(|entry| entry.username == *linked_tt);
+        let is_online = ctx.state.is_username_online(linked_tt).await;
         if is_online {
             send_silent = true;
         }

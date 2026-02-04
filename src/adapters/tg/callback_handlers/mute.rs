@@ -11,7 +11,6 @@ use crate::core::types::{
     ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TtCommand, TtUsername,
 };
 use crate::infra::locales;
-use teamtalk::types::UserAccount;
 use teloxide::prelude::*;
 
 pub async fn handle_mute(
@@ -220,7 +219,7 @@ async fn handle_server_list(
 ) -> ResponseResult<()> {
     request_accounts(bot, state, telegram_id, lang).await;
 
-    let accounts = load_accounts(&state.user_accounts);
+    let accounts = state.state.user_accounts_sorted().await;
     let guest_username = state
         .config
         .teamtalk
@@ -297,7 +296,7 @@ async fn handle_server_toggle(
     )
     .await?;
 
-    let accounts = load_accounts(&ctx.state.user_accounts);
+    let accounts = ctx.state.state.user_accounts_sorted().await;
     let guest_username = ctx
         .state
         .config
@@ -355,19 +354,6 @@ async fn load_muted_users(
             tracing::error!(telegram_id, error = %e, "Failed to load muted users");
             Vec::new()
         })
-}
-
-fn load_accounts(
-    user_accounts: &std::sync::RwLock<std::collections::HashMap<TtUsername, UserAccount>>,
-) -> Vec<UserAccount> {
-    let mut accounts: Vec<UserAccount> = user_accounts
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .values()
-        .cloned()
-        .collect();
-    accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
-    accounts
 }
 
 fn tg_user_id_i64(user_id: u64) -> i64 {

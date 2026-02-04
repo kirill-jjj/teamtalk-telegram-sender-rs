@@ -3,11 +3,9 @@ use crate::bootstrap::config::Config;
 use crate::core::types::TtUsername;
 use crate::infra::db::Database;
 use anyhow::{Result, anyhow};
-use std::collections::HashMap;
 use std::path::Path;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use teamtalk::Client;
-use teamtalk::types::UserAccount;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
 use tokio::sync::oneshot;
@@ -28,16 +26,12 @@ struct BotInit {
 }
 
 struct SharedState {
-    online_users: Arc<RwLock<HashMap<i32, crate::core::types::LiteUser>>>,
-    online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
-    all_user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
+    state: crate::app::state::StateHandle,
 }
 
 struct TeamtalkWorkerConfig {
     config: Arc<Config>,
-    online_users: Arc<RwLock<HashMap<i32, crate::core::types::LiteUser>>>,
-    online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>>,
-    user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>>,
+    state: crate::app::state::StateHandle,
     tx_bridge: tokio_mpsc::Sender<crate::core::types::BridgeEvent>,
     rx_tt_cmd: tokio_mpsc::Receiver<crate::core::types::TtCommand>,
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
@@ -115,9 +109,7 @@ impl Application {
                 let bots = init_bots(&config).await?;
                 let tt_handle = start_teamtalk_worker(TeamtalkWorkerConfig {
                     config: config.clone(),
-                    online_users: shared.online_users.clone(),
-                    online_users_by_username: shared.online_users_by_username.clone(),
-                    user_accounts: shared.all_user_accounts.clone(),
+                    state: shared.state.clone(),
                     tx_bridge: tx_bridge.clone(),
                     rx_tt_cmd,
                     tx_tt_cmd: tx_tt_cmd.clone(),
@@ -130,7 +122,7 @@ impl Application {
                 let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
                     adapters::bridge::BridgeContext {
                         db: db.clone(),
-                        online_users: shared.online_users.clone(),
+                        state: shared.state.clone(),
                         config: config.clone(),
                         event_bot: bots.event_bot.clone(),
                         msg_bot: bots.message_bot.clone(),
@@ -233,17 +225,8 @@ fn spawn_pending_cleanup_task(
 }
 
 fn init_shared_state() -> SharedState {
-    let online_users: Arc<RwLock<HashMap<i32, crate::core::types::LiteUser>>> =
-        Arc::new(RwLock::new(HashMap::new()));
-    let online_users_by_username: Arc<RwLock<HashMap<TtUsername, i32>>> =
-        Arc::new(RwLock::new(HashMap::new()));
-    let all_user_accounts: Arc<RwLock<HashMap<TtUsername, UserAccount>>> =
-        Arc::new(RwLock::new(HashMap::new()));
-
     SharedState {
-        online_users,
-        online_users_by_username,
-        all_user_accounts,
+        state: crate::app::state::StateHandle::new(),
     }
 }
 
@@ -299,9 +282,7 @@ async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task:
     let tt_handle = {
         let TeamtalkWorkerConfig {
             config,
-            online_users,
-            online_users_by_username,
-            user_accounts,
+            state,
             tx_bridge,
             rx_tt_cmd,
             tx_tt_cmd,
@@ -312,9 +293,7 @@ async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task:
         spawn_local(adapters::tt::run_teamtalk_worker(
             adapters::tt::RunTeamtalkArgs {
                 config,
-                online_users,
-                online_users_by_username,
-                user_accounts,
+                state,
                 tx_bridge,
                 rx_cmd: rx_tt_cmd,
                 tx_cmd_clone: tx_tt_cmd,
@@ -341,9 +320,7 @@ async fn run_telegram_or_wait(ctx: TelegramRunContext) -> Result<()> {
             event_bot: bot,
             message_bot: ctx.message_bot,
             db: ctx.db.clone(),
-            online_users: ctx.shared.online_users,
-            online_users_by_username: ctx.shared.online_users_by_username,
-            user_accounts: ctx.shared.all_user_accounts,
+            state: ctx.shared.state,
             tx_tt_cmd: ctx.tx_tt_cmd,
             config: ctx.config,
             cancel_token: ctx.cancel_token,

@@ -87,7 +87,6 @@ struct CommandCtx<'a> {
     state: &'a AppState,
     db: &'a crate::infra::db::Database,
     config: &'a crate::bootstrap::config::Config,
-    online_users: &'a std::sync::Arc<std::sync::RwLock<std::collections::HashMap<i32, LiteUser>>>,
     tx_tt: &'a tokio::sync::mpsc::Sender<TtCommand>,
     telegram_id: i64,
     lang: LanguageCode,
@@ -148,7 +147,6 @@ impl<'a> CommandCtx<'a> {
             state,
             db,
             config,
-            online_users: &state.online_users,
             tx_tt: &state.tx_tt,
             telegram_id,
             lang,
@@ -432,14 +430,7 @@ impl<'a> CommandCtx<'a> {
             .await?;
             return Ok(());
         }
-        let mut users: Vec<LiteUser> = self
-            .online_users
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .values()
-            .cloned()
-            .collect();
-        users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
+        let users: Vec<LiteUser> = self.state.state.online_users_sorted().await;
 
         let is_kick = matches!(cmd, Command::Kick);
         let title_key = if is_kick {
@@ -1321,25 +1312,20 @@ async fn handle_user_reply(
         }
     };
 
-    let current_tt_user_id = tt_username.as_ref().map_or(Some(tt_user_id), |username| {
+    let current_tt_user_id = if let Some(username) = tt_username.as_ref() {
         state
-            .online_users_by_username
-            .read()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .get(username)
-            .copied()
+            .state
+            .user_id_by_username(username)
+            .await
             .or(Some(tt_user_id))
-    });
-    let is_online = current_tt_user_id
-        .and_then(|id| {
-            state
-                .online_users
-                .read()
-                .unwrap_or_else(std::sync::PoisonError::into_inner)
-                .contains_key(&id)
-                .then_some(id)
-        })
-        .is_some();
+    } else {
+        Some(tt_user_id)
+    };
+    let is_online = if let Some(id) = current_tt_user_id {
+        state.state.online_user_by_id(id).await.is_some()
+    } else {
+        false
+    };
     let reply_key = if is_online {
         let Some(target_id) = current_tt_user_id else {
             return Ok(());

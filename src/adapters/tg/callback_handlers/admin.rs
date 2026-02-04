@@ -11,7 +11,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::admin_cleanup as admin_cleanup_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
-use crate::core::types::{AdminErrorContext, LanguageCode, LiteUser, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -60,7 +60,7 @@ async fn handle_kick_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let users = sorted_online_users(&state.online_users);
+    let users = state.state.online_users_sorted().await;
     let args = args!(server = state.config.teamtalk.display_name().to_string());
     let base = locales::get_text(
         lang.as_str(),
@@ -102,7 +102,7 @@ async fn handle_ban_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let users = sorted_online_users(&state.online_users);
+    let users = state.state.online_users_sorted().await;
     let args = args!(server = state.config.teamtalk.display_name().to_string());
     let base = locales::get_text(
         lang.as_str(),
@@ -171,12 +171,7 @@ async fn handle_ban_perform(
     user_id: i32,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let user = state
-        .online_users
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .get(&user_id)
-        .cloned();
+    let user = state.state.online_user_by_id(user_id).await;
     let Some(u) = user else {
         return answer_callback(
             bot,
@@ -348,19 +343,6 @@ async fn handle_subs_list(
         edit_subscribers_list(bot, msg, &state.db, &state.search_contexts, lang, page).await?;
     }
     answer_callback_empty(bot, &q.id).await
-}
-
-fn sorted_online_users(
-    online_users: &std::sync::RwLock<std::collections::HashMap<i32, LiteUser>>,
-) -> Vec<LiteUser> {
-    let mut users: Vec<LiteUser> = online_users
-        .read()
-        .unwrap_or_else(std::sync::PoisonError::into_inner)
-        .values()
-        .cloned()
-        .collect();
-    users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
-    users
 }
 
 async fn send_or_edit_list(

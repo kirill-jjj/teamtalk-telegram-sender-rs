@@ -40,9 +40,7 @@ pub(super) fn handle_sdk_event(
         e if e.is_reconnect_needed_with(&[Event::MySelfKicked]) => {
             *is_connected = false;
             reconnect_handler.mark_disconnected();
-            if let Ok(mut users) = ctx.online_users.write() {
-                users.clear();
-            }
+            ctx.state.notify_clear_online_users();
             *ready_time = None;
             tracing::warn!(
                 component = "tt_worker",
@@ -71,55 +69,43 @@ pub(super) fn handle_sdk_event(
                 }
             }
             *ready_time = Some(std::time::Instant::now());
-            if let Ok(mut accounts) = ctx.user_accounts.write() {
-                accounts.clear();
-            }
+            ctx.state.notify_clear_user_accounts();
             client.list_user_accounts(0, 1000);
         }
 
         Event::UserAccount => {
-            if let Some(account) = msg.account()
-                && !account.username.is_empty()
-                && let Ok(mut accounts) = ctx.user_accounts.write()
-            {
-                accounts.insert(TtUsername::new(account.username.clone()), account);
+            if let Some(account) = msg.account() {
+                ctx.state.notify_upsert_user_account(account);
             }
         }
         Event::UserAccountCreated | Event::UserAccountRemoved => {
-            if let Ok(mut accounts) = ctx.user_accounts.write() {
-                accounts.clear();
-            }
+            ctx.state.notify_clear_user_accounts();
             client.list_user_accounts(0, 1000);
         }
 
         Event::UserUpdate => {
-            if let Some(user) = msg.user()
-                && let Ok(mut users) = ctx.online_users.write()
-                && let Some(existing_lite_user) = users.get_mut(&user.id.0)
-            {
+            if let Some(user) = msg.user() {
+                let state = ctx.state.clone();
+                let user_id = user.id.0;
                 let new_username = TtUsername::new(user.username.clone());
-                if existing_lite_user.username != new_username {
-                    if let Ok(mut by_username) = ctx.online_users_by_username.write() {
-                        if !existing_lite_user.username.as_str().is_empty() {
-                            by_username.remove(&existing_lite_user.username);
+                let new_nickname = user.nickname.clone();
+                tokio::task::spawn_local(async move {
+                    if let Some(existing) = state.online_user_by_id(user_id).await {
+                        if existing.username != new_username {
+                            state.notify_update_user_username(user_id, new_username.clone());
                         }
-                        if !user.username.is_empty() {
-                            by_username.insert(new_username.clone(), user.id.0);
+                        if existing.nickname != new_nickname {
+                            tracing::info!(
+                                component = "tt_worker",
+                                username = %new_username,
+                                old_nick = %existing.nickname,
+                                new_nick = %new_nickname,
+                                "Nickname changed"
+                            );
+                            state.notify_update_user_nickname(user_id, new_nickname.clone());
                         }
                     }
-                    existing_lite_user.username = new_username;
-                }
-
-                if existing_lite_user.nickname != user.nickname {
-                    tracing::info!(
-                        component = "tt_worker",
-                        username = %user.username,
-                        old_nick = %existing_lite_user.nickname,
-                        new_nick = %user.nickname,
-                        "Nickname changed"
-                    );
-                    existing_lite_user.nickname = user.nickname.clone();
-                }
+                });
             }
         }
         Event::StreamMediaFile => {
@@ -179,14 +165,7 @@ pub(super) fn handle_sdk_event(
                     username: TtUsername::new(user.username.clone()),
                     channel_name,
                 };
-                if let Ok(mut by_username) = ctx.online_users_by_username.write()
-                    && !lite_user.username.as_str().is_empty()
-                {
-                    by_username.insert(lite_user.username.clone(), lite_user.id);
-                }
-                if let Ok(mut users) = ctx.online_users.write() {
-                    users.insert(user.id.0, lite_user.clone());
-                }
+                ctx.state.notify_upsert_online_user(lite_user.clone());
 
                 let is_ready = ready_time
                     .map(|t| t.elapsed() >= Duration::from_secs(2))
@@ -282,68 +261,47 @@ pub(super) fn handle_sdk_event(
                     username: TtUsername::new(user.username.clone()),
                     channel_name,
                 };
-                if let Ok(mut by_username) = ctx.online_users_by_username.write()
-                    && !lite_user.username.as_str().is_empty()
-                {
-                    by_username.insert(lite_user.username.clone(), lite_user.id);
-                }
-                if let Ok(mut users) = ctx.online_users.write() {
-                    users.insert(user.id.0, lite_user);
-                }
+                ctx.state.notify_upsert_online_user(lite_user);
             }
         }
 
         Event::UserLoggedOut => {
             if let Some(user) = msg.user() {
-                let removed = if let Ok(mut users) = ctx.online_users.write() {
-                    users.remove(&user.id.0)
-                } else {
-                    None
-                };
-                if let Some(u) = removed {
-                    if let Ok(mut by_username) = ctx.online_users_by_username.write()
-                        && !u.username.as_str().is_empty()
+                let is_ready = ready_time
+                    .map(|t| t.elapsed() >= Duration::from_secs(2))
+                    .unwrap_or(false);
+                let real_name = client.get_server_properties().map(|p| p.name);
+                let server_name = resolve_server_name(tt_config, real_name.as_deref());
+                let tx_bridge = ctx.tx_bridge.clone();
+                let state = ctx.state.clone();
+                let user_id = user.id.0;
+                let is_self = user.id == client.my_id();
+                let tt_config = tt_config.clone();
+                tokio::task::spawn_local(async move {
+                    let removed = state.remove_online_user(user_id).await;
+                    if let Some(u) = removed
+                        && !is_self
+                        && is_ready
+                        && !tt_config.global_ignore_usernames.contains(&u.username)
+                        && let Err(e) = tx_bridge
+                            .send(BridgeEvent::Broadcast {
+                                event_type: NotificationType::Leave,
+                                nickname: u.nickname.clone(),
+                                server_name,
+                                related_tt_username: u.username.clone(),
+                            })
+                            .await
                     {
-                        by_username.remove(&u.username);
+                        tracing::error!(error = %e, "Failed to send leave broadcast");
                     }
-                    if user.id != client.my_id() {
-                        let is_ready = ready_time
-                            .map(|t| t.elapsed() >= Duration::from_secs(2))
-                            .unwrap_or(false);
-                        if is_ready && !tt_config.global_ignore_usernames.contains(&u.username) {
-                            let real_name = client.get_server_properties().map(|p| p.name);
-                            let server_name = resolve_server_name(tt_config, real_name.as_deref());
-
-                            let tx_bridge = ctx.tx_bridge.clone();
-                            let nickname = u.nickname.clone();
-                            let related_tt_username = u.username.clone();
-                            tokio::task::spawn_local(async move {
-                                if let Err(e) = tx_bridge
-                                    .send(BridgeEvent::Broadcast {
-                                        event_type: NotificationType::Leave,
-                                        nickname,
-                                        server_name,
-                                        related_tt_username,
-                                    })
-                                    .await
-                                {
-                                    tracing::error!(error = %e, "Failed to send leave broadcast");
-                                }
-                            });
-                        }
-                    }
-                }
+                });
             }
         }
         Event::UserLeft => {
             if let Some(user) = msg.user() {
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
-
-                if let Ok(mut users) = ctx.online_users.write()
-                    && let Some(u) = users.get_mut(&user.id.0)
-                {
-                    u.channel_name = channel_name;
-                }
+                ctx.state
+                    .notify_update_user_channel(user.id.0, channel_name);
             }
         }
 

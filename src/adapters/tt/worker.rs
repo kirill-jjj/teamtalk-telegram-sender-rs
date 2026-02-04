@@ -168,9 +168,7 @@ fn handle_cmd(
 pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
     let RunTeamtalkArgs {
         config,
-        online_users,
-        online_users_by_username,
-        user_accounts,
+        state,
         tx_bridge,
         mut rx_cmd,
         tx_cmd_clone,
@@ -189,9 +187,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
 
     let ctx = WorkerContext {
         config: config.clone(),
-        online_users: online_users.clone(),
-        online_users_by_username,
-        user_accounts,
+        state,
         tx_bridge,
         tx_tt_cmd: tx_cmd_clone.clone(),
         db,
