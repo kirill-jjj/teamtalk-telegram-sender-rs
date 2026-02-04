@@ -1,4 +1,5 @@
 use anyhow::Result;
+use crate::core::types::{TgMessageId, TtChannelId};
 
 use super::Database;
 use sqlx::Row;
@@ -6,8 +7,8 @@ use sqlx::Row;
 impl Database {
     pub async fn add_pending_channel_reply(
         &self,
-        tg_message_id: i64,
-        channel_id: i32,
+        tg_message_id: TgMessageId,
+        channel_id: TtChannelId,
         channel_name: &str,
         server_name: &str,
         original_text: &str,
@@ -15,8 +16,8 @@ impl Database {
         sqlx::query(
             "INSERT OR IGNORE INTO pending_channel_replies (tg_message_id, channel_id, channel_name, server_name, original_text) VALUES (?, ?, ?, ?, ?)",
         )
-        .bind(tg_message_id)
-        .bind(channel_id)
+        .bind(tg_message_id.as_i32())
+        .bind(channel_id.as_i32())
         .bind(channel_name)
         .bind(server_name)
         .bind(original_text)
@@ -27,8 +28,8 @@ impl Database {
 
     pub async fn get_pending_channel_reply(
         &self,
-        tg_message_id: i64,
-    ) -> Result<Option<(i32, String, String, String)>> {
+        tg_message_id: TgMessageId,
+    ) -> Result<Option<(TtChannelId, String, String, String)>> {
         let row = sqlx::query(
             r"
             SELECT
@@ -40,13 +41,13 @@ impl Database {
             WHERE tg_message_id = ?
             ",
         )
-        .bind(tg_message_id)
+        .bind(tg_message_id.as_i32())
         .fetch_optional(&self.pool)
         .await?;
 
         Ok(row.map(|r| {
             (
-                r.get::<i32, _>("channel_id"),
+                TtChannelId::from(r.get::<i32, _>("channel_id")),
                 r.get::<String, _>("channel_name"),
                 r.get::<String, _>("server_name"),
                 r.get::<String, _>("original_text"),
@@ -54,11 +55,11 @@ impl Database {
         }))
     }
 
-    pub async fn touch_pending_channel_reply(&self, tg_message_id: i64) -> Result<()> {
+    pub async fn touch_pending_channel_reply(&self, tg_message_id: TgMessageId) -> Result<()> {
         sqlx::query(
             "UPDATE pending_channel_replies SET last_used_at = CURRENT_TIMESTAMP WHERE tg_message_id = ?",
         )
-        .bind(tg_message_id)
+        .bind(tg_message_id.as_i32())
         .execute(&self.pool)
         .await?;
         Ok(())

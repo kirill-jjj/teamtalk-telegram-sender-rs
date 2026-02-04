@@ -1,4 +1,4 @@
-use crate::core::types::{TelegramId, TtUsername};
+use crate::core::types::{DbReplyQueueId, TelegramId, TtUsername};
 use anyhow::Result;
 use chrono::NaiveDateTime;
 
@@ -6,7 +6,7 @@ use super::Database;
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct ReplyQueueItem {
-    pub id: i64,
+    pub id: DbReplyQueueId,
     pub message_text: String,
     pub created_at: NaiveDateTime,
 }
@@ -39,7 +39,7 @@ impl Database {
             ReplyQueueItem,
             r#"
             SELECT
-                id as "id!",
+                id as "id!: DbReplyQueueId",
                 message_text as "message_text!",
                 created_at as "created_at!"
             FROM reply_queue
@@ -53,7 +53,7 @@ impl Database {
         Ok(rows)
     }
 
-    pub async fn delete_reply_queue_ids(&self, ids: &[i64]) -> Result<u64> {
+    pub async fn delete_reply_queue_ids(&self, ids: &[DbReplyQueueId]) -> Result<u64> {
         if ids.is_empty() {
             return Ok(0);
         }
@@ -61,7 +61,7 @@ impl Database {
         let mut removed = 0u64;
         for id in ids {
             let res = sqlx::query("DELETE FROM reply_queue WHERE id = ?")
-                .bind(id)
+                .bind(id.as_i64())
                 .execute(&mut *tx)
                 .await?;
             removed += res.rows_affected();

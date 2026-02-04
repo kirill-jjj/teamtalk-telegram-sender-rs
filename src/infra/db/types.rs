@@ -1,5 +1,6 @@
 use crate::core::types::{
-    DeeplinkAction, LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUsername,
+    DbBanId, DeeplinkAction, LanguageCode, MuteListMode, NotificationSetting, TelegramId,
+    TtUsername,
 };
 use chrono::NaiveDateTime;
 
@@ -25,7 +26,7 @@ pub struct Deeplink {
 
 #[derive(sqlx::FromRow, Debug)]
 pub struct BanEntry {
-    pub id: i64,
+    pub id: DbBanId,
     pub telegram_id: Option<TelegramId>,
     pub teamtalk_username: Option<TtUsername>,
 }

@@ -2,7 +2,7 @@
 
 use crate::adapters::tt::{WorkerContext, resolve_server_name};
 use crate::args;
-use crate::core::types::BridgeEvent;
+use crate::core::types::{BridgeEvent, TgChatId, TgMessageId};
 use crate::infra::locales;
 use std::fmt::Write;
 use teamtalk::Client;
@@ -12,9 +12,9 @@ use crate::core::types::LanguageCode;
 pub(super) fn handle_who_command(
     client: &Client,
     ctx: &WorkerContext,
-    chat_id: i64,
+    chat_id: TgChatId,
     lang: LanguageCode,
-    reply_to: Option<i32>,
+    reply_to: Option<TgMessageId>,
 ) {
     let tt_config = &ctx.config.teamtalk;
 
@@ -103,7 +103,11 @@ pub(super) fn handle_who_command(
             })
             .await
         {
-            tracing::error!(chat_id, error = %e, "Failed to send who report to bridge");
+            tracing::error!(
+                chat_id = chat_id.as_i64(),
+                error = %e,
+                "Failed to send who report to bridge"
+            );
         }
     });
 }

@@ -1,7 +1,10 @@
 use crate::app::state::StateHandle;
 use crate::args;
 use crate::bootstrap::config::Config;
-use crate::core::types::{self, BridgeEvent, LanguageCode, TtChannelName, TtUsername};
+use crate::core::types::{
+    self, BridgeEvent, LanguageCode, TgChatId, TgMessageId, TtChannelId, TtChannelName, TtUserId,
+    TtUsername,
+};
 use crate::infra::db::{Database, types::UserSettings};
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
@@ -33,7 +36,7 @@ struct BroadcastData {
 }
 
 struct AdminData {
-    user_id: i32,
+    user_id: TtUserId,
     nick: String,
     tt_username: TtUsername,
     msg_content: String,
@@ -41,16 +44,16 @@ struct AdminData {
 }
 
 struct AdminChannelData {
-    channel_id: i32,
+    channel_id: TtChannelId,
     channel_name: TtChannelName,
     server_name: String,
     msg_content: String,
 }
 
 struct WhoReportData {
-    chat_id: i64,
+    chat_id: TgChatId,
     text: String,
-    reply_to: Option<i32>,
+    reply_to: Option<TgMessageId>,
 }
 
 struct BroadcastTaskCtx {
@@ -291,7 +294,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         && !ctx.related_tt_username.as_str().is_empty()
         && let Err(e) = ctx
             .db
-            .add_pending_reply(i64::from(msg.id.0), 0, Some(&ctx.related_tt_username))
+            .add_pending_reply(TgMessageId::from(msg.id.0), TtUserId::from(0), Some(&ctx.related_tt_username))
             .await
     {
         tracing::error!(
@@ -397,7 +400,7 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     if let Ok(msg) = &res
         && let Err(e) = deps
             .db
-            .add_pending_reply(i64::from(msg.id.0), data.user_id, Some(&data.tt_username))
+            .add_pending_reply(TgMessageId::from(msg.id.0), data.user_id, Some(&data.tt_username))
             .await
     {
         tracing::error!(
@@ -435,7 +438,7 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     {
         tracing::error!(
             component = "bridge",
-            user_id = data.user_id,
+            user_id = data.user_id.as_i32(),
             tt_username = %data.tt_username,
             error = %e,
             "Failed to send TT reply command"
@@ -495,7 +498,7 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
         && let Err(e) = deps
             .db
             .add_pending_channel_reply(
-                i64::from(msg.id.0),
+                TgMessageId::from(msg.id.0),
                 data.channel_id,
                 data.channel_name.as_str(),
                 &data.server_name,
@@ -516,10 +519,11 @@ async fn handle_who_report(deps: &BridgeDeps<'_>, data: WhoReportData) {
     if let Some(bot) = deps.event_bot
         && let Err(e) = {
             let req = bot
-                .send_message(teloxide::types::ChatId(data.chat_id), &data.text)
+                .send_message(teloxide::types::ChatId(data.chat_id.as_i64()), &data.text)
                 .parse_mode(teloxide::types::ParseMode::Html);
             if let Some(reply_to) = data.reply_to {
-                req.reply_to(teloxide::types::MessageId(reply_to)).await
+                req.reply_to(teloxide::types::MessageId(reply_to.as_i32()))
+                    .await
             } else {
                 req.await
             }
@@ -527,7 +531,7 @@ async fn handle_who_report(deps: &BridgeDeps<'_>, data: WhoReportData) {
     {
         tracing::error!(
             component = "bridge",
-            chat_id = data.chat_id,
+            chat_id = data.chat_id.as_i64(),
             error = %e,
             "Failed to send who report"
         );

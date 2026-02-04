@@ -1,4 +1,6 @@
-use crate::core::types::{LanguageCode, LiteUser, TelegramId, TtChannelName, TtUsername};
+use crate::core::types::{
+    LanguageCode, LiteUser, TelegramId, TtChannelName, TtUserId, TtUsername,
+};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use teamtalk::types::UserAccount;
@@ -25,12 +27,12 @@ enum StateCmd {
         resp: oneshot::Sender<Vec<LiteUser>>,
     },
     GetOnlineUserById {
-        user_id: i32,
+        user_id: TtUserId,
         resp: oneshot::Sender<Option<LiteUser>>,
     },
     GetUserIdByUsername {
         username: TtUsername,
-        resp: oneshot::Sender<Option<i32>>,
+        resp: oneshot::Sender<Option<TtUserId>>,
     },
     IsUsernameOnline {
         username: TtUsername,
@@ -40,19 +42,19 @@ enum StateCmd {
         user: LiteUser,
     },
     UpdateUserUsername {
-        user_id: i32,
+        user_id: TtUserId,
         username: TtUsername,
     },
     UpdateUserNickname {
-        user_id: i32,
+        user_id: TtUserId,
         nickname: String,
     },
     UpdateUserChannel {
-        user_id: i32,
+        user_id: TtUserId,
         channel_name: TtChannelName,
     },
     RemoveOnlineUser {
-        user_id: i32,
+        user_id: TtUserId,
         resp: Option<oneshot::Sender<Option<LiteUser>>>,
     },
     ClearOnlineUsers,
@@ -101,19 +103,19 @@ impl StateHandle {
         let _ = self.tx.try_send(StateCmd::UpsertOnlineUser { user });
     }
 
-    pub fn notify_update_user_username(&self, user_id: i32, username: TtUsername) {
+    pub fn notify_update_user_username(&self, user_id: TtUserId, username: TtUsername) {
         let _ = self
             .tx
             .try_send(StateCmd::UpdateUserUsername { user_id, username });
     }
 
-    pub fn notify_update_user_nickname(&self, user_id: i32, nickname: String) {
+    pub fn notify_update_user_nickname(&self, user_id: TtUserId, nickname: String) {
         let _ = self
             .tx
             .try_send(StateCmd::UpdateUserNickname { user_id, nickname });
     }
 
-    pub fn notify_update_user_channel(&self, user_id: i32, channel_name: TtChannelName) {
+    pub fn notify_update_user_channel(&self, user_id: TtUserId, channel_name: TtChannelName) {
         let _ = self.tx.try_send(StateCmd::UpdateUserChannel {
             user_id,
             channel_name,
@@ -145,7 +147,7 @@ impl StateHandle {
         rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn online_user_by_id(&self, user_id: i32) -> StateResult<Option<LiteUser>> {
+    pub async fn online_user_by_id(&self, user_id: TtUserId) -> StateResult<Option<LiteUser>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -158,7 +160,10 @@ impl StateHandle {
         rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn user_id_by_username(&self, username: &TtUsername) -> StateResult<Option<i32>> {
+    pub async fn user_id_by_username(
+        &self,
+        username: &TtUsername,
+    ) -> StateResult<Option<TtUserId>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -190,7 +195,7 @@ impl StateHandle {
         rx.await.map_err(|_| StateError::ResponseDropped)
     }
 
-    pub async fn remove_online_user(&self, user_id: i32) -> StateResult<Option<LiteUser>> {
+    pub async fn remove_online_user(&self, user_id: TtUserId) -> StateResult<Option<LiteUser>> {
         let (tx, rx) = oneshot::channel();
         if self
             .tx
@@ -292,8 +297,8 @@ async fn run_state(mut rx: mpsc::Receiver<StateCmd>) {
 }
 
 struct StateStore {
-    online_users: HashMap<i32, LiteUser>,
-    online_users_by_username: HashMap<TtUsername, i32>,
+    online_users: HashMap<TtUserId, LiteUser>,
+    online_users_by_username: HashMap<TtUsername, TtUserId>,
     user_accounts: HashMap<TtUsername, UserAccount>,
     tt_lang_cache: HashMap<TtUsername, LanguageCode>,
     tt_tg_cache: HashMap<TtUsername, TelegramId>,
@@ -420,7 +425,7 @@ impl StateStore {
         self.online_users.insert(user.id, user);
     }
 
-    fn handle_update_user_username(&mut self, user_id: i32, username: TtUsername) {
+    fn handle_update_user_username(&mut self, user_id: TtUserId, username: TtUsername) {
         if let Some(existing) = self.online_users.get_mut(&user_id) {
             if !existing.username.as_str().is_empty() {
                 self.online_users_by_username.remove(&existing.username);

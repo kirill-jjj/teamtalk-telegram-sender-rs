@@ -1,10 +1,10 @@
-use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TtUsername};
+use crate::core::types::{
+    DbBanId, LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUserId, TtUsername,
+};
 use anyhow::{Result, anyhow};
 use derive_more::From;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
-use crate::core::types::TelegramId;
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, From)]
 pub enum CallbackAction {
@@ -28,11 +28,11 @@ pub enum MenuAction {
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum AdminAction {
     KickList { page: usize },
-    KickPerform { user_id: i32 },
+    KickPerform { user_id: TtUserId },
     BanList { page: usize },
-    BanPerform { user_id: i32 },
+    BanPerform { user_id: TtUserId },
     UnbanList { page: usize },
-    UnbanPerform { ban_db_id: i64, page: usize },
+    UnbanPerform { ban_db_id: DbBanId, page: usize },
     SubsList { page: usize },
 }
 

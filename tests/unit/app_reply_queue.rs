@@ -167,22 +167,22 @@ fn format_queue_message_minutes_ru() {
 fn queue_items_sorted_orders_by_time_and_id() {
     let mut items = vec![
         crate::infra::db::reply_queue::ReplyQueueItem {
-            id: 2,
+            id: crate::core::types::DbReplyQueueId::from(2),
             message_text: "b".to_string(),
             created_at: chrono::DateTime::from_timestamp(10, 0).unwrap().naive_utc(),
         },
         crate::infra::db::reply_queue::ReplyQueueItem {
-            id: 1,
+            id: crate::core::types::DbReplyQueueId::from(1),
             message_text: "a".to_string(),
             created_at: chrono::DateTime::from_timestamp(10, 0).unwrap().naive_utc(),
         },
         crate::infra::db::reply_queue::ReplyQueueItem {
-            id: 3,
+            id: crate::core::types::DbReplyQueueId::from(3),
             message_text: "c".to_string(),
             created_at: chrono::DateTime::from_timestamp(5, 0).unwrap().naive_utc(),
         },
     ];
     super::queue_items_sorted(&mut items);
-    let ids: Vec<i64> = items.iter().map(|item| item.id).collect();
+    let ids: Vec<i64> = items.iter().map(|item| item.id.as_i64()).collect();
     assert_eq!(ids, vec![3, 1, 2]);
 }

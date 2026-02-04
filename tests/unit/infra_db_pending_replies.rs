@@ -1,15 +1,17 @@
 use super::Database;
-use crate::core::types::TtUsername;
+use crate::core::types::{TgMessageId, TtUserId, TtUsername};
 
 #[tokio::test]
 async fn pending_reply_roundtrip() {
     let (db, path) = setup_db().await;
     let alpha = TtUsername::new("alpha");
-    db.add_pending_reply(1, 42, Some(&alpha)).await.unwrap();
-    let reply = db.get_pending_reply(1).await.unwrap();
-    assert_eq!(reply, Some((42, Some(alpha))));
+    db.add_pending_reply(TgMessageId::from(1), TtUserId::from(42), Some(&alpha))
+        .await
+        .unwrap();
+    let reply = db.get_pending_reply(TgMessageId::from(1)).await.unwrap();
+    assert_eq!(reply, Some((TtUserId::from(42), Some(alpha))));
 
-    db.touch_pending_reply(1).await.unwrap();
+    db.touch_pending_reply(TgMessageId::from(1)).await.unwrap();
     let removed = db.cleanup_pending_replies(0).await.unwrap();
     assert!(removed <= 1);
 
@@ -20,11 +22,13 @@ async fn pending_reply_roundtrip() {
 #[tokio::test]
 async fn cleanup_keeps_recent_when_ttl_large() {
     let (db, path) = setup_db().await;
-    db.add_pending_reply(2, 99, None).await.unwrap();
+    db.add_pending_reply(TgMessageId::from(2), TtUserId::from(99), None)
+        .await
+        .unwrap();
     let removed = db.cleanup_pending_replies(10_000).await.unwrap();
     assert_eq!(removed, 0);
-    let reply = db.get_pending_reply(2).await.unwrap();
-    assert_eq!(reply, Some((99, None)));
+    let reply = db.get_pending_reply(TgMessageId::from(2)).await.unwrap();
+    assert_eq!(reply, Some((TtUserId::from(99), None)));
     db.close().await;
     let _ = std::fs::remove_file(path);
 }

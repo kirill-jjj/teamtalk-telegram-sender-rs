@@ -1,10 +1,10 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n                id as \"id!\",\n                message_text as \"message_text!\",\n                created_at as \"created_at!\"\n            FROM reply_queue\n            WHERE tt_username = ?\n            ORDER BY created_at ASC, id ASC\n            ",
+  "query": "\n            SELECT\n                id as \"id!: DbReplyQueueId\",\n                message_text as \"message_text!\",\n                created_at as \"created_at!\"\n            FROM reply_queue\n            WHERE tt_username = ?\n            ORDER BY created_at ASC, id ASC\n            ",
   "describe": {
     "columns": [
       {
-        "name": "id!",
+        "name": "id!: DbReplyQueueId",
         "ordinal": 0,
         "type_info": "Integer"
       },
@@ -28,5 +28,5 @@
       false
     ]
   },
-  "hash": "3ad4669cf2fb1c636b4193d8f01631f4efd95efa57ee38e36c8989d00c95aae5"
+  "hash": "b71244514bfdaab153d31f86e7b2f58564a51499b9824b4c5d61063131e332aa"
 }

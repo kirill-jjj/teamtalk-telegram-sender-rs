@@ -38,8 +38,8 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             .unwrap_or("")
             .to_lowercase();
         if cmd == "/skip" {
-            let from_uid = msg.from_id.0;
-            let channel_id = msg.channel_id.0;
+            let from_uid = crate::core::types::TtUserId::from(msg.from_id.0);
+            let channel_id = crate::core::types::TtChannelId::from(msg.channel_id.0);
             let db = db.clone();
             let state_handle = state_handle.clone();
             let tx_tt_cmd = tx_tt_cmd.clone();
@@ -111,7 +111,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .await
                 {
                     tracing::error!(
-                        channel_id,
+                        channel_id = channel_id.as_i32(),
                         error = %e,
                         "Failed to send TT channel reply"
                     );
@@ -128,7 +128,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let server_name = resolve_server_name(&tt_config, real_name_from_client.as_deref());
             let tx_bridge = tx_bridge.clone();
             let msg_content = pm_text.to_string();
-            let channel_id = msg.channel_id.0;
+            let channel_id = crate::core::types::TtChannelId::from(msg.channel_id.0);
             spawn_local(async move {
                 let _permit = tt_msg_sem.acquire_owned().await;
                 if let Err(e) = tx_bridge
@@ -151,7 +151,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
     spawn_local(async move {
         if msg.msg_type == teamtalk::client::ffi::TextMsgType::MSGTYPE_USER {
             let content = msg.text.trim();
-            let from_uid = msg.from_id.0;
+            let from_uid = crate::core::types::TtUserId::from(msg.from_id.0);
 
             let (nick, username): (String, TtUsername) = state_handle
                 .online_user_by_id(from_uid)
@@ -206,7 +206,7 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
                     .await
                 {
                     tracing::error!(
-                        user_id = from_uid,
+                        user_id = from_uid.as_i32(),
                         tt_username = %username,
                         error = %e,
                         "Failed to send TT reply command"

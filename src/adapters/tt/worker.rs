@@ -2,7 +2,7 @@
 
 use super::context::{RunTeamtalkArgs, WorkerContext};
 use super::{events, reports};
-use crate::core::types::TtCommand;
+use crate::core::types::{TtChannelId, TtCommand};
 use futures_util::StreamExt;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -17,7 +17,7 @@ use tokio::time::interval;
 
 struct StreamItem {
     stream_id: u64,
-    channel_id: i32,
+    channel_id: TtChannelId,
     file_path: String,
     duration_ms: u32,
     announce_text: Option<String>,
@@ -52,12 +52,12 @@ fn handle_cmd(
         }
         TtCommand::ReplyToUser { user_id, text } => {
             async_client.with_client_mut(|client_ref| {
-                client_ref.send_to_user(UserId(user_id), &text);
+                client_ref.send_to_user(UserId(user_id.as_i32()), &text);
             });
         }
         TtCommand::SendToChannel { channel_id, text } => {
             async_client.with_client_mut(|client_ref| {
-                client_ref.send_to_channel(ChannelId(channel_id), &text);
+                client_ref.send_to_channel(ChannelId(channel_id.as_i32()), &text);
             });
         }
         TtCommand::EnqueueStream {
@@ -134,12 +134,12 @@ fn handle_cmd(
         }
         TtCommand::KickUser { user_id } => {
             async_client.with_client_mut(|client_ref| {
-                client_ref.kick_user(UserId(user_id), teamtalk::types::ChannelId(0));
+                client_ref.kick_user(UserId(user_id.as_i32()), teamtalk::types::ChannelId(0));
             });
         }
         TtCommand::BanUser { user_id } => {
             async_client.with_client_mut(|client_ref| {
-                client_ref.ban_user(UserId(user_id), client_ref.my_channel_id());
+                client_ref.ban_user(UserId(user_id.as_i32()), client_ref.my_channel_id());
             });
         }
         TtCommand::Who {
@@ -294,10 +294,10 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
             return;
         }
         while let Some(mut item) = queue.pop_front() {
-            let channel_id = if item.channel_id == 0 {
+            let channel_id = if item.channel_id.as_i32() == 0 {
                 client.my_channel_id().0
             } else {
-                item.channel_id
+                item.channel_id.as_i32()
             };
             if let Some(text) = item.announce_text.take() {
                 client.send_to_channel(ChannelId(channel_id), &text);

@@ -1,4 +1,4 @@
-use crate::core::types::TtUsername;
+use crate::core::types::{TgMessageId, TtUserId, TtUsername};
 use anyhow::Result;
 
 use super::Database;
@@ -6,15 +6,15 @@ use super::Database;
 impl Database {
     pub async fn add_pending_reply(
         &self,
-        tg_message_id: i64,
-        tt_user_id: i32,
+        tg_message_id: TgMessageId,
+        tt_user_id: TtUserId,
         tt_username: Option<&TtUsername>,
     ) -> Result<()> {
         sqlx::query(
             "INSERT OR IGNORE INTO pending_replies (tg_message_id, tt_user_id, tt_username) VALUES (?, ?, ?)",
         )
-        .bind(tg_message_id)
-        .bind(tt_user_id)
+        .bind(tg_message_id.as_i32())
+        .bind(tt_user_id.as_i32())
         .bind(tt_username.map(TtUsername::as_str))
         .execute(&self.pool)
         .await?;
@@ -23,22 +23,22 @@ impl Database {
 
     pub async fn get_pending_reply(
         &self,
-        tg_message_id: i64,
-    ) -> Result<Option<(i32, Option<TtUsername>)>> {
+        tg_message_id: TgMessageId,
+    ) -> Result<Option<(TtUserId, Option<TtUsername>)>> {
         let res = sqlx::query_as::<_, (i32, Option<TtUsername>)>(
             "SELECT tt_user_id, tt_username FROM pending_replies WHERE tg_message_id = ?",
         )
-        .bind(tg_message_id)
+        .bind(tg_message_id.as_i32())
         .fetch_optional(&self.pool)
         .await?;
-        Ok(res)
+        Ok(res.map(|(id, username)| (TtUserId::from(id), username)))
     }
 
-    pub async fn touch_pending_reply(&self, tg_message_id: i64) -> Result<()> {
+    pub async fn touch_pending_reply(&self, tg_message_id: TgMessageId) -> Result<()> {
         sqlx::query(
             "UPDATE pending_replies SET last_used_at = CURRENT_TIMESTAMP WHERE tg_message_id = ?",
         )
-        .bind(tg_message_id)
+        .bind(tg_message_id.as_i32())
         .execute(&self.pool)
         .await?;
         Ok(())

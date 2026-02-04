@@ -25,7 +25,7 @@ pub async fn handle_menu(
             if let Err(e) = state
                 .tx_tt
                 .send(TtCommand::Who {
-                    chat_id: chat_id.0,
+                    chat_id: crate::core::types::TgChatId::from(chat_id.0),
                     lang,
                     reply_to: None,
                 })

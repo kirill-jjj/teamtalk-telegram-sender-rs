@@ -1,4 +1,4 @@
-use crate::core::types::{TelegramId, TtUsername};
+use crate::core::types::{DbBanId, TelegramId, TtUsername};
 use anyhow::Result;
 use chrono::Utc;
 
@@ -29,7 +29,7 @@ impl Database {
             BanEntry,
             r#"
             SELECT
-                id as "id!",
+                id as "id!: DbBanId",
                 telegram_id as "telegram_id?: TelegramId",
                 teamtalk_username as "teamtalk_username?: TtUsername"
             FROM ban_list
@@ -41,8 +41,9 @@ impl Database {
         Ok(rows)
     }
 
-    pub async fn remove_ban_by_id(&self, id: i64) -> Result<()> {
-        sqlx::query!("DELETE FROM ban_list WHERE id = ?", id)
+    pub async fn remove_ban_by_id(&self, id: DbBanId) -> Result<()> {
+        let id_i64 = id.as_i64();
+        sqlx::query!("DELETE FROM ban_list WHERE id = ?", id_i64)
             .execute(&self.pool)
             .await?;
         Ok(())

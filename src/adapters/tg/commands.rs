@@ -16,10 +16,12 @@ use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::subscription as subscription_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::args;
+use crate::bootstrap::config::Config;
 use crate::core::callbacks::{AdminAction, CallbackAction, UnsubAction};
 use crate::core::types::{
-    AdminErrorContext, DeeplinkAction, LanguageCode, LiteUser, TelegramId, TtCommand,
+    AdminErrorContext, DeeplinkAction, LanguageCode, LiteUser, TelegramId, TtCommand, TtUsername,
 };
+use crate::infra::db::Database;
 use crate::infra::locales;
 use std::time::{SystemTime, UNIX_EPOCH};
 use teloxide::net::Download;
@@ -370,9 +372,9 @@ impl<'a> CommandCtx<'a> {
         if let Err(e) = self
             .tx_tt
             .send(TtCommand::Who {
-                chat_id: self.msg.chat.id.0,
+                chat_id: crate::core::types::TgChatId::from(self.msg.chat.id.0),
                 lang: self.lang,
-                reply_to: Some(self.msg.id.0),
+                reply_to: Some(crate::core::types::TgMessageId::from(self.msg.id.0)),
             })
             .await
         {
@@ -1166,7 +1168,7 @@ async fn handle_admin_reply(
     let Some(reply_to) = reply_to else {
         return Ok(());
     };
-    let reply_id = i64::from(reply_to.id.0);
+    let reply_id = crate::core::types::TgMessageId::from(reply_to.id.0);
 
     if handle_channel_reply(
         ChannelReplyCtx {
@@ -1202,7 +1204,7 @@ struct ChannelReplyCtx<'a> {
 }
 
 struct ChannelReplyInput<'a> {
-    reply_id: i64,
+    reply_id: crate::core::types::TgMessageId,
     text: Option<&'a str>,
     voice: Option<&'a Voice>,
 }
@@ -1255,7 +1257,11 @@ async fn handle_channel_reply(
                 })
                 .await
             {
-                tracing::error!(channel_id, error = %e, "Failed to send TT channel reply");
+                tracing::error!(
+                    channel_id = channel_id.as_i32(),
+                    error = %e,
+                    "Failed to send TT channel reply"
+                );
                 notify_admin_error(
                     ctx.bot,
                     config,
@@ -1280,7 +1286,7 @@ async fn handle_channel_reply(
 
         if let Err(e) = pending_service::touch_pending_channel_reply(db, input.reply_id).await {
             tracing::error!(
-                reply_id = input.reply_id,
+                reply_id = input.reply_id.as_i32(),
                 error = %e,
                 "Failed to update pending channel reply"
             );
@@ -1291,22 +1297,22 @@ async fn handle_channel_reply(
     Ok(false)
 }
 
-async fn handle_user_reply(
+async fn load_pending_reply(
     bot: &Bot,
-    msg: &Message,
-    state: &AppState,
+    db: &Database,
+    config: &Config,
     telegram_id: TelegramId,
-    admin_lang: LanguageCode,
-    reply_id: i64,
-    text: &str,
-) -> ResponseResult<()> {
-    let db = &state.db;
-    let config = &state.config;
-    let (tt_user_id, tt_username) = match pending_service::get_pending_reply(db, reply_id).await {
-        Ok(Some(data)) => data,
-        Ok(None) => return Ok(()),
+    reply_id: crate::core::types::TgMessageId,
+) -> ResponseResult<Option<(crate::core::types::TtUserId, Option<TtUsername>)>> {
+    match pending_service::get_pending_reply(db, reply_id).await {
+        Ok(Some(data)) => Ok(Some(data)),
+        Ok(None) => Ok(None),
         Err(e) => {
-            tracing::error!(reply_id, error = %e, "Failed to load pending reply");
+            tracing::error!(
+                reply_id = reply_id.as_i32(),
+                error = %e,
+                "Failed to load pending reply"
+            );
             notify_admin_error(
                 bot,
                 config,
@@ -1316,11 +1322,17 @@ async fn handle_user_reply(
                 config.general.default_lang,
             )
             .await;
-            return Ok(());
+            Ok(None)
         }
-    };
+    }
+}
 
-    let current_tt_user_id = if let Some(username) = tt_username.as_ref() {
+async fn resolve_current_tt_user_id(
+    state: &AppState,
+    tt_username: Option<&TtUsername>,
+    tt_user_id: crate::core::types::TtUserId,
+) -> Option<crate::core::types::TtUserId> {
+    if let Some(username) = tt_username {
         state
             .state
             .user_id_by_username(username)
@@ -1330,18 +1342,43 @@ async fn handle_user_reply(
             .or(Some(tt_user_id))
     } else {
         Some(tt_user_id)
+    }
+}
+
+async fn is_tt_user_online(state: &AppState, user_id: crate::core::types::TtUserId) -> bool {
+    state
+        .state
+        .online_user_by_id(user_id)
+        .await
+        .ok()
+        .flatten()
+        .is_some()
+}
+
+async fn handle_user_reply(
+    bot: &Bot,
+    msg: &Message,
+    state: &AppState,
+    telegram_id: TelegramId,
+    admin_lang: LanguageCode,
+    reply_id: crate::core::types::TgMessageId,
+    text: &str,
+) -> ResponseResult<()> {
+    let db = &state.db;
+    let config = &state.config;
+    let Some((tt_user_id, tt_username)) =
+        load_pending_reply(bot, db, config, telegram_id, reply_id).await?
+    else {
+        return Ok(());
     };
-    let is_online = if let Some(id) = current_tt_user_id {
-        state
-            .state
-            .online_user_by_id(id)
-            .await
-            .ok()
-            .flatten()
-            .is_some()
-    } else {
-        false
+
+    let current_tt_user_id =
+        resolve_current_tt_user_id(state, tt_username.as_ref(), tt_user_id).await;
+    let is_online = match current_tt_user_id {
+        Some(id) => is_tt_user_online(state, id).await,
+        None => false,
     };
+
     let reply_key = if is_online {
         let Some(target_id) = current_tt_user_id else {
             return Ok(());
@@ -1354,7 +1391,11 @@ async fn handle_user_reply(
             })
             .await;
         if let Err(e) = send_res {
-            tracing::error!(tt_user_id, error = %e, "Failed to send TT reply command");
+            tracing::error!(
+                tt_user_id = tt_user_id.as_i32(),
+                error = %e,
+                "Failed to send TT reply command"
+            );
             notify_admin_error(
                 bot,
                 config,
@@ -1375,7 +1416,11 @@ async fn handle_user_reply(
                     .add_reply_queue_item(tt_username, telegram_id, text)
                     .await
                 {
-                    tracing::error!(tt_username = %tt_username, error = %e, "Failed to queue reply");
+                    tracing::error!(
+                        tt_username = %tt_username,
+                        error = %e,
+                        "Failed to queue reply"
+                    );
                     locales::LocaleKey::TgReplyFailed
                 } else {
                     locales::LocaleKey::TgReplyQueued
@@ -1397,7 +1442,11 @@ async fn handle_user_reply(
         .await;
 
     if let Err(e) = pending_service::touch_pending_reply(db, reply_id).await {
-        tracing::error!(reply_id, error = %e, "Failed to update pending reply");
+        tracing::error!(
+            reply_id = reply_id.as_i32(),
+            error = %e,
+            "Failed to update pending reply"
+        );
     }
 
     Ok(())
@@ -1412,7 +1461,7 @@ fn format_duration(duration_secs: u32) -> String {
 async fn stream_voice(
     bot: &Bot,
     state: &AppState,
-    announce: Option<(i32, String)>,
+    announce: Option<(crate::core::types::TtChannelId, String)>,
     voice: &Voice,
 ) -> Result<(), String> {
     let file_info = bot
@@ -1431,7 +1480,10 @@ async fn stream_voice(
         .map_err(|e| e.to_string())?;
 
     let duration_ms = voice.duration.seconds().saturating_mul(1000);
-    let (channel_id, announce_text) = announce.map_or((0, None), |(id, text)| (id, Some(text)));
+    let (channel_id, announce_text) =
+        announce.map_or_else(|| (crate::core::types::TtChannelId::from(0), None), |(id, text)| {
+            (id, Some(text))
+        });
     state
         .tx_tt
         .send(TtCommand::EnqueueStream {

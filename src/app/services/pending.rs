@@ -1,58 +1,64 @@
-use crate::core::types::TtUsername;
+use crate::core::types::{TgMessageId, TtChannelId, TtUserId, TtUsername};
 use anyhow::Result;
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait PendingRepo: Sync {
-    async fn get_pending_reply(&self, reply_id: i64) -> Result<Option<(i32, Option<TtUsername>)>>;
-    async fn touch_pending_reply(&self, reply_id: i64) -> Result<()>;
+    async fn get_pending_reply(
+        &self,
+        reply_id: TgMessageId,
+    ) -> Result<Option<(TtUserId, Option<TtUsername>)>>;
+    async fn touch_pending_reply(&self, reply_id: TgMessageId) -> Result<()>;
     async fn get_pending_channel_reply(
         &self,
-        reply_id: i64,
-    ) -> Result<Option<(i32, String, String, String)>>;
-    async fn touch_pending_channel_reply(&self, reply_id: i64) -> Result<()>;
+        reply_id: TgMessageId,
+    ) -> Result<Option<(TtChannelId, String, String, String)>>;
+    async fn touch_pending_channel_reply(&self, reply_id: TgMessageId) -> Result<()>;
 }
 
 pub async fn get_pending_reply(
     db: &impl PendingRepo,
-    reply_id: i64,
-) -> Result<Option<(i32, Option<TtUsername>)>> {
+    reply_id: TgMessageId,
+) -> Result<Option<(TtUserId, Option<TtUsername>)>> {
     db.get_pending_reply(reply_id).await
 }
 
-pub async fn touch_pending_reply(db: &impl PendingRepo, reply_id: i64) -> Result<()> {
+pub async fn touch_pending_reply(db: &impl PendingRepo, reply_id: TgMessageId) -> Result<()> {
     db.touch_pending_reply(reply_id).await
 }
 
 pub async fn get_pending_channel_reply(
     db: &impl PendingRepo,
-    reply_id: i64,
-) -> Result<Option<(i32, String, String, String)>> {
+    reply_id: TgMessageId,
+) -> Result<Option<(TtChannelId, String, String, String)>> {
     db.get_pending_channel_reply(reply_id).await
 }
 
-pub async fn touch_pending_channel_reply(db: &impl PendingRepo, reply_id: i64) -> Result<()> {
+pub async fn touch_pending_channel_reply(db: &impl PendingRepo, reply_id: TgMessageId) -> Result<()> {
     db.touch_pending_channel_reply(reply_id).await
 }
 
 #[async_trait]
 impl PendingRepo for crate::infra::db::Database {
-    async fn get_pending_reply(&self, reply_id: i64) -> Result<Option<(i32, Option<TtUsername>)>> {
+    async fn get_pending_reply(
+        &self,
+        reply_id: TgMessageId,
+    ) -> Result<Option<(TtUserId, Option<TtUsername>)>> {
         self.get_pending_reply(reply_id).await
     }
 
-    async fn touch_pending_reply(&self, reply_id: i64) -> Result<()> {
+    async fn touch_pending_reply(&self, reply_id: TgMessageId) -> Result<()> {
         self.touch_pending_reply(reply_id).await
     }
 
     async fn get_pending_channel_reply(
         &self,
-        reply_id: i64,
-    ) -> Result<Option<(i32, String, String, String)>> {
+        reply_id: TgMessageId,
+    ) -> Result<Option<(TtChannelId, String, String, String)>> {
         self.get_pending_channel_reply(reply_id).await
     }
 
-    async fn touch_pending_channel_reply(&self, reply_id: i64) -> Result<()> {
+    async fn touch_pending_channel_reply(&self, reply_id: TgMessageId) -> Result<()> {
         self.touch_pending_channel_reply(reply_id).await
     }
 }

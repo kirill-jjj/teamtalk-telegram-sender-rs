@@ -5,7 +5,7 @@ use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_na
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::bootstrap::config::GenderConfig;
 use crate::core::types::{
-    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand, TtUsername,
+    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand, TtUserId, TtUsername,
 };
 use chrono::Utc;
 use std::time::{Duration, Instant};
@@ -86,7 +86,7 @@ pub(super) fn handle_sdk_event(
         Event::UserUpdate => {
             if let Some(user) = msg.user() {
                 let state = ctx.state.clone();
-                let user_id = user.id.0;
+                let user_id = TtUserId::from(user.id.0);
                 let new_username = TtUsername::new(user.username.clone());
                 let new_nickname = user.nickname.clone();
                 tokio::task::spawn_local(async move {
@@ -160,7 +160,7 @@ pub(super) fn handle_sdk_event(
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
                 let lite_user = LiteUser {
-                    id: user.id.0,
+                    id: TtUserId::from(user.id.0),
                     nickname: nickname.clone(),
                     username: TtUsername::new(user.username.clone()),
                     channel_name,
@@ -201,7 +201,7 @@ pub(super) fn handle_sdk_event(
                     let tx_tt_cmd = ctx.tx_tt_cmd.clone();
                     let tt_username = TtUsername::new(user.username.clone());
                     let default_lang = ctx.config.general.default_lang;
-                    let user_id = user.id.0;
+                    let user_id = TtUserId::from(user.id.0);
                     tokio::task::spawn_local(async move {
                         let mut items = match db.get_reply_queue_for_user(&tt_username).await {
                             Ok(items) => items,
@@ -228,10 +228,7 @@ pub(super) fn handle_sdk_event(
                                 &item.message_text,
                             );
                             if let Err(e) = tx_tt_cmd
-                                .send(TtCommand::ReplyToUser {
-                                    user_id,
-                                    text: formatted,
-                                })
+                                .send(TtCommand::ReplyToUser { user_id, text: formatted })
                                 .await
                             {
                                 tracing::error!(error = %e, "Failed to send queued reply");
@@ -256,7 +253,7 @@ pub(super) fn handle_sdk_event(
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
                 let lite_user = LiteUser {
-                    id: user.id.0,
+                    id: TtUserId::from(user.id.0),
                     nickname,
                     username: TtUsername::new(user.username.clone()),
                     channel_name,
@@ -274,7 +271,7 @@ pub(super) fn handle_sdk_event(
                 let server_name = resolve_server_name(tt_config, real_name.as_deref());
                 let tx_bridge = ctx.tx_bridge.clone();
                 let state = ctx.state.clone();
-                let user_id = user.id.0;
+                let user_id = TtUserId::from(user.id.0);
                 let is_self = user.id == client.my_id();
                 let tt_config = tt_config.clone();
                 tokio::task::spawn_local(async move {
@@ -300,8 +297,7 @@ pub(super) fn handle_sdk_event(
         Event::UserLeft => {
             if let Some(user) = msg.user() {
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
-                ctx.state
-                    .notify_update_user_channel(user.id.0, channel_name);
+                ctx.state.notify_update_user_channel(TtUserId::from(user.id.0), channel_name);
             }
         }
 

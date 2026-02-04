@@ -11,8 +11,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::admin_cleanup as admin_cleanup_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
-use crate::core::types::TelegramId;
-use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
+use crate::core::types::{AdminErrorContext, DbBanId, LanguageCode, TelegramId, TtCommand, TtUserId};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -141,11 +140,11 @@ async fn handle_kick_perform(
     bot: &Bot,
     q: &CallbackQuery,
     state: &AppState,
-    user_id: i32,
+    user_id: TtUserId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }).await {
-        tracing::error!(user_id, error = %e, "Failed to send kick command");
+        tracing::error!(user_id = user_id.as_i32(), error = %e, "Failed to send kick command");
         notify_admin_error(
             bot,
             &state.config,
@@ -169,7 +168,7 @@ async fn handle_ban_perform(
     bot: &Bot,
     q: &CallbackQuery,
     state: &AppState,
-    user_id: i32,
+    user_id: TtUserId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let user = state.state.online_user_by_id(user_id).await.ok().flatten();
@@ -240,7 +239,7 @@ async fn handle_ban_perform(
     }
     if let Err(e) = state.tx_tt.send(TtCommand::BanUser { user_id }).await {
         tracing::error!(
-            user_id,
+            user_id = user_id.as_i32(),
             tt_username = %u.username,
             error = %e,
             "Failed to send ban command"
@@ -294,7 +293,7 @@ async fn handle_unban_perform(
     q: &CallbackQuery,
     state: &AppState,
     msg: &Message,
-    ban_db_id: i64,
+    ban_db_id: DbBanId,
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
