@@ -34,7 +34,10 @@ pub async fn get_pending_channel_reply(
     db.get_pending_channel_reply(reply_id).await
 }
 
-pub async fn touch_pending_channel_reply(db: &impl PendingRepo, reply_id: TgMessageId) -> Result<()> {
+pub async fn touch_pending_channel_reply(
+    db: &impl PendingRepo,
+    reply_id: TgMessageId,
+) -> Result<()> {
     db.touch_pending_channel_reply(reply_id).await
 }
 

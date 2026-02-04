@@ -5,7 +5,8 @@ use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_na
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::bootstrap::config::GenderConfig;
 use crate::core::types::{
-    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand, TtUserId, TtUsername,
+    BridgeEvent, LanguageCode, LiteUser, NotificationType, TtCommand, TtNickname, TtUserId,
+    TtUsername,
 };
 use chrono::Utc;
 use std::time::{Duration, Instant};
@@ -88,7 +89,7 @@ pub(super) fn handle_sdk_event(
                 let state = ctx.state.clone();
                 let user_id = TtUserId::from(user.id.0);
                 let new_username = TtUsername::new(user.username.clone());
-                let new_nickname = user.nickname.clone();
+                let new_nickname = TtNickname::from(user.nickname.clone());
                 tokio::task::spawn_local(async move {
                     if let Some(existing) = state.online_user_by_id(user_id).await.ok().flatten() {
                         if existing.username != new_username {
@@ -155,7 +156,7 @@ pub(super) fn handle_sdk_event(
             if let Some(user) = msg.user()
                 && user.id != client.my_id()
             {
-                let nickname = user.nickname.clone();
+                let nickname = TtNickname::from(user.nickname.clone());
 
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
@@ -228,7 +229,10 @@ pub(super) fn handle_sdk_event(
                                 &item.message_text,
                             );
                             if let Err(e) = tx_tt_cmd
-                                .send(TtCommand::ReplyToUser { user_id, text: formatted })
+                                .send(TtCommand::ReplyToUser {
+                                    user_id,
+                                    text: formatted,
+                                })
                                 .await
                             {
                                 tracing::error!(error = %e, "Failed to send queued reply");
@@ -249,7 +253,7 @@ pub(super) fn handle_sdk_event(
             if let Some(user) = msg.user()
                 && user.id != client.my_id()
             {
-                let nickname = user.nickname.clone();
+                let nickname = TtNickname::from(user.nickname.clone());
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
 
                 let lite_user = LiteUser {
@@ -297,7 +301,8 @@ pub(super) fn handle_sdk_event(
         Event::UserLeft => {
             if let Some(user) = msg.user() {
                 let channel_name = resolve_channel_name(client, user.channel_id, LanguageCode::En);
-                ctx.state.notify_update_user_channel(TtUserId::from(user.id.0), channel_name);
+                ctx.state
+                    .notify_update_user_channel(TtUserId::from(user.id.0), channel_name);
             }
         }
 

@@ -11,7 +11,9 @@ use crate::adapters::tg::utils::{
 use crate::app::services::admin_cleanup as admin_cleanup_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
-use crate::core::types::{AdminErrorContext, DbBanId, LanguageCode, TelegramId, TtCommand, TtUserId};
+use crate::core::types::{
+    AdminErrorContext, DbBanId, LanguageCode, TelegramId, TtCommand, TtUserId,
+};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -73,7 +75,7 @@ async fn handle_kick_list(
         page,
         |u| {
             (
-                u.nickname.clone(),
+                u.nickname.as_str().to_string(),
                 CallbackAction::Admin(AdminAction::KickPerform { user_id: u.id }),
             )
         },
@@ -115,7 +117,7 @@ async fn handle_ban_list(
         page,
         |u| {
             (
-                u.nickname.clone(),
+                u.nickname.as_str().to_string(),
                 CallbackAction::Admin(AdminAction::BanPerform { user_id: u.id }),
             )
         },

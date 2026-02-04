@@ -2,7 +2,7 @@
 
 use crate::adapters::tt::{WorkerContext, resolve_server_name};
 use crate::args;
-use crate::core::types::{BridgeEvent, TgChatId, TgMessageId};
+use crate::core::types::{BridgeEvent, TgChatId, TgMessageId, TtNickname};
 use crate::infra::locales;
 use std::fmt::Write;
 use teamtalk::Client;
@@ -22,12 +22,12 @@ pub(super) fn handle_who_command(
     let server_name = resolve_server_name(tt_config, real_name.as_deref());
 
     let users = client.get_server_users();
-    let mut channels_data: std::collections::BTreeMap<String, Vec<String>> =
+    let mut channels_data: std::collections::BTreeMap<String, Vec<TtNickname>> =
         std::collections::BTreeMap::new();
-    let mut unauth_users: Vec<String> = Vec::new();
+    let mut unauth_users: Vec<TtNickname> = Vec::new();
 
     for user in &users {
-        let nickname = user.nickname.clone();
+        let nickname = TtNickname::from(user.nickname.clone());
 
         if user.channel_id.0 <= 0 {
             unauth_users.push(nickname);
@@ -50,7 +50,7 @@ pub(super) fn handle_who_command(
 
     let total = users.len();
 
-    let header_args = args!(server = server_name, count = total);
+    let header_args = args!(server = server_name.as_str(), count = total);
     let header = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::TtReportHeader,
@@ -63,9 +63,13 @@ pub(super) fn handle_who_command(
     }
 
     for (chan_name, mut nicks) in channels_data {
-        nicks.sort_by_key(|a| a.to_lowercase());
+        nicks.sort_by_key(|a| a.as_str().to_lowercase());
 
-        let user_list = nicks.join(", ");
+        let user_list = nicks
+            .iter()
+            .map(|nick| nick.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
 
         let location = if chan_name == "ROOT_MARKER" {
             locales::get_text(lang.as_str(), locales::LocaleKey::TtReportRoot, None)
@@ -87,7 +91,12 @@ pub(super) fn handle_who_command(
     if !unauth_users.is_empty() {
         let unauth_label =
             locales::get_text(lang.as_str(), locales::LocaleKey::TtReportUnauth, None);
-        if let Err(e) = writeln!(report, "{} {}", unauth_users.join(", "), unauth_label) {
+        let unauth_list = unauth_users
+            .iter()
+            .map(|nick| nick.as_str())
+            .collect::<Vec<_>>()
+            .join(", ");
+        if let Err(e) = writeln!(report, "{} {}", unauth_list, unauth_label) {
             tracing::error!(error = %e, "Failed to write who report unauth row");
         }
     }

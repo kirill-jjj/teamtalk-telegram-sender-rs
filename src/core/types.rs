@@ -491,6 +491,72 @@ impl From<String> for TtChannelName {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TtNickname(String);
+
+impl TtNickname {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for TtNickname {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for TtNickname {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for TtNickname {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl fmt::Display for TtNickname {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct TtServerName(String);
+
+impl TtServerName {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<str> for TtServerName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<String> for TtServerName {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<&str> for TtServerName {
+    fn from(value: &str) -> Self {
+        Self(value.to_string())
+    }
+}
+
+impl fmt::Display for TtServerName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AdminErrorContext {
     Command,
@@ -504,21 +570,21 @@ pub enum AdminErrorContext {
 pub enum BridgeEvent {
     Broadcast {
         event_type: NotificationType,
-        nickname: String,
-        server_name: String,
+        nickname: TtNickname,
+        server_name: TtServerName,
         related_tt_username: TtUsername,
     },
     ToAdmin {
         user_id: TtUserId,
-        nick: String,
+        nick: TtNickname,
         tt_username: TtUsername,
         msg_content: String,
-        server_name: String,
+        server_name: TtServerName,
     },
     ToAdminChannel {
         channel_id: TtChannelId,
         channel_name: TtChannelName,
-        server_name: String,
+        server_name: TtServerName,
         msg_content: String,
     },
     WhoReport {
@@ -578,7 +644,7 @@ pub enum TtCommand {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LiteUser {
     pub id: TtUserId,
-    pub nickname: String,
+    pub nickname: TtNickname,
     pub username: TtUsername,
     pub channel_name: TtChannelName,
 }

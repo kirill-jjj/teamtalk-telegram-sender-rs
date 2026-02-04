@@ -1,5 +1,5 @@
 use crate::core::types::{
-    LanguageCode, LiteUser, TelegramId, TtChannelName, TtUserId, TtUsername,
+    LanguageCode, LiteUser, TelegramId, TtChannelName, TtNickname, TtUserId, TtUsername,
 };
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -47,7 +47,7 @@ enum StateCmd {
     },
     UpdateUserNickname {
         user_id: TtUserId,
-        nickname: String,
+        nickname: TtNickname,
     },
     UpdateUserChannel {
         user_id: TtUserId,
@@ -109,7 +109,7 @@ impl StateHandle {
             .try_send(StateCmd::UpdateUserUsername { user_id, username });
     }
 
-    pub fn notify_update_user_nickname(&self, user_id: TtUserId, nickname: String) {
+    pub fn notify_update_user_nickname(&self, user_id: TtUserId, nickname: TtNickname) {
         let _ = self
             .tx
             .try_send(StateCmd::UpdateUserNickname { user_id, nickname });
@@ -413,7 +413,12 @@ impl StateStore {
 
     fn handle_get_online_users(&self, resp: oneshot::Sender<Vec<LiteUser>>) {
         let mut users: Vec<LiteUser> = self.online_users.values().cloned().collect();
-        users.sort_by(|a, b| a.nickname.to_lowercase().cmp(&b.nickname.to_lowercase()));
+        users.sort_by(|a, b| {
+            a.nickname
+                .as_str()
+                .to_lowercase()
+                .cmp(&b.nickname.as_str().to_lowercase())
+        });
         let _ = resp.send(users);
     }
 

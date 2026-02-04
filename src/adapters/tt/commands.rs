@@ -3,7 +3,7 @@
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::args;
-use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand, TtUsername};
+use crate::core::types::{DeeplinkAction, LanguageCode, TtCommand, TtNickname, TtUsername};
 use crate::infra::locales;
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
@@ -153,13 +153,13 @@ pub(super) fn handle_text_message(client: &Client, ctx: &WorkerContext, msg: Tex
             let content = msg.text.trim();
             let from_uid = crate::core::types::TtUserId::from(msg.from_id.0);
 
-            let (nick, username): (String, TtUsername) = state_handle
+            let (nick, username): (TtNickname, TtUsername) = state_handle
                 .online_user_by_id(from_uid)
                 .await
                 .ok()
                 .flatten()
                 .map(|u| (u.nickname, u.username))
-                .unwrap_or(("Unknown".to_string(), TtUsername::new(String::new())));
+                .unwrap_or((TtNickname::from("Unknown"), TtUsername::new(String::new())));
 
             tracing::info!(
                 component = "tt_worker",

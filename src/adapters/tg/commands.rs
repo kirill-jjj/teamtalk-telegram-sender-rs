@@ -462,7 +462,10 @@ impl<'a> CommandCtx<'a> {
                 } else {
                     AdminAction::BanPerform { user_id: u.id }
                 };
-                (u.nickname.clone(), CallbackAction::Admin(action))
+                (
+                    u.nickname.as_str().to_string(),
+                    CallbackAction::Admin(action),
+                )
             },
             move |p| {
                 let action = if is_kick {
@@ -1480,10 +1483,10 @@ async fn stream_voice(
         .map_err(|e| e.to_string())?;
 
     let duration_ms = voice.duration.seconds().saturating_mul(1000);
-    let (channel_id, announce_text) =
-        announce.map_or_else(|| (crate::core::types::TtChannelId::from(0), None), |(id, text)| {
-            (id, Some(text))
-        });
+    let (channel_id, announce_text) = announce.map_or_else(
+        || (crate::core::types::TtChannelId::from(0), None),
+        |(id, text)| (id, Some(text)),
+    );
     state
         .tx_tt
         .send(TtCommand::EnqueueStream {

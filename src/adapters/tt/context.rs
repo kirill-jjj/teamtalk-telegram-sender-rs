@@ -1,6 +1,8 @@
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
-use crate::core::types::{BridgeEvent, LanguageCode, TtChannelName, TtCommand, TtUsername};
+use crate::core::types::{
+    BridgeEvent, LanguageCode, TtChannelName, TtCommand, TtServerName, TtUsername,
+};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use std::sync::Arc;
@@ -13,14 +15,15 @@ use tokio::sync::oneshot;
 pub fn resolve_server_name(
     tt_config: &crate::bootstrap::config::TeamTalkConfig,
     real_name: Option<&str>,
-) -> String {
-    tt_config
+) -> TtServerName {
+    let resolved = tt_config
         .server_name
         .as_deref()
         .filter(|s| !s.is_empty())
         .or_else(|| real_name.filter(|s| !s.is_empty()))
         .unwrap_or(&tt_config.host_name)
-        .to_string()
+        .to_string();
+    TtServerName::from(resolved)
 }
 
 pub fn resolve_channel_name(

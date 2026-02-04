@@ -11,8 +11,8 @@ async fn pending_channel_reply_roundtrip() {
         "srv",
         "text",
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
     let data = db
         .get_pending_channel_reply(TgMessageId::from(10))
         .await
@@ -43,8 +43,8 @@ async fn cleanup_keeps_recent_when_ttl_large() {
         "srv2",
         "text2",
     )
-        .await
-        .unwrap();
+    .await
+    .unwrap();
     let removed = db.cleanup_pending_channel_replies(10_000).await.unwrap();
     assert_eq!(removed, 0);
     let data = db

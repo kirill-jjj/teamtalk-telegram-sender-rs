@@ -151,8 +151,8 @@ async fn find_matches(
             users
                 .into_iter()
                 .map(|u| SearchCandidate {
-                    label: u.nickname.clone(),
-                    match_key: format!("{} {}", u.nickname, u.username),
+                    label: u.nickname.as_str().to_string(),
+                    match_key: format!("{} {}", u.nickname.as_str(), u.username),
                     action: CallbackAction::Admin(AdminAction::KickPerform { user_id: u.id }),
                 })
                 .collect()
@@ -162,8 +162,8 @@ async fn find_matches(
             users
                 .into_iter()
                 .map(|u| SearchCandidate {
-                    label: u.nickname.clone(),
-                    match_key: format!("{} {}", u.nickname, u.username),
+                    label: u.nickname.as_str().to_string(),
+                    match_key: format!("{} {}", u.nickname.as_str(), u.username),
                     action: CallbackAction::Admin(AdminAction::BanPerform { user_id: u.id }),
                 })
                 .collect()

@@ -43,9 +43,13 @@ async fn pending_reply_delegates() {
         reply: Some((TtUserId::from(7), Some(TtUsername::new("hi")))),
         ..Default::default()
     };
-    let res = get_pending_reply(&repo, TgMessageId::from(1)).await.unwrap();
+    let res = get_pending_reply(&repo, TgMessageId::from(1))
+        .await
+        .unwrap();
     assert_eq!(res, Some((TtUserId::from(7), Some(TtUsername::new("hi")))));
-    touch_pending_reply(&repo, TgMessageId::from(1)).await.unwrap();
+    touch_pending_reply(&repo, TgMessageId::from(1))
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -59,7 +63,9 @@ async fn pending_channel_reply_delegates() {
         )),
         ..Default::default()
     };
-    let res = get_pending_channel_reply(&repo, TgMessageId::from(1)).await.unwrap();
+    let res = get_pending_channel_reply(&repo, TgMessageId::from(1))
+        .await
+        .unwrap();
     assert_eq!(
         res,
         Some((
@@ -69,5 +75,7 @@ async fn pending_channel_reply_delegates() {
             "msg".to_string()
         ))
     );
-    touch_pending_channel_reply(&repo, TgMessageId::from(1)).await.unwrap();
+    touch_pending_channel_reply(&repo, TgMessageId::from(1))
+        .await
+        .unwrap();
 }

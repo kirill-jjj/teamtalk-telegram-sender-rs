@@ -2,8 +2,8 @@ use crate::app::state::StateHandle;
 use crate::args;
 use crate::bootstrap::config::Config;
 use crate::core::types::{
-    self, BridgeEvent, LanguageCode, TgChatId, TgMessageId, TtChannelId, TtChannelName, TtUserId,
-    TtUsername,
+    self, BridgeEvent, LanguageCode, TgChatId, TgMessageId, TtChannelId, TtChannelName, TtNickname,
+    TtServerName, TtUserId, TtUsername,
 };
 use crate::infra::db::{Database, types::UserSettings};
 use crate::infra::locales;
@@ -30,23 +30,23 @@ struct BridgeDeps<'a> {
 
 struct BroadcastData {
     event_type: types::NotificationType,
-    nickname: String,
-    server_name: String,
+    nickname: TtNickname,
+    server_name: TtServerName,
     related_tt_username: TtUsername,
 }
 
 struct AdminData {
     user_id: TtUserId,
-    nick: String,
+    nick: TtNickname,
     tt_username: TtUsername,
     msg_content: String,
-    server_name: String,
+    server_name: TtServerName,
 }
 
 struct AdminChannelData {
     channel_id: TtChannelId,
     channel_name: TtChannelName,
-    server_name: String,
+    server_name: TtServerName,
     msg_content: String,
 }
 
@@ -217,8 +217,8 @@ async fn handle_broadcast(deps: &BridgeDeps<'_>, data: BroadcastData) {
         }
     };
 
-    let escaped_nick = teloxide::utils::html::escape(&data.nickname);
-    let escaped_server = teloxide::utils::html::escape(&data.server_name);
+    let escaped_nick = teloxide::utils::html::escape(data.nickname.as_str());
+    let escaped_server = teloxide::utils::html::escape(data.server_name.as_str());
 
     let key = match data.event_type {
         types::NotificationType::Join => LocaleKey::EventJoin,
@@ -294,7 +294,11 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         && !ctx.related_tt_username.as_str().is_empty()
         && let Err(e) = ctx
             .db
-            .add_pending_reply(TgMessageId::from(msg.id.0), TtUserId::from(0), Some(&ctx.related_tt_username))
+            .add_pending_reply(
+                TgMessageId::from(msg.id.0),
+                TtUserId::from(0),
+                Some(&ctx.related_tt_username),
+            )
             .await
     {
         tracing::error!(
@@ -383,8 +387,8 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     };
 
     let args_admin = args!(
-        server = html::escape(&data.server_name),
-        nick = html::escape(&data.nick),
+        server = html::escape(data.server_name.as_str()),
+        nick = html::escape(data.nick.as_str()),
         msg = html::escape(&data.msg_content)
     );
     let text_admin = locales::get_text(
@@ -400,7 +404,11 @@ async fn handle_to_admin(deps: &BridgeDeps<'_>, data: AdminData) {
     if let Ok(msg) = &res
         && let Err(e) = deps
             .db
-            .add_pending_reply(TgMessageId::from(msg.id.0), data.user_id, Some(&data.tt_username))
+            .add_pending_reply(
+                TgMessageId::from(msg.id.0),
+                data.user_id,
+                Some(&data.tt_username),
+            )
             .await
     {
         tracing::error!(
@@ -480,7 +488,7 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
     };
 
     let args_admin = args!(
-        server = html::escape(&data.server_name),
+        server = html::escape(data.server_name.as_str()),
         channel = html::escape(data.channel_name.as_str()),
         msg = html::escape(&data.msg_content)
     );
@@ -501,7 +509,7 @@ async fn handle_to_admin_channel(deps: &BridgeDeps<'_>, data: AdminChannelData) 
                 TgMessageId::from(msg.id.0),
                 data.channel_id,
                 data.channel_name.as_str(),
-                &data.server_name,
+                data.server_name.as_str(),
                 &data.msg_content,
             )
             .await
