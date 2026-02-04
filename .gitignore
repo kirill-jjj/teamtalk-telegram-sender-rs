@@ -1,7 +1,8 @@
 .env
 /target
 
-config.toml
+*.toml
+!config.toml.example
 
 *.db
 *.db-shm
