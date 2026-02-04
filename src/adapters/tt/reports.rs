@@ -9,6 +9,8 @@ use teamtalk::Client;
 
 use crate::core::types::LanguageCode;
 
+const ROOT_MARKER: &str = "ROOT_MARKER";
+
 pub(super) fn handle_who_command(
     client: &Client,
     ctx: &WorkerContext,
@@ -38,7 +40,7 @@ pub(super) fn handle_who_command(
         let chan_name = chan.as_ref().map(|c| c.name.clone()).unwrap_or_default();
 
         let chan_display = if chan_name.is_empty() && user.channel_id.0 == 1 {
-            "ROOT_MARKER".to_string()
+            ROOT_MARKER.to_string()
         } else {
             chan_name
         };
@@ -71,7 +73,7 @@ pub(super) fn handle_who_command(
             .collect::<Vec<_>>()
             .join(", ");
 
-        let location = if chan_name == "ROOT_MARKER" {
+        let location = if chan_name == ROOT_MARKER {
             locales::get_text(lang.as_str(), locales::LocaleKey::TtReportRoot, None)
         } else {
             chan_name

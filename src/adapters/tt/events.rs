@@ -32,7 +32,7 @@ pub(super) fn handle_sdk_event(
             *is_connected = true;
             reconnect_handler.mark_connected();
             client.login(
-                &tt_config.nick_name,
+                tt_config.nick_name.as_str(),
                 &tt_config.user_name,
                 &tt_config.password,
                 &tt_config.client_name,

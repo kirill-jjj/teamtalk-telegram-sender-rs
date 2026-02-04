@@ -18,7 +18,8 @@ pub fn resolve_server_name(
 ) -> TtServerName {
     let resolved = tt_config
         .server_name
-        .as_deref()
+        .as_ref()
+        .map(TtServerName::as_str)
         .filter(|s| !s.is_empty())
         .or_else(|| real_name.filter(|s| !s.is_empty()))
         .unwrap_or(&tt_config.host_name)

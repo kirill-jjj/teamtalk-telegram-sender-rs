@@ -1152,7 +1152,7 @@ async fn handle_admin_reply(
                         config,
                         telegram_id,
                         AdminErrorContext::Command,
-                        &e,
+                        &e.to_string(),
                         admin_lang,
                     )
                     .await;
@@ -1238,7 +1238,7 @@ async fn handle_channel_reply(
                     config,
                     ctx.telegram_id,
                     AdminErrorContext::Command,
-                    &e,
+                    &e.to_string(),
                     ctx.admin_lang,
                 )
                 .await;
@@ -1461,26 +1461,33 @@ fn format_duration(duration_secs: u32) -> String {
     format!("{minutes:02}:{seconds:02}")
 }
 
+#[derive(Debug, thiserror::Error)]
+enum StreamVoiceError {
+    #[error("Telegram request failed: {0}")]
+    Telegram(#[from] teloxide::RequestError),
+    #[error("Telegram download failed: {0}")]
+    Download(#[from] teloxide::DownloadError),
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+    #[error("Failed to send TeamTalk stream command: {0}")]
+    Send(#[from] tokio::sync::mpsc::error::SendError<TtCommand>),
+}
+
 async fn stream_voice(
     bot: &Bot,
     state: &AppState,
     announce: Option<(crate::core::types::TtChannelId, String)>,
     voice: &Voice,
-) -> Result<(), String> {
-    let file_info = bot
-        .get_file(voice.file.id.clone())
-        .await
-        .map_err(|e| e.to_string())?;
+) -> Result<(), StreamVoiceError> {
+    let file_info = bot.get_file(voice.file.id.clone()).await?;
     let mut temp_path = std::env::temp_dir();
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis())
         .unwrap_or(0);
     temp_path.push(format!("tg-voice-{}-{}.ogg", voice.file.id, now));
-    let mut dst = File::create(&temp_path).await.map_err(|e| e.to_string())?;
-    bot.download_file(&file_info.path, &mut dst)
-        .await
-        .map_err(|e| e.to_string())?;
+    let mut dst = File::create(&temp_path).await?;
+    bot.download_file(&file_info.path, &mut dst).await?;
 
     let duration_ms = voice.duration.seconds().saturating_mul(1000);
     let (channel_id, announce_text) = announce.map_or_else(
@@ -1495,7 +1502,6 @@ async fn stream_voice(
             duration_ms,
             announce_text,
         })
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
     Ok(())
 }

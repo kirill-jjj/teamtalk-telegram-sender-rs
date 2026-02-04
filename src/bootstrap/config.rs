@@ -1,4 +1,6 @@
-use crate::core::types::{LanguageCode, TelegramId, TtChannelName, TtUsername};
+use crate::core::types::{
+    LanguageCode, TelegramId, TtChannelName, TtNickname, TtServerName, TtUsername,
+};
 use serde::Deserialize;
 use serde_with::{NoneAsEmptyString, serde_as};
 use teamtalk::types::UserGender;
@@ -105,11 +107,11 @@ pub struct TeamTalkConfig {
     pub password: String,
     pub channel: TtChannelName,
     pub channel_password: Option<String>,
-    pub nick_name: String,
+    pub nick_name: TtNickname,
     #[serde(default)]
     pub status_text: String,
     pub client_name: String,
-    pub server_name: Option<String>,
+    pub server_name: Option<TtServerName>,
     #[serde(default)]
     pub global_ignore_usernames: Vec<TtUsername>,
     pub guest_username: Option<TtUsername>,
@@ -118,7 +120,8 @@ pub struct TeamTalkConfig {
 impl TeamTalkConfig {
     pub fn display_name(&self) -> &str {
         self.server_name
-            .as_deref()
+            .as_ref()
+            .map(TtServerName::as_str)
             .filter(|s| !s.is_empty())
             .unwrap_or(&self.host_name)
     }
