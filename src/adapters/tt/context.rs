@@ -4,7 +4,6 @@ use crate::core::types::{BridgeEvent, LanguageCode, TtChannelName, TtCommand, Tt
 use crate::infra::db::Database;
 use crate::infra::locales;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU64;
 use teamtalk::Client;
 use teamtalk::types::ChannelId;
 use tokio::sync::Semaphore;
@@ -56,16 +55,6 @@ pub struct WorkerContext {
     pub bot_username: Option<TtUsername>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
-    pub tt_lang_cache: Arc<std::sync::RwLock<std::collections::HashMap<TtUsername, LanguageCode>>>,
-    pub tt_tg_cache: Arc<std::sync::RwLock<std::collections::HashMap<TtUsername, i64>>>,
-    pub tt_cache_stats: Arc<TtCacheStats>,
-}
-
-pub struct TtCacheStats {
-    pub lang_hits: AtomicU64,
-    pub lang_misses: AtomicU64,
-    pub tg_hits: AtomicU64,
-    pub tg_misses: AtomicU64,
 }
 
 pub struct RunTeamtalkArgs {

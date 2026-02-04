@@ -1,12 +1,11 @@
 #![allow(clippy::pedantic, clippy::nursery)]
 
-use super::context::{RunTeamtalkArgs, TtCacheStats, WorkerContext};
+use super::context::{RunTeamtalkArgs, WorkerContext};
 use super::{events, reports};
 use crate::core::types::TtCommand;
 use futures_util::StreamExt;
-use std::collections::{HashMap, VecDeque};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, RwLock};
+use std::collections::VecDeque;
+use std::sync::Arc;
 use std::time::Duration;
 use teamtalk::Client;
 use teamtalk::client::media::MediaFilePlayback;
@@ -194,24 +193,13 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         bot_username,
         is_streaming: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         tt_msg_sem: Arc::new(Semaphore::new(8)),
-        tt_lang_cache: Arc::new(RwLock::new(HashMap::new())),
-        tt_tg_cache: Arc::new(RwLock::new(HashMap::new())),
-        tt_cache_stats: Arc::new(TtCacheStats {
-            lang_hits: AtomicU64::new(0),
-            lang_misses: AtomicU64::new(0),
-            tg_hits: AtomicU64::new(0),
-            tg_misses: AtomicU64::new(0),
-        }),
     };
     let is_streaming = ctx.is_streaming.clone();
-    let tt_lang_cache = ctx.tt_lang_cache.clone();
-    let tt_tg_cache = ctx.tt_tg_cache.clone();
     let db_for_cache = ctx.db.clone();
+    let state_handle = ctx.state.clone();
 
     if let Ok(cache) = db_for_cache.load_tt_lang_cache().await {
-        if let Ok(mut slot) = tt_lang_cache.write() {
-            *slot = cache;
-        }
+        state_handle.preload_lang_cache(cache);
     } else {
         tracing::warn!(
             component = "tt_worker",
@@ -219,9 +207,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         );
     }
     if let Ok(cache) = db_for_cache.load_tt_tg_cache().await {
-        if let Ok(mut slot) = tt_tg_cache.write() {
-            *slot = cache;
-        }
+        state_handle.preload_tg_cache(cache);
     } else {
         tracing::warn!(
             component = "tt_worker",
@@ -230,29 +216,24 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
     }
 
     let db_for_refresh = ctx.db.clone();
-    let tt_lang_cache_refresh = ctx.tt_lang_cache.clone();
-    let tt_tg_cache_refresh = ctx.tt_tg_cache.clone();
-    let tt_cache_stats = ctx.tt_cache_stats.clone();
+    let state_refresh = ctx.state.clone();
     tokio::task::spawn_local(async move {
         let mut tick = interval(Duration::from_secs(300));
         loop {
             tick.tick().await;
-            if let Ok(cache) = db_for_refresh.load_tt_lang_cache().await
-                && let Ok(mut slot) = tt_lang_cache_refresh.write()
-            {
-                *slot = cache;
+            if let Ok(cache) = db_for_refresh.load_tt_lang_cache().await {
+                state_refresh.preload_lang_cache(cache);
             }
-            if let Ok(cache) = db_for_refresh.load_tt_tg_cache().await
-                && let Ok(mut slot) = tt_tg_cache_refresh.write()
-            {
-                *slot = cache;
+            if let Ok(cache) = db_for_refresh.load_tt_tg_cache().await {
+                state_refresh.preload_tg_cache(cache);
             }
+            let stats = state_refresh.cache_stats().await;
             tracing::info!(
                 component = "tt_worker",
-                lang_hits = tt_cache_stats.lang_hits.load(Ordering::Relaxed),
-                lang_misses = tt_cache_stats.lang_misses.load(Ordering::Relaxed),
-                tg_hits = tt_cache_stats.tg_hits.load(Ordering::Relaxed),
-                tg_misses = tt_cache_stats.tg_misses.load(Ordering::Relaxed),
+                lang_hits = stats.lang_hits,
+                lang_misses = stats.lang_misses,
+                tg_hits = stats.tg_hits,
+                tg_misses = stats.tg_misses,
                 "TT user cache stats"
             );
         }
