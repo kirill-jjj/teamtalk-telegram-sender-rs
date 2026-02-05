@@ -26,10 +26,13 @@ pub async fn stream_voice(
 ) -> Result<(), StreamVoiceError> {
     let file_info = bot.get_file(voice.file.id.clone()).await?;
     let mut temp_path = std::env::temp_dir();
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis())
-        .unwrap_or(0);
+    let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
+        Ok(duration) => duration.as_millis(),
+        Err(err) => {
+            tracing::error!(error = %err, "System clock is before UNIX_EPOCH");
+            0
+        }
+    };
     temp_path.push(format!("tg-voice-{}-{}.ogg", voice.file.id, now));
     let mut dst = File::create(&temp_path).await?;
     bot.download_file(&file_info.path, &mut dst).await?;

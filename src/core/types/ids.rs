@@ -22,6 +22,14 @@ impl From<i64> for TelegramId {
     }
 }
 
+impl TryFrom<u64> for TelegramId {
+    type Error = std::num::TryFromIntError;
+
+    fn try_from(value: u64) -> Result<Self, Self::Error> {
+        Ok(Self(i64::try_from(value)?))
+    }
+}
+
 impl From<TelegramId> for i64 {
     fn from(value: TelegramId) -> Self {
         value.0

@@ -1,8 +1,9 @@
 use crate::adapters::tg::presenter::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback_empty, notify_admin_error};
+use crate::adapters::tg::utils::{
+    answer_callback_empty, notify_admin_error, telegram_id_from_user_id,
+};
 use crate::core::callbacks::{CallbackAction, MenuAction, UnsubAction};
-use crate::core::types::TelegramId;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
@@ -19,6 +20,7 @@ pub async fn handle_menu(
         return Ok(());
     };
     let chat_id = msg.chat.id;
+    let admin_id = telegram_id_from_user_id(q.from.id.0, "handle_menu");
 
     match action {
         MenuAction::Who => {
@@ -32,15 +34,17 @@ pub async fn handle_menu(
                 .await
             {
                 tracing::error!(error = %e, "Failed to send TT who command");
-                notify_admin_error(
-                    &bot,
-                    &state.config,
-                    tg_user_id_i64(q.from.id.0),
-                    AdminErrorContext::TtCommand,
-                    &e.to_string(),
-                    lang,
-                )
-                .await;
+                if let Some(admin_id) = admin_id {
+                    notify_admin_error(
+                        &bot,
+                        &state.config,
+                        admin_id,
+                        AdminErrorContext::TtCommand,
+                        &e.to_string(),
+                        lang,
+                    )
+                    .await;
+                }
             }
             answer_callback_empty(&bot, &q.id).await?;
         }
@@ -72,8 +76,4 @@ pub async fn handle_menu(
         MenuAction::Settings => {}
     }
     Ok(())
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

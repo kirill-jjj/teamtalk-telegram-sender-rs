@@ -3,7 +3,7 @@ use crate::adapters::tg::presenter::admin::subscriber_settings as subscriber_set
 use crate::adapters::tg::presenter::admin::subscribers as subscribers_logic;
 use crate::adapters::tg::presenter::settings::{RenderMuteListArgs, RenderMuteListStringsArgs};
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key};
+use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user_id};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::args;
@@ -15,7 +15,7 @@ use crate::infra::locales;
 use teloxide::prelude::*;
 use teloxide::sugar::request::RequestReplyExt;
 
-use super::context::{SearchCandidate, SearchContext, SearchListType, tg_user_id_i64};
+use super::context::{SearchCandidate, SearchContext, SearchListType};
 
 pub(super) async fn handle_single_match(
     bot: &Bot,
@@ -127,15 +127,17 @@ async fn handle_unban(
         return Ok(false);
     };
     if let Err(e) = tg_search_actions_service::remove_ban(&state.db, *ban_db_id).await {
-        notify_admin_error(
-            bot,
-            &state.config,
-            tg_user_id_i64(msg.from.as_ref().map_or(0, |u| u.id.0)),
-            AdminErrorContext::Callback,
-            &e.to_string(),
-            lang,
-        )
-        .await;
+        if let Some(requester_id) = requester_id_from_message(msg, "search_unban") {
+            notify_admin_error(
+                bot,
+                &state.config,
+                requester_id,
+                AdminErrorContext::Callback,
+                &e.to_string(),
+                lang,
+            )
+            .await;
+        }
         return Ok(true);
     }
     send_text_key(
@@ -149,9 +151,23 @@ async fn handle_unban(
     bans_logic::edit_unban_list(
         bot,
         msg,
-        tg_admin_service::list_ban_entries(&state.db)
-            .await
-            .unwrap_or_default(),
+        match tg_admin_service::list_ban_entries(&state.db).await {
+            Ok(entries) => entries,
+            Err(err) => {
+                if let Some(requester_id) = requester_id_from_message(msg, "search_bans_reload") {
+                    notify_admin_error(
+                        bot,
+                        &state.config,
+                        requester_id,
+                        AdminErrorContext::Callback,
+                        &err.into_error().to_string(),
+                        lang,
+                    )
+                    .await;
+                }
+                Vec::new()
+            }
+        },
         &state.search_contexts,
         lang,
         *page,
@@ -170,7 +186,9 @@ async fn handle_subscribers(
     let CallbackAction::Subscriber(SubAction::Details { sub_id, page }) = &candidate.action else {
         return Ok(false);
     };
-    let requester_id = tg_user_id_i64(msg.from.as_ref().map_or(0, |u| u.id.0));
+    let Some(requester_id) = requester_id_from_message(msg, "search_subscribers") else {
+        return Ok(true);
+    };
     let is_main_admin = requester_id == state.config.telegram.admin_chat_id;
     let mut settings = subscribers_logic::default_user_settings(*sub_id);
     let mut is_admin = false;
@@ -258,15 +276,17 @@ async fn handle_link_list(
         return Ok(false);
     };
     if let Err(e) = tg_search_actions_service::link_tt(&state.db, sub_id, username).await {
-        notify_admin_error(
-            bot,
-            &state.config,
-            tg_user_id_i64(msg.from.as_ref().map_or(0, |u| u.id.0)),
-            AdminErrorContext::Callback,
-            &e.to_string(),
-            lang,
-        )
-        .await;
+        if let Some(requester_id) = requester_id_from_message(msg, "search_link_tt") {
+            notify_admin_error(
+                bot,
+                &state.config,
+                requester_id,
+                AdminErrorContext::Callback,
+                &e.to_string(),
+                lang,
+            )
+            .await;
+        }
         return Ok(true);
     }
     let args = args!(user = username.to_string());
@@ -282,15 +302,17 @@ async fn handle_link_list(
         {
             Ok(s) => s,
             Err(e) => {
-                notify_admin_error(
-                    bot,
-                    &state.config,
-                    tg_user_id_i64(msg.from.as_ref().map_or(0, |u| u.id.0)),
-                    AdminErrorContext::Callback,
-                    &e.to_string(),
-                    lang,
-                )
-                .await;
+                if let Some(requester_id) = requester_id_from_message(msg, "search_load_settings") {
+                    notify_admin_error(
+                        bot,
+                        &state.config,
+                        requester_id,
+                        AdminErrorContext::Callback,
+                        &e.to_string(),
+                        lang,
+                    )
+                    .await;
+                }
                 return Ok(true);
             }
         };
@@ -413,8 +435,10 @@ async fn send_tt_command(
     cmd: TtCommand,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let admin_id = tg_user_id_i64(msg.from.as_ref().map_or(0, |u| u.id.0));
-    if let Err(e) = state.tx_tt.send(cmd).await {
+    let admin_id = requester_id_from_message(msg, "search_send_tt_command");
+    if let Err(e) = state.tx_tt.send(cmd).await
+        && let Some(admin_id) = admin_id
+    {
         notify_admin_error(
             bot,
             &state.config,
@@ -434,4 +458,9 @@ async fn send_tt_command(
     )
     .await?;
     Ok(())
+}
+
+fn requester_id_from_message(msg: &Message, context: &'static str) -> Option<TelegramId> {
+    let user = msg.from.as_ref()?;
+    telegram_id_from_user_id(user.id.0, context)
 }

@@ -7,7 +7,7 @@ mod voice;
 
 use crate::adapters::tg::handlers::search::maybe_handle_search_message;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key};
+use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user_id};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_commands as tg_commands_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
@@ -63,16 +63,14 @@ pub async fn answer_command(
     let Some(user) = &msg.from else {
         return Ok(());
     };
-    let telegram_id = tg_user_id_i64(user.id.0);
+    let Some(telegram_id) = telegram_id_from_user_id(user.id.0, "answer_command") else {
+        return Ok(());
+    };
     let Some(ctx) = CommandCtx::new(&bot, &msg, state.as_ref(), telegram_id).await? else {
         return Ok(());
     };
     ctx.dispatch(cmd).await?;
     Ok(())
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }
 
 struct CommandCtx<'a> {
@@ -227,14 +225,25 @@ pub async fn answer_message(bot: Bot, msg: Message, state: Arc<AppState>) -> Res
     let Some(user) = &msg.from else {
         return Ok(());
     };
-    let telegram_id = tg_user_id_i64(user.id.0);
+    let Some(telegram_id) = telegram_id_from_user_id(user.id.0, "answer_message") else {
+        return Ok(());
+    };
     let config = &state.config;
     let db = &state.db;
 
     let default_lang = config.general.default_lang;
-    let admin_lang = tg_commands_service::load_user_lang(db, telegram_id, default_lang)
-        .await
-        .unwrap_or(default_lang);
+    let admin_lang = match tg_commands_service::load_user_lang(db, telegram_id, default_lang).await
+    {
+        Ok(lang) => lang,
+        Err(err) => {
+            tracing::error!(
+                telegram_id = telegram_id.as_i64(),
+                error = ?err,
+                "Failed to load admin language, using default"
+            );
+            default_lang
+        }
+    };
 
     if maybe_handle_search_message(&bot, &msg, state.as_ref(), admin_lang).await? {
         return Ok(());

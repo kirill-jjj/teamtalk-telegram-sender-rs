@@ -86,7 +86,3 @@ pub(super) fn format_display_subscriber(
     }
     parts.join(", ")
 }
-
-pub(super) fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
-}

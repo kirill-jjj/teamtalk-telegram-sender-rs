@@ -130,10 +130,14 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         is_connected,
     }));
 
-    let _ = driver.await;
+    if let Err(err) = driver.await {
+        tracing::error!(error = %err, "TeamTalk worker driver task failed");
+    }
     cmd_forwarder.abort();
 
-    let _ = cmd_forwarder.await;
+    if let Err(err) = cmd_forwarder.await {
+        tracing::debug!(error = %err, "TeamTalk command forwarder task stopped");
+    }
 }
 
 fn spawn_cache_refresh(
@@ -144,8 +148,16 @@ fn spawn_cache_refresh(
         let mut tick = interval(Duration::from_secs(300));
         loop {
             tick.tick().await;
-            let _ = tt_cache_service::preload_all_ctx(&services).await;
-            let cache_stats = state.cache_stats().await.unwrap_or_default();
+            if !tt_cache_service::preload_all_ctx(&services).await {
+                tracing::warn!(component = "tt_worker", "Failed to refresh TT user caches");
+            }
+            let cache_stats = match state.cache_stats().await {
+                Ok(cache_stats) => cache_stats,
+                Err(err) => {
+                    tracing::error!(component = "tt_worker", error = %err, "Failed to read cache stats");
+                    continue;
+                }
+            };
             tracing::info!(
                 component = "tt_worker",
                 lang_hits = cache_stats.lang_hits,

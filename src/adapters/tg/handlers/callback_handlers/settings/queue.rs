@@ -89,9 +89,11 @@ pub(super) async fn handle_queue_menu(
             return Ok(());
         }
     };
-    let global_enabled = tg_queue_settings_service::global_enabled(&state.db)
-        .await
-        .unwrap_or(false);
+    let Some(global_enabled) =
+        global_enabled_or_reply(bot, "queue_menu", state, telegram_id, lang).await?
+    else {
+        return Ok(());
+    };
     send_queue_settings(
         bot,
         msg,
@@ -197,9 +199,11 @@ pub(super) async fn handle_queue_toggle_user(
     .await?;
 
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
-    let global_enabled = tg_queue_settings_service::global_enabled(&state.db)
-        .await
-        .unwrap_or(false);
+    let Some(global_enabled) =
+        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    else {
+        return Ok(());
+    };
     send_queue_settings(
         bot,
         msg,
@@ -249,9 +253,10 @@ pub(super) async fn handle_queue_toggle_global(
         .await?;
         return Ok(());
     }
-    let current = tg_queue_settings_service::global_enabled(&state.db)
-        .await
-        .unwrap_or(false);
+    let Some(current) = global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    else {
+        return Ok(());
+    };
     let new_val = !current;
     if let Err(e) = tg_queue_settings_service::set_global_enabled(&state.db, new_val).await {
         check_db_err(
@@ -364,9 +369,11 @@ pub(super) async fn handle_queue_clear_self(
     )
     .await?;
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
-    let global_enabled = tg_queue_settings_service::global_enabled(&state.db)
-        .await
-        .unwrap_or(false);
+    let Some(global_enabled) =
+        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    else {
+        return Ok(());
+    };
     send_queue_settings(
         bot,
         msg,
@@ -447,9 +454,11 @@ pub(super) async fn handle_queue_clear_all(
     else {
         return Ok(());
     };
-    let global_enabled = tg_queue_settings_service::global_enabled(&state.db)
-        .await
-        .unwrap_or(false);
+    let Some(global_enabled) =
+        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    else {
+        return Ok(());
+    };
     send_queue_settings(
         bot,
         msg,

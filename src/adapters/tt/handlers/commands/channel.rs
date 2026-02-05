@@ -30,12 +30,18 @@ pub(super) fn handle_channel_message(client: &Client, ctx: &WorkerContext, msg: 
         let channel_id = TtChannelId::from(msg.channel_id.0);
         spawn_local(async move {
             let _permit = tt_msg_sem.acquire_owned().await;
-            let username = state_handle
-                .online_user_by_id(from_uid)
-                .await
-                .ok()
-                .flatten()
-                .map_or_else(|| TtUsername::new(String::new()), |u| u.username);
+            let username = match state_handle.online_user_by_id(from_uid).await {
+                Ok(Some(user)) => user.username,
+                Ok(None) => TtUsername::new(String::new()),
+                Err(err) => {
+                    tracing::error!(
+                        user_id = from_uid.as_i32(),
+                        error = %err,
+                        "Failed to resolve user for /skip command"
+                    );
+                    TtUsername::new(String::new())
+                }
+            };
             let reply_lang =
                 tt_users_service::resolve_reply_lang(&services, &username, default_lang).await;
             let is_admin =

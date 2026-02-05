@@ -1,5 +1,6 @@
 use crate::adapters::tg::presenter::settings::send_mute_menu;
 use crate::adapters::tg::state::AppState;
+use crate::adapters::tg::utils::telegram_id_from_user_id;
 use crate::core::callbacks::MuteAction;
 use crate::core::types::{LanguageCode, TelegramId};
 use teloxide::prelude::*;
@@ -18,7 +19,9 @@ pub async fn handle_mute(
     let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = &q.message else {
         return Ok(());
     };
-    let telegram_id = tg_user_id_i64(q.from.id.0);
+    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "handle_mute") else {
+        return Ok(());
+    };
     let ctx = MuteCtx {
         bot: &bot,
         q: &q,
@@ -68,8 +71,4 @@ struct MuteCtx<'a> {
     state: &'a AppState,
     telegram_id: TelegramId,
     lang: LanguageCode,
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

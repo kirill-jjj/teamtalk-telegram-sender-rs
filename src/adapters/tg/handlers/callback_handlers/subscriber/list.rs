@@ -11,6 +11,27 @@ use teloxide::prelude::*;
 
 use super::SubCtx;
 
+async fn load_subscribers_or_reply(
+    ctx: &SubCtx<'_>,
+) -> ResponseResult<Option<Vec<crate::infra::db::types::SubscriberInfo>>> {
+    match tg_admin_service::list_subscribers(ctx.db).await {
+        Ok(subs) => Ok(Some(subs)),
+        Err(err) => {
+            let _ = check_db_err(
+                ctx.bot,
+                &ctx.q_id.0,
+                Err(err.into_error()),
+                ctx.config,
+                ctx.admin_chat_id,
+                AdminErrorContext::Callback,
+                ctx.lang,
+            )
+            .await?;
+            Ok(None)
+        }
+    }
+}
+
 pub(super) async fn details(
     ctx: &SubCtx<'_>,
     sub_id: TelegramId,
@@ -26,6 +47,9 @@ pub(super) async fn delete(
     sub_id: TelegramId,
     page: usize,
 ) -> ResponseResult<()> {
+    let Some(subscribers) = load_subscribers_or_reply(ctx).await? else {
+        return Ok(());
+    };
     if check_db_err(
         ctx.bot,
         &ctx.q_id.0,
@@ -53,13 +77,7 @@ pub(super) async fn delete(
     edit_subscribers_list(
         ctx.bot,
         ctx.msg,
-        prepare_display_list(
-            ctx.bot,
-            tg_admin_service::list_subscribers(ctx.db)
-                .await
-                .unwrap_or_default(),
-        )
-        .await,
+        prepare_display_list(ctx.bot, subscribers).await,
         ctx.search_contexts,
         ctx.lang,
         page,
@@ -69,6 +87,9 @@ pub(super) async fn delete(
 }
 
 pub(super) async fn ban(ctx: &SubCtx<'_>, sub_id: TelegramId, page: usize) -> ResponseResult<()> {
+    let Some(subscribers) = load_subscribers_or_reply(ctx).await? else {
+        return Ok(());
+    };
     if check_db_err(
         ctx.bot,
         &ctx.q_id.0,
@@ -93,13 +114,7 @@ pub(super) async fn ban(ctx: &SubCtx<'_>, sub_id: TelegramId, page: usize) -> Re
     edit_subscribers_list(
         ctx.bot,
         ctx.msg,
-        prepare_display_list(
-            ctx.bot,
-            tg_admin_service::list_subscribers(ctx.db)
-                .await
-                .unwrap_or_default(),
-        )
-        .await,
+        prepare_display_list(ctx.bot, subscribers).await,
         ctx.search_contexts,
         ctx.lang,
         page,

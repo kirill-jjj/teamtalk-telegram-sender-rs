@@ -70,6 +70,16 @@ pub async fn ensure_subscribed(
     }
 }
 
+pub fn telegram_id_from_user_id(user_id: u64, context: &'static str) -> Option<TelegramId> {
+    TelegramId::try_from(user_id).map_or_else(
+        |_| {
+            tracing::error!(user_id, context, "Telegram user id does not fit into i64");
+            None
+        },
+        Some,
+    )
+}
+
 pub async fn check_db_err(
     bot: &Bot,
     query_id: &str,

@@ -31,15 +31,19 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
         let content = msg_text.trim().to_string();
         let from_uid = TtUserId::from(msg_from_id.0);
 
-        let (nick, username): (TtNickname, TtUsername) = state_handle
-            .online_user_by_id(from_uid)
-            .await
-            .ok()
-            .flatten()
-            .map_or_else(
-                || (TtNickname::from("Unknown"), TtUsername::new(String::new())),
-                |u| (u.nickname, u.username),
-            );
+        let (nick, username): (TtNickname, TtUsername) =
+            match state_handle.online_user_by_id(from_uid).await {
+                Ok(Some(user)) => (user.nickname, user.username),
+                Ok(None) => (TtNickname::from("Unknown"), TtUsername::new(String::new())),
+                Err(err) => {
+                    tracing::error!(
+                        user_id = from_uid.as_i32(),
+                        error = %err,
+                        "Failed to resolve user for private message"
+                    );
+                    (TtNickname::from("Unknown"), TtUsername::new(String::new()))
+                }
+            };
 
         tracing::info!(
             component = "tt_worker",

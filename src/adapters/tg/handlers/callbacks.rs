@@ -2,7 +2,7 @@ use crate::adapters::tg::handlers::callback_handlers::{
     admin, menu, mute, settings, subscriber, unsub,
 };
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::notify_admin_error;
+use crate::adapters::tg::utils::{notify_admin_error, telegram_id_from_user_id};
 use crate::app::services::tg_callbacks as tg_callbacks_service;
 use crate::core::callbacks::CallbackAction;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
@@ -18,7 +18,9 @@ pub async fn answer_callback(
     state: Arc<AppState>,
 ) -> ResponseResult<()> {
     let query_id = q.id.clone();
-    let telegram_id = tg_user_id_i64(q.from.id.0);
+    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "answer_callback") else {
+        return Ok(());
+    };
     let callback_data_str = q.data.clone().unwrap_or_default();
 
     let db = &state.db;
@@ -37,10 +39,6 @@ pub async fn answer_callback(
     dispatch_action(bot, q, state.as_ref(), action, lang).await?;
 
     Ok(())
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }
 
 async fn load_user_lang(

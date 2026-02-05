@@ -25,6 +25,14 @@ pub async fn load_accounts(
     tx_tt: &tokio::sync::mpsc::Sender<TtCommand>,
     state: &StateHandle,
 ) -> Vec<teamtalk::types::UserAccount> {
-    let _ = tx_tt.send(TtCommand::LoadAccounts).await;
-    state.user_accounts_sorted().await.unwrap_or_default()
+    if let Err(err) = tx_tt.send(TtCommand::LoadAccounts).await {
+        tracing::error!(error = %err, "Failed to send load accounts command");
+    }
+    match state.user_accounts_sorted().await {
+        Ok(accounts) => accounts,
+        Err(err) => {
+            tracing::error!(error = %err, "Failed to load TeamTalk accounts");
+            Vec::new()
+        }
+    }
 }

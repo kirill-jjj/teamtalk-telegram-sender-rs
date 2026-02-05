@@ -1,8 +1,10 @@
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty, notify_admin_error};
+use crate::adapters::tg::utils::{
+    answer_callback, answer_callback_empty, notify_admin_error, telegram_id_from_user_id,
+};
 use crate::app::services::tg_basic as tg_basic_service;
 use crate::core::callbacks::UnsubAction;
-use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
+use crate::core::types::{AdminErrorContext, LanguageCode};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -16,7 +18,9 @@ pub async fn handle_unsub_action(
     let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
-    let telegram_id = tg_user_id_i64(q.from.id.0);
+    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "handle_unsub_action") else {
+        return Ok(());
+    };
     let db = &state.db;
     let config = &state.config;
 
@@ -71,8 +75,4 @@ pub async fn handle_unsub_action(
         }
     }
     Ok(())
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

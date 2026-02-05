@@ -28,8 +28,28 @@ pub fn instance_name_from_path(path: &str) -> String {
 }
 
 pub fn read_log_level(config_path: &str) -> Option<String> {
-    let content = std::fs::read_to_string(config_path).ok()?;
-    let config: Config = toml::from_str(&content).ok()?;
+    let content = match std::fs::read_to_string(config_path) {
+        Ok(content) => content,
+        Err(err) => {
+            tracing::debug!(
+                path = %config_path,
+                error = %err,
+                "Failed to read config while probing log level"
+            );
+            return None;
+        }
+    };
+    let config: Config = match toml::from_str(&content) {
+        Ok(config) => config,
+        Err(err) => {
+            tracing::debug!(
+                path = %config_path,
+                error = %err,
+                "Failed to parse config while probing log level"
+            );
+            return None;
+        }
+    };
     Some(config.general.log_level.as_str().to_string())
 }
 

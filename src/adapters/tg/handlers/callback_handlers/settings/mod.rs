@@ -1,8 +1,9 @@
 use crate::adapters::tg::presenter::settings::send_main_settings_edit;
 use crate::adapters::tg::state::AppState;
+use crate::adapters::tg::utils::telegram_id_from_user_id;
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::callbacks::SettingsAction;
-use crate::core::types::{LanguageCode, TelegramId};
+use crate::core::types::LanguageCode;
 use teloxide::prelude::*;
 
 mod lang;
@@ -22,7 +23,9 @@ pub async fn handle_settings(
         return Ok(());
     };
     let msg = msg.as_ref();
-    let telegram_id = tg_user_id_i64(q.from.id.0);
+    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "handle_settings") else {
+        return Ok(());
+    };
 
     match action {
         SettingsAction::Main => {
@@ -67,8 +70,4 @@ pub async fn handle_settings(
         }
     }
     Ok(())
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

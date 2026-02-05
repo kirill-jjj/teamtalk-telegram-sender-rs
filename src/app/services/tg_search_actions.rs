@@ -46,11 +46,25 @@ pub async fn list_muted_users(
     telegram_id: TelegramId,
     mode: MuteListMode,
 ) -> Vec<TtUsername> {
-    mute_lists_service::get_muted_users_list(db, telegram_id, mode)
-        .await
-        .unwrap_or_default()
+    match mute_lists_service::get_muted_users_list(db, telegram_id, mode).await {
+        Ok(items) => items,
+        Err(err) => {
+            tracing::error!(
+                telegram_id = telegram_id.as_i64(),
+                error = %err,
+                "Failed to list muted users for search actions"
+            );
+            Vec::new()
+        }
+    }
 }
 
 pub async fn list_user_accounts(state: &StateHandle) -> Vec<teamtalk::types::UserAccount> {
-    state.user_accounts_sorted().await.unwrap_or_default()
+    match state.user_accounts_sorted().await {
+        Ok(accounts) => accounts,
+        Err(err) => {
+            tracing::error!(error = %err, "Failed to list TeamTalk accounts for search actions");
+            Vec::new()
+        }
+    }
 }

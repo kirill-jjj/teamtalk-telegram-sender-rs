@@ -40,9 +40,14 @@ pub(super) async fn handle_user_reply(
         }
     };
     let is_online = match current_tt_user_id {
-        Some(id) => tg_replies_service::is_tt_user_online(&state.state, id)
-            .await
-            .unwrap_or(false),
+        Some(id) => match tg_replies_service::is_tt_user_online(&state.state, id).await {
+            Ok(value) => value,
+            Err(err) => {
+                let error = err.into_error();
+                tracing::error!(tt_user_id = id.as_i32(), error = %error, "Failed to check TT user online status");
+                false
+            }
+        },
         None => false,
     };
 

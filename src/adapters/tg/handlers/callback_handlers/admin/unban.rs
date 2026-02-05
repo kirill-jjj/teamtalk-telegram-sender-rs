@@ -1,12 +1,36 @@
 use crate::adapters::tg::presenter::admin::bans::{edit_unban_list, send_unban_list};
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty, check_db_err};
+use crate::adapters::tg::utils::{
+    answer_callback, answer_callback_empty, check_db_err, telegram_id_from_user_id,
+};
 use crate::app::services::tg_admin as tg_admin_service;
-use crate::core::types::{AdminErrorContext, DbBanId, LanguageCode, TelegramId};
+use crate::core::types::{AdminErrorContext, DbBanId, LanguageCode};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
 use super::lists::should_send_page;
+
+async fn load_bans_or_reply(
+    bot: &Bot,
+    q: &CallbackQuery,
+    state: &AppState,
+    lang: LanguageCode,
+) -> ResponseResult<Option<Vec<crate::infra::db::types::BanEntry>>> {
+    match tg_admin_service::list_ban_entries(&state.db).await {
+        Ok(entries) => Ok(Some(entries)),
+        Err(err) => {
+            tracing::error!(error = ?err, "Failed to load ban entries");
+            answer_callback(
+                bot,
+                &q.id,
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
+                true,
+            )
+            .await?;
+            Ok(None)
+        }
+    }
+}
 
 pub(super) async fn handle_unban_list(
     bot: &Bot,
@@ -16,13 +40,14 @@ pub(super) async fn handle_unban_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let Some(entries) = load_bans_or_reply(bot, q, state, lang).await? else {
+        return Ok(());
+    };
     if should_send_page(msg, page) {
         send_unban_list(
             bot,
             msg.chat.id,
-            tg_admin_service::list_ban_entries(&state.db)
-                .await
-                .unwrap_or_default(),
+            entries,
             &state.search_contexts,
             lang,
             0,
@@ -30,17 +55,7 @@ pub(super) async fn handle_unban_list(
         )
         .await?;
     } else {
-        edit_unban_list(
-            bot,
-            msg,
-            tg_admin_service::list_ban_entries(&state.db)
-                .await
-                .unwrap_or_default(),
-            &state.search_contexts,
-            lang,
-            page,
-        )
-        .await?;
+        edit_unban_list(bot, msg, entries, &state.search_contexts, lang, page).await?;
     }
     answer_callback_empty(bot, &q.id).await
 }
@@ -54,6 +69,9 @@ pub(super) async fn handle_unban_perform(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let Some(admin_id) = telegram_id_from_user_id(q.from.id.0, "handle_unban_perform") else {
+        return Ok(());
+    };
     if check_db_err(
         bot,
         &q.id.0,
@@ -61,7 +79,7 @@ pub(super) async fn handle_unban_perform(
             .await
             .map_err(crate::app::services::tg_admin::AdminError::into_error),
         &state.config,
-        tg_user_id_i64(q.from.id.0),
+        admin_id,
         AdminErrorContext::Callback,
         lang,
     )
@@ -76,19 +94,8 @@ pub(super) async fn handle_unban_perform(
         false,
     )
     .await?;
-    edit_unban_list(
-        bot,
-        msg,
-        tg_admin_service::list_ban_entries(&state.db)
-            .await
-            .unwrap_or_default(),
-        &state.search_contexts,
-        lang,
-        page,
-    )
-    .await
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
+    let Some(entries) = load_bans_or_reply(bot, q, state, lang).await? else {
+        return Ok(());
+    };
+    edit_unban_list(bot, msg, entries, &state.search_contexts, lang, page).await
 }

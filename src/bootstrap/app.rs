@@ -321,11 +321,17 @@ async fn run_telegram_or_wait(ctx: TelegramRunContext) -> Result<()> {
             cancel_token: ctx.cancel_token,
         })
         .await;
-        let _ = ctx.bridge_handle.await;
-        let _ = ctx.tt_handle.await;
+        if let Err(e) = ctx.bridge_handle.await {
+            tracing::error!(error = %e, "Bridge task failed");
+        }
+        if let Err(e) = ctx.tt_handle.await {
+            tracing::error!(error = %e, "TeamTalk worker task failed");
+        }
     } else if let Err(e) = ctx.bridge_handle.await {
         tracing::error!(error = %e, "Bridge task failed");
-        let _ = ctx.tt_handle.await;
+        if let Err(e) = ctx.tt_handle.await {
+            tracing::error!(error = %e, "TeamTalk worker task failed");
+        }
     }
 
     tracing::info!(component = "shutdown", "Closing database pool");
@@ -343,7 +349,9 @@ async fn wait_for_termination_signal() {
         Ok(sigterm) => sigterm,
         Err(e) => {
             tracing::error!(error = %e, "Failed to register SIGTERM handler");
-            tokio::signal::ctrl_c().await.ok();
+            if let Err(err) = tokio::signal::ctrl_c().await {
+                tracing::error!(error = %err, "Failed to listen for Ctrl+C");
+            }
             return;
         }
     };
@@ -365,9 +373,12 @@ async fn wait_for_shutdown_signal(
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
 ) {
     wait_for_termination_signal().await;
-    let _ = tx_tt_cmd
+    if let Err(err) = tx_tt_cmd
         .send(crate::core::types::TtCommand::Shutdown)
-        .await;
+        .await
+    {
+        tracing::error!(error = %err, "Failed to send shutdown command");
+    }
     cancel_token.cancel();
 }
 
@@ -376,7 +387,10 @@ async fn wait_for_cancel(
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
 ) {
     cancel_token.cancelled().await;
-    let _ = tx_tt_cmd
+    if let Err(err) = tx_tt_cmd
         .send(crate::core::types::TtCommand::Shutdown)
-        .await;
+        .await
+    {
+        tracing::error!(error = %err, "Failed to send shutdown command on cancel");
+    }
 }

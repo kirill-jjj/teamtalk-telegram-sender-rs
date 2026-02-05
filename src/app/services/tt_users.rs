@@ -9,8 +9,16 @@ pub async fn resolve_reply_lang(
     if username.as_str().is_empty() {
         return default_lang;
     }
-    if let Some(lang) = ctx.state.get_lang_cached(username).await.ok().flatten() {
-        return lang;
+    match ctx.state.get_lang_cached(username).await {
+        Ok(Some(lang)) => return lang,
+        Ok(None) => {}
+        Err(err) => {
+            tracing::error!(
+                tt_username = %username,
+                error = %err,
+                "Failed to read language from cache"
+            );
+        }
     }
     let lang = ctx
         .db
@@ -32,22 +40,34 @@ pub async fn resolve_is_admin(
     if admin_username.is_some_and(|u| u == username) {
         return true;
     }
-    if let Some(tg_id) = ctx.state.get_tg_cached(username).await.ok().flatten() {
-        return ctx
-            .db
-            .get_all_admins()
-            .await
-            .map(|admins| admins.contains(&tg_id))
-            .unwrap_or(false);
+    match ctx.state.get_tg_cached(username).await {
+        Ok(Some(tg_id)) => {
+            return match ctx.db.get_all_admins().await {
+                Ok(admins) => admins.contains(&tg_id),
+                Err(err) => {
+                    tracing::error!(tt_username = %username, error = %err, "Failed to load admins list from cache path");
+                    false
+                }
+            };
+        }
+        Ok(None) => {}
+        Err(err) => {
+            tracing::error!(
+                tt_username = %username,
+                error = %err,
+                "Failed to read Telegram id from cache"
+            );
+        }
     }
     if let Some(tg_id) = ctx.db.get_telegram_id_by_tt_user(username).await {
         ctx.state.set_tg_cached(username.clone(), tg_id);
-        return ctx
-            .db
-            .get_all_admins()
-            .await
-            .map(|admins| admins.contains(&tg_id))
-            .unwrap_or(false);
+        return match ctx.db.get_all_admins().await {
+            Ok(admins) => admins.contains(&tg_id),
+            Err(err) => {
+                tracing::error!(tt_username = %username, error = %err, "Failed to load admins list after DB lookup");
+                false
+            }
+        };
     }
     false
 }

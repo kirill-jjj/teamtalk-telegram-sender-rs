@@ -1,7 +1,7 @@
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback, notify_admin_error};
+use crate::adapters::tg::utils::{answer_callback, notify_admin_error, telegram_id_from_user_id};
 use crate::app::services::tg_admin as tg_admin_service;
-use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand, TtUserId};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand, TtUserId};
 use crate::infra::locales;
 use teloxide::prelude::*;
 
@@ -12,12 +12,15 @@ pub(super) async fn handle_kick_perform(
     user_id: TtUserId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let Some(admin_id) = telegram_id_from_user_id(q.from.id.0, "handle_kick_perform") else {
+        return Ok(());
+    };
     if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }).await {
         tracing::error!(user_id = user_id.as_i32(), error = %e, "Failed to send kick command");
         notify_admin_error(
             bot,
             &state.config,
-            tg_user_id_i64(q.from.id.0),
+            admin_id,
             AdminErrorContext::TtCommand,
             &e.to_string(),
             lang,
@@ -40,10 +43,26 @@ pub(super) async fn handle_ban_perform(
     user_id: TtUserId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let user = tg_admin_service::online_user_by_id(&state.state, user_id)
-        .await
-        .ok()
-        .flatten();
+    let Some(admin_id) = telegram_id_from_user_id(q.from.id.0, "handle_ban_perform") else {
+        return Ok(());
+    };
+    let user = match tg_admin_service::online_user_by_id(&state.state, user_id).await {
+        Ok(user) => user,
+        Err(err) => {
+            let error = err.into_error();
+            tracing::error!(user_id = user_id.as_i32(), error = %error, "Failed to resolve online user");
+            notify_admin_error(
+                bot,
+                &state.config,
+                admin_id,
+                AdminErrorContext::Callback,
+                &error.to_string(),
+                lang,
+            )
+            .await;
+            None
+        }
+    };
     let Some(u) = user else {
         return answer_callback(
             bot,
@@ -60,7 +79,7 @@ pub(super) async fn handle_ban_perform(
         notify_admin_error(
             bot,
             &state.config,
-            tg_user_id_i64(q.from.id.0),
+            admin_id,
             AdminErrorContext::Callback,
             &error.to_string(),
             lang,
@@ -86,7 +105,7 @@ pub(super) async fn handle_ban_perform(
         notify_admin_error(
             bot,
             &state.config,
-            tg_user_id_i64(q.from.id.0),
+            admin_id,
             AdminErrorContext::TtCommand,
             &e.to_string(),
             lang,
@@ -100,8 +119,4 @@ pub(super) async fn handle_ban_perform(
         false,
     )
     .await
-}
-
-fn tg_user_id_i64(user_id: u64) -> TelegramId {
-    TelegramId::from(i64::try_from(user_id).unwrap_or(i64::MAX))
 }

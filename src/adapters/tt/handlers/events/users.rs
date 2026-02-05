@@ -142,19 +142,30 @@ pub(super) fn handle_user_update(ctx: &WorkerContext, msg: &Message) {
                 }
                 return;
             }
-            if let Some(existing) = state.online_user_by_id(user_id).await.ok().flatten() {
-                if existing.username != new_username {
-                    state.notify_update_user_username(user_id, new_username.clone());
+            match state.online_user_by_id(user_id).await {
+                Ok(Some(existing)) => {
+                    if existing.username != new_username {
+                        state.notify_update_user_username(user_id, new_username.clone());
+                    }
+                    if existing.nickname != new_nickname {
+                        tracing::info!(
+                            component = "tt_worker",
+                            username = %new_username,
+                            old_nick = %existing.nickname,
+                            new_nick = %new_nickname,
+                            "Nickname changed"
+                        );
+                        state.notify_update_user_nickname(user_id, new_nickname.clone());
+                    }
                 }
-                if existing.nickname != new_nickname {
-                    tracing::info!(
+                Ok(None) => {}
+                Err(err) => {
+                    tracing::error!(
                         component = "tt_worker",
-                        username = %new_username,
-                        old_nick = %existing.nickname,
-                        new_nick = %new_nickname,
-                        "Nickname changed"
+                        user_id = user_id.as_i32(),
+                        error = %err,
+                        "Failed to read existing online user"
                     );
-                    state.notify_update_user_nickname(user_id, new_nickname.clone());
                 }
             }
         });
@@ -265,7 +276,18 @@ pub(super) fn handle_user_logged_out(
             teamtalk::types::UserGender::Male => JoinGender::Male,
         };
         tokio::task::spawn_local(async move {
-            let removed = state.remove_online_user(user_id).await.ok().flatten();
+            let removed = match state.remove_online_user(user_id).await {
+                Ok(user) => user,
+                Err(err) => {
+                    tracing::error!(
+                        component = "tt_worker",
+                        user_id = user_id.as_i32(),
+                        error = %err,
+                        "Failed to remove online user"
+                    );
+                    None
+                }
+            };
             if let Some(u) = removed
                 && !is_self
                 && is_ready

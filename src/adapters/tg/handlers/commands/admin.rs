@@ -29,9 +29,34 @@ pub(super) async fn handle_kick_or_ban(ctx: &CommandCtx<'_>, cmd: Command) -> Re
         .await?;
         return Ok(());
     }
-    let users: Vec<LiteUser> = tg_admin_service::list_online_users(&ctx.state.state)
-        .await
-        .unwrap_or_default();
+    let users: Vec<LiteUser> = match tg_admin_service::list_online_users(&ctx.state.state).await {
+        Ok(users) => users,
+        Err(err) => {
+            let notify = err.should_notify();
+            let error = err.into_error();
+            tracing::error!(error = %error, "Failed to list online users");
+            if notify {
+                notify_admin_error(
+                    ctx.bot,
+                    ctx.config,
+                    ctx.telegram_id,
+                    AdminErrorContext::Command,
+                    &error.to_string(),
+                    ctx.lang,
+                )
+                .await;
+            }
+            send_text_key(
+                ctx.bot,
+                ctx.msg.chat.id,
+                ctx.lang,
+                locales::LocaleKey::CmdError,
+                Some(ctx.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
 
     let is_kick = matches!(cmd, Command::Kick);
     let title_key = if is_kick {
@@ -108,9 +133,34 @@ pub(super) async fn handle_unban(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
     send_unban_list(
         ctx.bot,
         ctx.msg.chat.id,
-        tg_admin_service::list_ban_entries(ctx.db)
-            .await
-            .unwrap_or_default(),
+        match tg_admin_service::list_ban_entries(ctx.db).await {
+            Ok(entries) => entries,
+            Err(err) => {
+                let notify = err.should_notify();
+                let error = err.into_error();
+                tracing::error!(error = %error, "Failed to load ban entries");
+                if notify {
+                    notify_admin_error(
+                        ctx.bot,
+                        ctx.config,
+                        ctx.telegram_id,
+                        AdminErrorContext::Command,
+                        &error.to_string(),
+                        ctx.lang,
+                    )
+                    .await;
+                }
+                send_text_key(
+                    ctx.bot,
+                    ctx.msg.chat.id,
+                    ctx.lang,
+                    locales::LocaleKey::CmdError,
+                    Some(ctx.msg.id),
+                )
+                .await?;
+                return Ok(());
+            }
+        },
         &ctx.state.search_contexts,
         ctx.lang,
         0,
@@ -136,9 +186,34 @@ pub(super) async fn handle_subscribers(ctx: &CommandCtx<'_>) -> ResponseResult<(
         ctx.msg.chat.id,
         prepare_display_list(
             ctx.bot,
-            tg_admin_service::list_subscribers(ctx.db)
-                .await
-                .unwrap_or_default(),
+            match tg_admin_service::list_subscribers(ctx.db).await {
+                Ok(subs) => subs,
+                Err(err) => {
+                    let notify = err.should_notify();
+                    let error = err.into_error();
+                    tracing::error!(error = %error, "Failed to load subscribers");
+                    if notify {
+                        notify_admin_error(
+                            ctx.bot,
+                            ctx.config,
+                            ctx.telegram_id,
+                            AdminErrorContext::Command,
+                            &error.to_string(),
+                            ctx.lang,
+                        )
+                        .await;
+                    }
+                    send_text_key(
+                        ctx.bot,
+                        ctx.msg.chat.id,
+                        ctx.lang,
+                        locales::LocaleKey::CmdError,
+                        Some(ctx.msg.id),
+                    )
+                    .await?;
+                    return Ok(());
+                }
+            },
         )
         .await,
         &ctx.state.search_contexts,
@@ -168,7 +243,18 @@ pub(super) async fn handle_exit(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
         )
         .reply_to(ctx.msg.id)
         .await?;
-    let _ = ctx.state.tx_tt.send(TtCommand::Shutdown).await;
+    if let Err(err) = ctx.state.tx_tt.send(TtCommand::Shutdown).await {
+        tracing::error!(error = %err, "Failed to send shutdown command");
+        notify_admin_error(
+            ctx.bot,
+            ctx.config,
+            ctx.telegram_id,
+            AdminErrorContext::TtCommand,
+            &err.to_string(),
+            ctx.lang,
+        )
+        .await;
+    }
     ctx.state.cancel_token.cancel();
     Ok(())
 }

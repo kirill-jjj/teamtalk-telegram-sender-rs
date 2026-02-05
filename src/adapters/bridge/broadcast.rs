@@ -115,11 +115,18 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         && sub.not_on_online_confirmed
         && let Some(linked_tt) = &sub.teamtalk_username
     {
-        let is_online = ctx
-            .state
-            .is_username_online(linked_tt)
-            .await
-            .unwrap_or(false);
+        let is_online = match ctx.state.is_username_online(linked_tt).await {
+            Ok(value) => value,
+            Err(err) => {
+                tracing::error!(
+                    component = "bridge",
+                    tt_username = %linked_tt,
+                    error = %err,
+                    "Failed to resolve online status for silent notification"
+                );
+                false
+            }
+        };
         if is_online {
             send_silent = true;
         }

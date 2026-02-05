@@ -3,7 +3,7 @@ use crate::adapters::tg::handlers::search::{
 };
 use crate::adapters::tg::presenter::keyboards::create_user_list_keyboard;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::answer_callback_empty;
+use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
@@ -19,9 +19,20 @@ pub(super) async fn handle_kick_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let users = tg_admin_service::list_online_users(&state.state)
-        .await
-        .unwrap_or_default();
+    let users = match tg_admin_service::list_online_users(&state.state).await {
+        Ok(users) => users,
+        Err(err) => {
+            tracing::error!(error = ?err, "Failed to list online users for kick list");
+            answer_callback(
+                bot,
+                &q.id,
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
+                true,
+            )
+            .await?;
+            return Ok(());
+        }
+    };
     let args = args!(server = state.config.teamtalk.display_name().to_string());
     let base = locales::get_text(
         lang.as_str(),
@@ -63,9 +74,20 @@ pub(super) async fn handle_ban_list(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let users = tg_admin_service::list_online_users(&state.state)
-        .await
-        .unwrap_or_default();
+    let users = match tg_admin_service::list_online_users(&state.state).await {
+        Ok(users) => users,
+        Err(err) => {
+            tracing::error!(error = ?err, "Failed to list online users for ban list");
+            answer_callback(
+                bot,
+                &q.id,
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
+                true,
+            )
+            .await?;
+            return Ok(());
+        }
+    };
     let args = args!(server = state.config.teamtalk.display_name().to_string());
     let base = locales::get_text(
         lang.as_str(),

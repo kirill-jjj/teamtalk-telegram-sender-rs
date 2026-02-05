@@ -152,8 +152,20 @@ impl Database {
 
         let mut cache = HashMap::new();
         for row in rows {
-            let username: Option<TtUsername> = row.try_get("teamtalk_username").ok();
-            let language_code: Option<LanguageCode> = row.try_get("language_code").ok();
+            let username: Option<TtUsername> = match row.try_get("teamtalk_username") {
+                Ok(value) => value,
+                Err(err) => {
+                    tracing::error!(error = %err, "Failed to decode teamtalk_username for lang cache");
+                    continue;
+                }
+            };
+            let language_code: Option<LanguageCode> = match row.try_get("language_code") {
+                Ok(value) => value,
+                Err(err) => {
+                    tracing::error!(error = %err, "Failed to decode language_code for lang cache");
+                    continue;
+                }
+            };
             if let (Some(username), Some(language_code)) = (username, language_code) {
                 cache.insert(username, language_code);
             }
@@ -174,8 +186,20 @@ impl Database {
 
         let mut cache = HashMap::new();
         for row in rows {
-            let username: Option<TtUsername> = row.try_get("teamtalk_username").ok();
-            let telegram_id: Option<TelegramId> = row.try_get("telegram_id").ok();
+            let username: Option<TtUsername> = match row.try_get("teamtalk_username") {
+                Ok(value) => value,
+                Err(err) => {
+                    tracing::error!(error = %err, "Failed to decode teamtalk_username for tg cache");
+                    continue;
+                }
+            };
+            let telegram_id: Option<TelegramId> = match row.try_get("telegram_id") {
+                Ok(value) => value,
+                Err(err) => {
+                    tracing::error!(error = %err, "Failed to decode telegram_id for tg cache");
+                    continue;
+                }
+            };
             if let (Some(username), Some(telegram_id)) = (username, telegram_id) {
                 cache.insert(username, telegram_id);
             }
@@ -234,7 +258,13 @@ impl Database {
         )
         .fetch_optional(&mut *tx)
         .await?
-        .unwrap_or(0);
+        .unwrap_or_else(|| {
+            tracing::warn!(
+                telegram_id = telegram_id.as_i64(),
+                "toggle_noon called for missing user, using default disabled state"
+            );
+            0
+        });
 
         let new_bool = current_val == 0;
         let new_int = i64::from(new_bool);
