@@ -86,6 +86,7 @@ async fn handle_bridge_event(deps: &BridgeDeps<'_>, event: BridgeEvent) {
             nickname,
             server_name,
             related_tt_username,
+            gender,
         } => {
             broadcast::handle_broadcast(
                 deps,
@@ -93,6 +94,7 @@ async fn handle_bridge_event(deps: &BridgeDeps<'_>, event: BridgeEvent) {
                 nickname,
                 server_name,
                 related_tt_username,
+                gender,
             )
             .await;
         }

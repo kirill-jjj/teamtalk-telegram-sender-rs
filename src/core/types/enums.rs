@@ -160,3 +160,10 @@ pub enum NotificationType {
     Join,
     Leave,
 }
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum JoinGender {
+    Male,
+    Female,
+    Neutral,
+}

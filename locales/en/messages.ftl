@@ -61,7 +61,13 @@ btn-no = No
 
 # Notifications
 event-join = { $nickname } joined server { $server }
+event-join-male = { $nickname } joined server { $server }
+event-join-female = { $nickname } joined server { $server }
+event-join-neutral = { $nickname } joined server { $server }
 event-leave = { $nickname } left server { $server }
+event-leave-male = { $nickname } left server { $server }
+event-leave-female = { $nickname } left server { $server }
+event-leave-neutral = { $nickname } left server { $server }
 
 # Settings Menu
 settings-title = <b>Settings</b>

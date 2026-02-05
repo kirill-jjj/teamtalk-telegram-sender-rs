@@ -2,7 +2,7 @@ use crate::app::services::notifications as notifications_service;
 use crate::app::services::pending as pending_service;
 use crate::app::services::subscription as subscription_service;
 use crate::args;
-use crate::core::types::{LanguageCode, TtNickname, TtServerName, TtUsername};
+use crate::core::types::{JoinGender, LanguageCode, TtNickname, TtServerName, TtUsername};
 use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
@@ -21,6 +21,7 @@ pub(super) async fn handle_broadcast(
     nickname: TtNickname,
     server_name: TtServerName,
     related_tt_username: TtUsername,
+    gender: JoinGender,
 ) {
     let Some(bot) = deps.event_bot else {
         return;
@@ -51,8 +52,16 @@ pub(super) async fn handle_broadcast(
     let escaped_server = teloxide::utils::html::escape(server_name.as_str());
 
     let key = match event_type {
-        crate::core::types::NotificationType::Join => LocaleKey::EventJoin,
-        crate::core::types::NotificationType::Leave => LocaleKey::EventLeave,
+        crate::core::types::NotificationType::Join => match gender {
+            JoinGender::Female => LocaleKey::EventJoinFemale,
+            JoinGender::Male => LocaleKey::EventJoinMale,
+            JoinGender::Neutral => LocaleKey::EventJoinNeutral,
+        },
+        crate::core::types::NotificationType::Leave => match gender {
+            JoinGender::Female => LocaleKey::EventLeaveFemale,
+            JoinGender::Male => LocaleKey::EventLeaveMale,
+            JoinGender::Neutral => LocaleKey::EventLeaveNeutral,
+        },
     };
 
     let mut rendered_text_cache: HashMap<LanguageCode, String> = HashMap::new();

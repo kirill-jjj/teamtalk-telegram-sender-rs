@@ -61,7 +61,13 @@ btn-no = Нет
 
 # Notifications
 event-join = { $nickname } присоединился к серверу { $server }
+event-join-male = { $nickname } присоединился к серверу { $server }
+event-join-female = { $nickname } присоединилась к серверу { $server }
+event-join-neutral = { $nickname } присоединился к серверу { $server }
 event-leave = { $nickname } покинул сервер { $server }
+event-leave-male = { $nickname } покинул сервер { $server }
+event-leave-female = { $nickname } покинула сервер { $server }
+event-leave-neutral = { $nickname } покинул сервер { $server }
 
 # Settings Menu
 settings-title = <b>Настройки</b>

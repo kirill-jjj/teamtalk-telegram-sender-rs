@@ -118,8 +118,12 @@ pub enum LocaleKey {
     CmdUnauth,
     CmdUserBanned,
     DisplayGuestAccount,
-    EventJoin,
-    EventLeave,
+    EventJoinMale,
+    EventJoinFemale,
+    EventJoinNeutral,
+    EventLeaveMale,
+    EventLeaveFemale,
+    EventLeaveNeutral,
     HelloStart,
     HelpText,
     IconCheckSimple,
@@ -237,7 +241,7 @@ pub enum LocaleKey {
     ValNo,
 }
 
-const LOCALE_KEY_STRINGS: [&str; 207] = [
+const LOCALE_KEY_STRINGS: [&str; 211] = [
     "admin-alert",
     "admin-channel-pm",
     "admin-error-context-callback",
@@ -328,8 +332,12 @@ const LOCALE_KEY_STRINGS: [&str; 207] = [
     "cmd-unauth",
     "cmd-user-banned",
     "display-guest-account",
-    "event-join",
-    "event-leave",
+    "event-join-male",
+    "event-join-female",
+    "event-join-neutral",
+    "event-leave-male",
+    "event-leave-female",
+    "event-leave-neutral",
     "hello-start",
     "help-text",
     "icon-check-simple",

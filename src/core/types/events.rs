@@ -1,6 +1,6 @@
 use super::{
-    LanguageCode, NotificationType, TgChatId, TgMessageId, TtChannelId, TtChannelName, TtNickname,
-    TtServerName, TtUserId, TtUsername,
+    JoinGender, LanguageCode, NotificationType, TgChatId, TgMessageId, TtChannelId, TtChannelName,
+    TtNickname, TtServerName, TtUserId, TtUsername,
 };
 use std::path::PathBuf;
 
@@ -11,6 +11,7 @@ pub enum BridgeEvent {
         nickname: TtNickname,
         server_name: TtServerName,
         related_tt_username: TtUsername,
+        gender: JoinGender,
     },
     ToAdmin {
         user_id: TtUserId,
