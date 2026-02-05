@@ -72,6 +72,40 @@ fn tt_channel_name_trim_and_reject_empty() {
     assert!(TtChannelName::try_from("   ").is_err());
 }
 
+#[test]
+fn action_status_as_str() {
+    assert_eq!(ActionStatus::Toggled.as_str(), "toggled");
+}
+
+#[test]
+fn tt_password_helpers() {
+    let password: TtPassword = "secret".into();
+    assert_eq!(password.as_str(), "secret");
+}
+
+#[test]
+fn tt_channel_password_helpers() {
+    let password: TtChannelPassword = String::from("chan").into();
+    assert_eq!(password.as_ref(), "chan");
+}
+
+#[test]
+fn tt_nickname_helpers() {
+    let nick: TtNickname = "Nick".into();
+    assert_eq!(nick.as_ref(), "Nick");
+    assert_eq!(nick.to_string(), "Nick");
+}
+
+#[test]
+fn tt_host_and_login_helpers() {
+    let host: TtHostName = "example.org".into();
+    let login: TtLoginName = "user".into();
+    assert_eq!(host.as_ref(), "example.org");
+    assert_eq!(login.as_ref(), "user");
+    assert_eq!(host.to_string(), "example.org");
+    assert_eq!(login.to_string(), "user");
+}
+
 proptest! {
     #[test]
     fn tt_username_roundtrips(input in ".*") {
