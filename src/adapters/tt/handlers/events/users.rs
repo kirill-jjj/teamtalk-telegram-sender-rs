@@ -69,21 +69,20 @@ async fn flush_reply_queue_on_login(
     default_lang: LanguageCode,
     user_id: TtUserId,
 ) {
-    let mut items = match reply_queue_service::get_reply_queue_for_user(&services.db, &tt_username)
-        .await
-    {
-        Ok(items) => items,
-        Err(e) => {
-            tracing::error!(error = %e, "Failed to load reply queue");
-            return;
-        }
-    };
+    let mut items =
+        match reply_queue_service::get_reply_queue_for_user(&services.db, &tt_username).await {
+            Ok(items) => items,
+            Err(e) => {
+                tracing::error!(error = %e, "Failed to load reply queue");
+                return;
+            }
+        };
     if items.is_empty() {
         return;
     }
     reply_queue_service::queue_items_sorted(&mut items);
-    let lang = tt_users_service::get_user_lang_by_tt_user(&services, &tt_username, default_lang)
-        .await;
+    let lang =
+        tt_users_service::get_user_lang_by_tt_user(&services, &tt_username, default_lang).await;
     let now = Utc::now();
     let mut sent_ids = Vec::new();
     for item in items {
@@ -222,14 +221,8 @@ pub(super) fn handle_user_logged_in(
             let default_lang = ctx.config.general.default_lang;
             let user_id = TtUserId::from(user.id.0);
             tokio::task::spawn_local(async move {
-                flush_reply_queue_on_login(
-                    services,
-                    tx_tt_cmd,
-                    tt_username,
-                    default_lang,
-                    user_id,
-                )
-                .await;
+                flush_reply_queue_on_login(services, tx_tt_cmd, tt_username, default_lang, user_id)
+                    .await;
             });
         }
     }
