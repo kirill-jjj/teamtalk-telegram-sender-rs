@@ -3,7 +3,7 @@
 ## Project Structure & Module Organization
 - `src/core/` contains domain types and callback models.
 - `src/app/` hosts application services (use-case orchestration).
-- `src/adapters/` contains presentation/transport: Telegram (`src/adapters/tg/`), TeamTalk (`src/adapters/tt/`), and the bridge (`src/adapters/bridge.rs`).
+- `src/adapters/` contains presentation/transport: Telegram (`src/adapters/tg/`), TeamTalk (`src/adapters/tt/`), and the bridge (`src/adapters/bridge/`).
 - `src/infra/` contains infrastructure: SQLx DB (`src/infra/db/`) and localization (`src/infra/locales.rs`).
 - `src/bootstrap/` contains configuration types and startup wiring.
 - `migrations/` contains SQL schema migrations.
@@ -75,3 +75,4 @@
 - The TeamTalk client runs in a dedicated OS thread (via `tt_worker`) and communicates over channels to avoid blocking the Tokio runtime.
 - The Telegram bot uses `teloxide` on Tokio async tasks; the `bridge` module formats events and routes messages/commands.
 - Database access is via `sqlx` with a single `Database` struct implemented across `src/infra/db/*` modules.
+ - App state/cache is managed by `StateHandle` in `src/app/state/`.
