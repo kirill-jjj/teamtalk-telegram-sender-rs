@@ -7,7 +7,7 @@ mod voice;
 
 use crate::adapters::tg::handlers::search::maybe_handle_search_message;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{send_text_key, telegram_id_from_user, TgErrorReporter};
+use crate::adapters::tg::utils::{TgErrorReporter, send_text_key, telegram_id_from_user};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_commands as tg_commands_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
@@ -273,7 +273,9 @@ async fn handle_admin_reply(
             let reply_key = match stream_voice(bot, state, None, voice).await {
                 Ok(()) => locales::LocaleKey::TgReplySent,
                 Err(e) => {
-                    errors.notify(AdminErrorContext::Command, &e.to_string()).await;
+                    errors
+                        .notify(AdminErrorContext::Command, &e.to_string())
+                        .await;
                     locales::LocaleKey::TgReplyFailed
                 }
             };

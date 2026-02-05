@@ -287,14 +287,14 @@ pub(super) async fn handle_message(ctx: &CommandCtx<'_>, text: String) -> Respon
     let subs = match tg_admin_service::list_subscribers(ctx.db).await {
         Ok(subs) => subs,
         Err(err) => {
-        let notify = err.should_notify();
-        let error = err.into_error();
-        tracing::error!(error = %error, "Failed to load subscribers");
-        if notify {
-            ctx.errors()
-                .notify(AdminErrorContext::Command, &error.to_string())
-                .await;
-        }
+            let notify = err.should_notify();
+            let error = err.into_error();
+            tracing::error!(error = %error, "Failed to load subscribers");
+            if notify {
+                ctx.errors()
+                    .notify(AdminErrorContext::Command, &error.to_string())
+                    .await;
+            }
             send_text_key(
                 ctx.bot,
                 ctx.msg.chat.id,

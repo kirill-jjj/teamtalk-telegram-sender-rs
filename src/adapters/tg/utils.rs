@@ -142,16 +142,27 @@ impl<'a> TgErrorReporter<'a> {
         result: anyhow::Result<()>,
         context: AdminErrorContext,
     ) -> ResponseResult<bool> {
-        check_db_err(
-            self.bot,
-            query_id,
-            result,
-            self.config,
-            self.user_id,
-            context,
-            self.lang,
-        )
-        .await
+        if let Err(e) = result {
+            tracing::error!(error = ?e, "Database error");
+            notify_admin_error(
+                self.bot,
+                self.config,
+                self.user_id,
+                context,
+                &e.to_string(),
+                self.lang,
+            )
+            .await;
+
+            self.bot
+                .answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
+                .text(cmd_error_text(self.lang))
+                .show_alert(true)
+                .await?;
+
+            return Ok(true);
+        }
+        Ok(false)
     }
 }
 
@@ -162,29 +173,6 @@ pub async fn answer_cmd_error_callback(
     show_alert: bool,
 ) -> ResponseResult<()> {
     answer_callback(bot, query_id, cmd_error_text(lang), show_alert).await
-}
-
-pub async fn check_db_err(
-    bot: &Bot,
-    query_id: &str,
-    result: anyhow::Result<()>,
-    config: &Config,
-    user_id: TelegramId,
-    context: AdminErrorContext,
-    lang: LanguageCode,
-) -> ResponseResult<bool> {
-    if let Err(e) = result {
-        tracing::error!(error = ?e, "Database error");
-        notify_admin_error(bot, config, user_id, context, &e.to_string(), lang).await;
-
-        bot.answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
-            .text(cmd_error_text(lang))
-            .show_alert(true)
-            .await?;
-
-        return Ok(true);
-    }
-    Ok(false)
 }
 
 pub async fn notify_admin_error(
