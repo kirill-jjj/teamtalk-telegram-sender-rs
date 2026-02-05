@@ -1,8 +1,7 @@
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback, answer_callback_empty, answer_cmd_error_callback,
+    TgErrorReporter, answer_callback, answer_callback_empty, answer_cmd_error_callback,
     telegram_id_from_callback_query,
-    TgErrorReporter,
 };
 use crate::app::services::tg_basic as tg_basic_service;
 use crate::core::callbacks::UnsubAction;

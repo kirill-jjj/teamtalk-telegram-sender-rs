@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::keyboards::{
     confirm_cancel_keyboard, create_main_menu_keyboard,
 };
 use crate::adapters::tg::presenter::settings::send_main_settings;
-use crate::adapters::tg::utils::{ensure_subscribed, notify_admin_error, send_text_key};
+use crate::adapters::tg::utils::{ensure_subscribed, send_text_key};
 use crate::app::services::tg_basic as tg_basic_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, UnsubAction};
@@ -89,15 +89,9 @@ pub(super) async fn handle_start(ctx: &CommandCtx<'_>, token: String) -> Respons
         Ok(tg_basic_service::StartOutcome::Unsubscribe) => handle_unsubscribe(ctx).await,
         Err(e) => {
             tracing::error!(error = %e, "DB error resolving deeplink");
-            notify_admin_error(
-                ctx.bot,
-                ctx.config,
-                ctx.telegram_id,
-                AdminErrorContext::Command,
-                &e.to_string(),
-                ctx.lang,
-            )
-            .await;
+            ctx.errors()
+                .notify(AdminErrorContext::Command, &e.to_string())
+                .await;
             send_text_key(
                 ctx.bot,
                 ctx.msg.chat.id,
@@ -156,15 +150,9 @@ pub(super) async fn handle_who(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
         .await
     {
         tracing::error!(error = %e, "Failed to send TT who command");
-        notify_admin_error(
-            ctx.bot,
-            ctx.config,
-            ctx.telegram_id,
-            AdminErrorContext::TtCommand,
-            &e.to_string(),
-            ctx.lang,
-        )
-        .await;
+        ctx.errors()
+            .notify(AdminErrorContext::TtCommand, &e.to_string())
+            .await;
     }
     Ok(())
 }
@@ -203,15 +191,9 @@ pub(super) async fn handle_unsub(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
 pub(super) async fn handle_unsubscribe(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
     if let Err(e) = tg_basic_service::unsubscribe(ctx.db, ctx.telegram_id).await {
         tracing::error!(error = %e, "DB error unsubscribing");
-        notify_admin_error(
-            ctx.bot,
-            ctx.config,
-            ctx.telegram_id,
-            AdminErrorContext::Command,
-            &e.to_string(),
-            ctx.lang,
-        )
-        .await;
+        ctx.errors()
+            .notify(AdminErrorContext::Command, &e.to_string())
+            .await;
         return send_text_key(
             ctx.bot,
             ctx.msg.chat.id,

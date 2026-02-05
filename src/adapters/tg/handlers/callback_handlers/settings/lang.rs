@@ -1,6 +1,6 @@
 use crate::adapters::tg::presenter::keyboards::{back_button, callback_button};
 use crate::adapters::tg::presenter::settings::send_main_settings_edit;
-use crate::adapters::tg::utils::{answer_callback, TgErrorReporter};
+use crate::adapters::tg::utils::{TgErrorReporter, answer_callback};
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};

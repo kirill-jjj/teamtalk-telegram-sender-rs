@@ -1,5 +1,5 @@
 use crate::adapters::tg::presenter::settings::send_mute_menu;
-use crate::adapters::tg::utils::{answer_callback, TgErrorReporter};
+use crate::adapters::tg::utils::{TgErrorReporter, answer_callback};
 use crate::app::services::tg_sub_settings as tg_sub_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TelegramId};

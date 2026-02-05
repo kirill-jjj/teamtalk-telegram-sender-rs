@@ -2,7 +2,7 @@ use crate::adapters::tg::handlers::search::{SearchContext, SearchListType, set_s
 use crate::adapters::tg::presenter::settings::{
     RenderMuteListStringsArgs, render_mute_list_strings,
 };
-use crate::adapters::tg::utils::{answer_callback, TgErrorReporter};
+use crate::adapters::tg::utils::{TgErrorReporter, answer_callback};
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::args;
 use crate::core::types::{

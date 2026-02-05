@@ -3,7 +3,7 @@ use crate::adapters::tg::handlers::callback_handlers::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_cmd_error_callback, telegram_id_from_callback_query, TgErrorReporter,
+    TgErrorReporter, answer_cmd_error_callback, telegram_id_from_callback_query,
 };
 use crate::app::services::tg_callbacks as tg_callbacks_service;
 use crate::core::callbacks::CallbackAction;

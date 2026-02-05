@@ -1,4 +1,4 @@
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key};
+use crate::adapters::tg::utils::send_text_key;
 use crate::app::services::tg_queue as tg_queue_service;
 use crate::args;
 use crate::core::types::AdminErrorContext;
@@ -93,15 +93,9 @@ pub(super) async fn handle_queue(ctx: &CommandCtx<'_>, text: String) -> Response
             let error = err.into_error();
             tracing::error!(error = %error, "Failed to handle queue command");
             if notify {
-                notify_admin_error(
-                    ctx.bot,
-                    ctx.config,
-                    ctx.telegram_id,
-                    AdminErrorContext::Command,
-                    &error.to_string(),
-                    ctx.lang,
-                )
-                .await;
+                ctx.errors()
+                    .notify(AdminErrorContext::Command, &error.to_string())
+                    .await;
             }
             send_text_key(
                 ctx.bot,

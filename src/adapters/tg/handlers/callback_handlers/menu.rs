@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback_empty, telegram_id_from_callback_query, TgErrorReporter,
+    TgErrorReporter, answer_callback_empty, telegram_id_from_callback_query,
 };
 use crate::core::callbacks::{CallbackAction, MenuAction, UnsubAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
@@ -36,7 +36,9 @@ pub async fn handle_menu(
             {
                 tracing::error!(error = %e, "Failed to send TT who command");
                 if let Some(errors) = &errors {
-                    errors.notify(AdminErrorContext::TtCommand, &e.to_string()).await;
+                    errors
+                        .notify(AdminErrorContext::TtCommand, &e.to_string())
+                        .await;
                 }
             }
             answer_callback_empty(&bot, &q.id).await?;

@@ -1,4 +1,4 @@
-use crate::adapters::tg::utils::notify_admin_error;
+use crate::adapters::tg::utils::TgErrorReporter;
 use crate::app::services::tg_replies as tg_replies_service;
 use crate::args;
 use crate::bootstrap::config::Config;
@@ -50,15 +50,9 @@ async fn send_text_reply(
 }
 
 async fn notify_send_error(ctx: &ChannelReplyCtx<'_>, error: &str) {
-    notify_admin_error(
-        ctx.bot,
-        &ctx.state.config,
-        ctx.telegram_id,
-        AdminErrorContext::Command,
-        error,
-        ctx.admin_lang,
-    )
-    .await;
+    TgErrorReporter::new(ctx.bot, &ctx.state.config, ctx.telegram_id, ctx.admin_lang)
+        .notify(AdminErrorContext::Command, error)
+        .await;
 }
 
 pub(super) struct ChannelReplyCtx<'a> {
@@ -153,15 +147,9 @@ pub(super) async fn handle_channel_reply(
             let error = err.into_error();
             tracing::error!(error = %error, "Failed to load pending channel reply");
             if notify {
-                notify_admin_error(
-                    ctx.bot,
-                    &ctx.state.config,
-                    ctx.telegram_id,
-                    AdminErrorContext::Command,
-                    &error.to_string(),
-                    ctx.admin_lang,
-                )
-                .await;
+                TgErrorReporter::new(ctx.bot, &ctx.state.config, ctx.telegram_id, ctx.admin_lang)
+                    .notify(AdminErrorContext::Command, &error.to_string())
+                    .await;
             }
             Ok(false)
         }
@@ -187,15 +175,9 @@ pub(super) async fn load_pending_reply(
                 "Failed to load pending reply"
             );
             if notify {
-                notify_admin_error(
-                    bot,
-                    config,
-                    telegram_id,
-                    AdminErrorContext::Command,
-                    &error.to_string(),
-                    config.general.default_lang,
-                )
-                .await;
+                TgErrorReporter::new(bot, config, telegram_id, config.general.default_lang)
+                    .notify(AdminErrorContext::Command, &error.to_string())
+                    .await;
             }
             Ok(None)
         }

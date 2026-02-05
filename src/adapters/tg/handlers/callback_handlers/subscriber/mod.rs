@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::admin::subscribers::{
     SubscriberDetailsArgs, default_user_settings,
 };
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{telegram_id_from_callback_query, TgErrorReporter};
+use crate::adapters::tg::utils::{TgErrorReporter, telegram_id_from_callback_query};
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::core::callbacks::SubAction;
 use crate::core::types::AdminErrorContext;

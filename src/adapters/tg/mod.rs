@@ -3,7 +3,7 @@ pub mod presenter;
 pub mod state;
 pub mod utils;
 
-use crate::adapters::tg::utils::notify_admin_error;
+use crate::adapters::tg::utils::TgErrorReporter;
 use crate::app::services::user_settings as user_settings_service;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
@@ -93,15 +93,9 @@ fn make_error_handler(
                     "Update listener error"
                 );
                 let default_lang = admin_config.general.default_lang;
-                notify_admin_error(
-                    &admin_bot,
-                    &admin_config,
-                    TelegramId::from(0),
-                    AdminErrorContext::UpdateListener,
-                    &err_str,
-                    default_lang,
-                )
-                .await;
+                TgErrorReporter::new(&admin_bot, &admin_config, TelegramId::from(0), default_lang)
+                    .notify(AdminErrorContext::UpdateListener, &err_str)
+                    .await;
             }
         }
     })

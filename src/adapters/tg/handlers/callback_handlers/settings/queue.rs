@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::settings::{
     QueueAdminStatus, QueueLinkStatus, QueueSettingsView, QueueToggleStatus, send_queue_settings,
 };
-use crate::adapters::tg::utils::{answer_callback, cmd_error_text, TgErrorReporter};
+use crate::adapters::tg::utils::{TgErrorReporter, answer_callback, cmd_error_text};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_queue_settings as tg_queue_settings_service;
 use crate::args;
@@ -17,7 +17,9 @@ async fn load_settings_or_reply(
     q_id: &str,
     state: &AppState,
 ) -> ResponseResult<Option<UserSettings>> {
-    match tg_queue_settings_service::load_settings(&state.db, errors.user_id(), LanguageCode::En).await {
+    match tg_queue_settings_service::load_settings(&state.db, errors.user_id(), LanguageCode::En)
+        .await
+    {
         Ok(s) => Ok(Some(s)),
         Err(e) => {
             errors
@@ -68,8 +70,7 @@ pub(super) async fn handle_queue_menu(
             return Ok(());
         }
     };
-    let Some(global_enabled) = global_enabled_or_reply(&errors, "queue_menu", state).await?
-    else {
+    let Some(global_enabled) = global_enabled_or_reply(&errors, "queue_menu", state).await? else {
         return Ok(());
     };
     send_queue_settings(
@@ -111,8 +112,7 @@ pub(super) async fn handle_queue_toggle_user(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
-    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
 
@@ -127,8 +127,7 @@ pub(super) async fn handle_queue_toggle_user(
         return Ok(());
     }
 
-    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     if !global_enabled {
@@ -170,8 +169,7 @@ pub(super) async fn handle_queue_toggle_user(
     .await?;
 
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
-    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     send_queue_settings(
@@ -224,8 +222,7 @@ pub(super) async fn handle_queue_toggle_global(
         .await?;
         return Ok(());
     }
-    let Some(current) = global_enabled_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(current) = global_enabled_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     let new_val = !current;
@@ -247,8 +244,7 @@ pub(super) async fn handle_queue_toggle_global(
         false,
     )
     .await?;
-    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     send_queue_settings(
@@ -290,8 +286,7 @@ pub(super) async fn handle_queue_clear_self(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
-    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     let has_link = settings.teamtalk_username.is_some();
@@ -327,8 +322,7 @@ pub(super) async fn handle_queue_clear_self(
     )
     .await?;
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
-    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     send_queue_settings(
@@ -401,12 +395,10 @@ pub(super) async fn handle_queue_clear_all(
         false,
     )
     .await?;
-    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
-    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
-    else {
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await? else {
         return Ok(());
     };
     send_queue_settings(

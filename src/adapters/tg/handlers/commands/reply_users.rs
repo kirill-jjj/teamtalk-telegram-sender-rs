@@ -1,4 +1,4 @@
-use crate::adapters::tg::utils::notify_admin_error;
+use crate::adapters::tg::utils::TgErrorReporter;
 use crate::app::services::tg_replies as tg_replies_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
 use crate::infra::locales;
@@ -68,15 +68,9 @@ pub(super) async fn handle_user_reply(
                 error = %e,
                 "Failed to send TT reply command"
             );
-            notify_admin_error(
-                bot,
-                config,
-                telegram_id,
-                AdminErrorContext::Command,
-                &e.to_string(),
-                admin_lang,
-            )
-            .await;
+            TgErrorReporter::new(bot, config, telegram_id, admin_lang)
+                .notify(AdminErrorContext::Command, &e.to_string())
+                .await;
             locales::LocaleKey::TgReplyFailed
         } else {
             locales::LocaleKey::TgReplySent

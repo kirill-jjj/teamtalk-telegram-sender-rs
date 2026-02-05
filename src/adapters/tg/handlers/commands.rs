@@ -7,7 +7,7 @@ mod voice;
 
 use crate::adapters::tg::handlers::search::maybe_handle_search_message;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user};
+use crate::adapters::tg::utils::{send_text_key, telegram_id_from_user, TgErrorReporter};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_commands as tg_commands_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
@@ -86,6 +86,10 @@ struct CommandCtx<'a> {
 }
 
 impl<'a> CommandCtx<'a> {
+    const fn errors(&self) -> TgErrorReporter<'_> {
+        TgErrorReporter::new(self.bot, self.config, self.telegram_id, self.lang)
+    }
+
     async fn new(
         bot: &'a Bot,
         msg: &'a Message,
@@ -104,15 +108,9 @@ impl<'a> CommandCtx<'a> {
                     error = %error,
                     "Failed to get or create user"
                 );
-                notify_admin_error(
-                    bot,
-                    config,
-                    telegram_id,
-                    AdminErrorContext::Command,
-                    &error.to_string(),
-                    default_lang,
-                )
-                .await;
+                TgErrorReporter::new(bot, config, telegram_id, default_lang)
+                    .notify(AdminErrorContext::Command, &error.to_string())
+                    .await;
                 send_text_key(
                     bot,
                     msg.chat.id,
@@ -263,7 +261,7 @@ async fn handle_admin_reply(
     telegram_id: TelegramId,
     admin_lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let config = &state.config;
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, admin_lang);
     let reply_to_id = msg
         .reply_to_message()
         .map(|reply_msg| crate::core::types::TgMessageId::from(reply_msg.id.0));
@@ -275,15 +273,7 @@ async fn handle_admin_reply(
             let reply_key = match stream_voice(bot, state, None, voice).await {
                 Ok(()) => locales::LocaleKey::TgReplySent,
                 Err(e) => {
-                    notify_admin_error(
-                        bot,
-                        config,
-                        telegram_id,
-                        AdminErrorContext::Command,
-                        &e.to_string(),
-                        admin_lang,
-                    )
-                    .await;
+                    errors.notify(AdminErrorContext::Command, &e.to_string()).await;
                     locales::LocaleKey::TgReplyFailed
                 }
             };

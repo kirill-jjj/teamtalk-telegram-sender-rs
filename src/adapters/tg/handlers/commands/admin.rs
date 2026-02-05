@@ -6,7 +6,7 @@ use crate::adapters::tg::presenter::admin::subscribers::{
     prepare_display_list, send_subscribers_list,
 };
 use crate::adapters::tg::presenter::keyboards::create_user_list_keyboard;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key};
+use crate::adapters::tg::utils::send_text_key;
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
@@ -43,15 +43,9 @@ pub(super) async fn handle_kick_or_ban(ctx: &CommandCtx<'_>, cmd: Command) -> Re
             let error = err.into_error();
             tracing::error!(error = %error, "Failed to list online users");
             if notify {
-                notify_admin_error(
-                    ctx.bot,
-                    ctx.config,
-                    ctx.telegram_id,
-                    AdminErrorContext::Command,
-                    &error.to_string(),
-                    ctx.lang,
-                )
-                .await;
+                ctx.errors()
+                    .notify(AdminErrorContext::Command, &error.to_string())
+                    .await;
             }
             send_text_key(
                 ctx.bot,
@@ -139,15 +133,9 @@ pub(super) async fn handle_unban(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
                 let error = err.into_error();
                 tracing::error!(error = %error, "Failed to load ban entries");
                 if notify {
-                    notify_admin_error(
-                        ctx.bot,
-                        ctx.config,
-                        ctx.telegram_id,
-                        AdminErrorContext::Command,
-                        &error.to_string(),
-                        ctx.lang,
-                    )
-                    .await;
+                    ctx.errors()
+                        .notify(AdminErrorContext::Command, &error.to_string())
+                        .await;
                 }
                 send_text_key(
                     ctx.bot,
@@ -184,15 +172,9 @@ pub(super) async fn handle_subscribers(ctx: &CommandCtx<'_>) -> ResponseResult<(
                     let error = err.into_error();
                     tracing::error!(error = %error, "Failed to load subscribers");
                     if notify {
-                        notify_admin_error(
-                            ctx.bot,
-                            ctx.config,
-                            ctx.telegram_id,
-                            AdminErrorContext::Command,
-                            &error.to_string(),
-                            ctx.lang,
-                        )
-                        .await;
+                        ctx.errors()
+                            .notify(AdminErrorContext::Command, &error.to_string())
+                            .await;
                     }
                     send_text_key(
                         ctx.bot,
@@ -228,15 +210,9 @@ pub(super) async fn handle_exit(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
         .await?;
     if let Err(err) = ctx.state.tx_tt.send(TtCommand::Shutdown).await {
         tracing::error!(error = %err, "Failed to send shutdown command");
-        notify_admin_error(
-            ctx.bot,
-            ctx.config,
-            ctx.telegram_id,
-            AdminErrorContext::TtCommand,
-            &err.to_string(),
-            ctx.lang,
-        )
-        .await;
+        ctx.errors()
+            .notify(AdminErrorContext::TtCommand, &err.to_string())
+            .await;
     }
     ctx.state.cancel_token.cancel();
     Ok(())
@@ -265,15 +241,9 @@ pub(super) async fn handle_broadcast(ctx: &CommandCtx<'_>, text: String) -> Resp
         let error = err.into_error();
         tracing::error!(error = %error, "Failed to send broadcast command");
         if notify {
-            notify_admin_error(
-                ctx.bot,
-                ctx.config,
-                ctx.telegram_id,
-                AdminErrorContext::Command,
-                &error.to_string(),
-                ctx.lang,
-            )
-            .await;
+            ctx.errors()
+                .notify(AdminErrorContext::Command, &error.to_string())
+                .await;
         }
         send_text_key(
             ctx.bot,
@@ -317,20 +287,14 @@ pub(super) async fn handle_message(ctx: &CommandCtx<'_>, text: String) -> Respon
     let subs = match tg_admin_service::list_subscribers(ctx.db).await {
         Ok(subs) => subs,
         Err(err) => {
-            let notify = err.should_notify();
-            let error = err.into_error();
-            tracing::error!(error = %error, "Failed to load subscribers");
-            if notify {
-                notify_admin_error(
-                    ctx.bot,
-                    ctx.config,
-                    ctx.telegram_id,
-                    AdminErrorContext::Command,
-                    &error.to_string(),
-                    ctx.lang,
-                )
+        let notify = err.should_notify();
+        let error = err.into_error();
+        tracing::error!(error = %error, "Failed to load subscribers");
+        if notify {
+            ctx.errors()
+                .notify(AdminErrorContext::Command, &error.to_string())
                 .await;
-            }
+        }
             send_text_key(
                 ctx.bot,
                 ctx.msg.chat.id,

@@ -3,7 +3,7 @@ use crate::adapters::tg::presenter::admin::subscriber_settings as subscriber_set
 use crate::adapters::tg::presenter::admin::subscribers as subscribers_logic;
 use crate::adapters::tg::presenter::settings::{RenderMuteListArgs, RenderMuteListStringsArgs};
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user};
+use crate::adapters::tg::utils::{send_text_key, telegram_id_from_user, TgErrorReporter};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::args;
@@ -128,15 +128,9 @@ async fn handle_unban(
     };
     if let Err(e) = tg_search_actions_service::remove_ban(&state.db, *ban_db_id).await {
         if let Some(requester_id) = requester_id_from_message(msg, "search_unban") {
-            notify_admin_error(
-                bot,
-                &state.config,
-                requester_id,
-                AdminErrorContext::Callback,
-                &e.to_string(),
-                lang,
-            )
-            .await;
+            TgErrorReporter::new(bot, &state.config, requester_id, lang)
+                .notify(AdminErrorContext::Callback, &e.to_string())
+                .await;
         }
         return Ok(true);
     }
@@ -155,15 +149,9 @@ async fn handle_unban(
             Ok(entries) => entries,
             Err(err) => {
                 if let Some(requester_id) = requester_id_from_message(msg, "search_bans_reload") {
-                    notify_admin_error(
-                        bot,
-                        &state.config,
-                        requester_id,
-                        AdminErrorContext::Callback,
-                        &err.into_error().to_string(),
-                        lang,
-                    )
-                    .await;
+                    TgErrorReporter::new(bot, &state.config, requester_id, lang)
+                        .notify(AdminErrorContext::Callback, &err.into_error().to_string())
+                        .await;
                 }
                 Vec::new()
             }
@@ -200,15 +188,9 @@ async fn handle_subscribers(
             is_admin = details.is_admin;
         }
         Err(e) => {
-            notify_admin_error(
-                bot,
-                &state.config,
-                requester_id,
-                AdminErrorContext::Callback,
-                &e.to_string(),
-                lang,
-            )
-            .await;
+            TgErrorReporter::new(bot, &state.config, requester_id, lang)
+                .notify(AdminErrorContext::Callback, &e.to_string())
+                .await;
         }
     }
     subscribers_logic::send_subscriber_details(subscribers_logic::SubscriberDetailsArgs {
@@ -277,15 +259,9 @@ async fn handle_link_list(
     };
     if let Err(e) = tg_search_actions_service::link_tt(&state.db, sub_id, username).await {
         if let Some(requester_id) = requester_id_from_message(msg, "search_link_tt") {
-            notify_admin_error(
-                bot,
-                &state.config,
-                requester_id,
-                AdminErrorContext::Callback,
-                &e.to_string(),
-                lang,
-            )
-            .await;
+            TgErrorReporter::new(bot, &state.config, requester_id, lang)
+                .notify(AdminErrorContext::Callback, &e.to_string())
+                .await;
         }
         return Ok(true);
     }
@@ -303,15 +279,9 @@ async fn handle_link_list(
             Ok(s) => s,
             Err(e) => {
                 if let Some(requester_id) = requester_id_from_message(msg, "search_load_settings") {
-                    notify_admin_error(
-                        bot,
-                        &state.config,
-                        requester_id,
-                        AdminErrorContext::Callback,
-                        &e.to_string(),
-                        lang,
-                    )
-                    .await;
+                    TgErrorReporter::new(bot, &state.config, requester_id, lang)
+                        .notify(AdminErrorContext::Callback, &e.to_string())
+                        .await;
                 }
                 return Ok(true);
             }
@@ -351,15 +321,9 @@ async fn toggle_mute_and_render(
     )
     .await
     {
-        notify_admin_error(
-            bot,
-            &state.config,
-            args.telegram_id,
-            AdminErrorContext::Callback,
-            &e.to_string(),
-            args.lang,
-        )
-        .await;
+        TgErrorReporter::new(bot, &state.config, args.telegram_id, args.lang)
+            .notify(AdminErrorContext::Callback, &e.to_string())
+            .await;
         return Ok(());
     }
 
@@ -439,15 +403,9 @@ async fn send_tt_command(
     if let Err(e) = state.tx_tt.send(cmd).await
         && let Some(admin_id) = admin_id
     {
-        notify_admin_error(
-            bot,
-            &state.config,
-            admin_id,
-            AdminErrorContext::TtCommand,
-            &e.to_string(),
-            lang,
-        )
-        .await;
+        TgErrorReporter::new(bot, &state.config, admin_id, lang)
+            .notify(AdminErrorContext::TtCommand, &e.to_string())
+            .await;
     }
     send_text_key(
         bot,

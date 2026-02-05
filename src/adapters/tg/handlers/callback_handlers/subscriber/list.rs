@@ -19,7 +19,11 @@ async fn load_subscribers_or_reply(
         Err(err) => {
             let _ = ctx
                 .errors()
-                .check_db_err(&ctx.q_id.0, Err(err.into_error()), AdminErrorContext::Callback)
+                .check_db_err(
+                    &ctx.q_id.0,
+                    Err(err.into_error()),
+                    AdminErrorContext::Callback,
+                )
                 .await?;
             Ok(None)
         }
