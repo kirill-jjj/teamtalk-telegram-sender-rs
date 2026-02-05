@@ -23,7 +23,7 @@ pub(super) async fn handle_kick_list(
         .await
         .unwrap_or_default();
     let args = args!(server = state.config.teamtalk.display_name().to_string());
-    let base = locales::get_text(
+    let base = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::ListKickTitle,
         args.as_ref(),
@@ -67,7 +67,7 @@ pub(super) async fn handle_ban_list(
         .await
         .unwrap_or_default();
     let args = args!(server = state.config.teamtalk.display_name().to_string());
-    let base = locales::get_text(
+    let base = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::ListBanTitle,
         args.as_ref(),

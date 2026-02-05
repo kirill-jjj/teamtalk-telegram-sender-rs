@@ -138,14 +138,14 @@ async fn handle_clear_user(ctx: &UserCtx) {
         reply_queue_service::clear_reply_queue_for_user(&ctx.services.db, &ctx.username).await;
     let text = count.map_or_else(
         |_| {
-            locales::get_text(
+            locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtErrorGeneric,
                 None,
             )
         },
         |count| {
-            locales::get_text(
+            locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtQueueCleared,
                 args!(count = count).as_ref(),
@@ -163,14 +163,14 @@ async fn handle_clear_all(ctx: &UserCtx, is_admin: bool) {
     let count = reply_queue_service::clear_reply_queue_all(&ctx.services.db).await;
     let text = count.map_or_else(
         |_| {
-            locales::get_text(
+            locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtErrorGeneric,
                 None,
             )
         },
         |count| {
-            locales::get_text(
+            locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtQueueClearedAll,
                 args!(count = count).as_ref(),
@@ -183,7 +183,7 @@ async fn handle_clear_all(ctx: &UserCtx, is_admin: bool) {
 type LocaleArgs = HashMap<Cow<'static, str>, FluentValue<'static>>;
 
 async fn send_text(ctx: &UserCtx, key: locales::LocaleKey, args: Option<LocaleArgs>) {
-    let text = locales::get_text(ctx.reply_lang.as_str(), key, args.as_ref());
+    let text = locales::get_text_or_log(ctx.reply_lang.as_str(), key, args.as_ref());
     drop(args);
     ctx.send_reply(text).await;
 }

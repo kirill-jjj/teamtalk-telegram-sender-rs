@@ -270,7 +270,7 @@ async fn handle_link_list(
         return Ok(true);
     }
     let args = args!(user = username.to_string());
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::ToastAccountLinked,
         args.as_ref(),
@@ -345,7 +345,7 @@ async fn toggle_mute_and_render(
         user = args.username.to_string(),
         action = ActionStatus::Toggled.as_str()
     );
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         args.lang.as_str(),
         locales::LocaleKey::ToastUserMuted,
         fmt_args.as_ref(),

@@ -12,7 +12,7 @@ pub async fn send_main_settings(
     lang: LanguageCode,
     reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
-    let text = locales::get_text(lang.as_str(), locales::LocaleKey::SettingsTitle, None);
+    let text = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::SettingsTitle, None);
     let keyboard = main_settings_keyboard(lang);
     let req = bot
         .send_message(chat_id, text)
@@ -31,7 +31,7 @@ pub async fn send_main_settings_edit(
     msg: &Message,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let text = locales::get_text(lang.as_str(), locales::LocaleKey::SettingsTitle, None);
+    let text = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::SettingsTitle, None);
     let keyboard = main_settings_keyboard(lang);
     bot.edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)
@@ -43,19 +43,19 @@ pub async fn send_main_settings_edit(
 fn main_settings_keyboard(lang: LanguageCode) -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new(vec![
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnLang, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnLang, None),
             CallbackAction::Settings(SettingsAction::LangSelect),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnSubSettings, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnSubSettings, None),
             CallbackAction::Settings(SettingsAction::SubSelect),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnNotifSettings, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnNotifSettings, None),
             CallbackAction::Settings(SettingsAction::NotifSelect),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnQueueSettings, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnQueueSettings, None),
             CallbackAction::Settings(SettingsAction::QueueMenu),
         )],
     ])

@@ -34,7 +34,7 @@ pub fn resolve_channel_name(
     lang: LanguageCode,
 ) -> TtChannelName {
     if channel_id.0 == 0 {
-        return TtChannelName::from(locales::get_text(
+        return TtChannelName::from(locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::TtRootChannelName,
             None,
@@ -42,7 +42,7 @@ pub fn resolve_channel_name(
     }
     match client.get_channel(channel_id) {
         Some(channel) if !channel.name.is_empty() => TtChannelName::from(channel.name),
-        Some(_) => TtChannelName::from(locales::get_text(
+        Some(_) => TtChannelName::from(locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::TtRootChannelName,
             None,

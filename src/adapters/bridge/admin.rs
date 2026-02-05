@@ -55,7 +55,7 @@ pub(super) async fn handle_to_admin(
         nick = html::escape(nick.as_str()),
         msg = html::escape(&msg_content)
     );
-    let text_admin = locales::get_text(
+    let text_admin = locales::get_text_or_log(
         admin_lang.as_str(),
         LocaleKey::AdminAlert,
         args_admin.as_ref(),
@@ -92,7 +92,7 @@ pub(super) async fn handle_to_admin(
     } else {
         LocaleKey::TtMsgFailed
     };
-    let reply_text = locales::get_text(reply_lang.as_str(), key_reply, None);
+    let reply_text = locales::get_text_or_log(reply_lang.as_str(), key_reply, None);
 
     if let Err(e) = deps
         .tx_tt_cmd

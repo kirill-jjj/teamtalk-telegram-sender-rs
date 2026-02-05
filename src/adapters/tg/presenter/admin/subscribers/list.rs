@@ -29,7 +29,7 @@ pub async fn send_subscribers_list(
     if display_list.is_empty() {
         let req = bot.send_message(
             chat_id,
-            locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsEmpty, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ListSubsEmpty, None),
         );
         if let Some(reply_to) = reply_to {
             req.reply_to(reply_to).await?;
@@ -52,7 +52,7 @@ pub async fn send_subscribers_list(
         lang,
     );
 
-    let base = locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsTitle, None);
+    let base = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ListSubsTitle, None);
     let text = append_search_hint(&base, lang);
     let req = bot.send_message(chat_id, text).reply_markup(keyboard);
     if let Some(reply_to) = reply_to {
@@ -100,7 +100,7 @@ pub async fn edit_subscribers_list(
         bot.edit_message_text(
             msg.chat.id,
             msg.id,
-            locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsEmpty, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ListSubsEmpty, None),
         )
         .await?;
         return Ok(());
@@ -119,7 +119,7 @@ pub async fn edit_subscribers_list(
         lang,
     );
 
-    let base = locales::get_text(lang.as_str(), locales::LocaleKey::ListSubsTitle, None);
+    let base = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ListSubsTitle, None);
     let text = append_search_hint(&base, lang);
     bot.edit_message_text(msg.chat.id, msg.id, text)
         .reply_markup(keyboard)

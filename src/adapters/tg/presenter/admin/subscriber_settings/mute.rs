@@ -14,14 +14,14 @@ pub async fn send_sub_mute_mode_menu(
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::SubModeTitle,
         args.as_ref(),
     );
 
-    let bl_text = locales::get_text(lang.as_str(), locales::LocaleKey::ModeBlacklist, None);
-    let wl_text = locales::get_text(lang.as_str(), locales::LocaleKey::ModeWhitelist, None);
+    let bl_text = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ModeBlacklist, None);
+    let wl_text = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ModeWhitelist, None);
 
     let mk_act = |mode: MuteListMode| {
         CallbackAction::Subscriber(SubAction::ModeSet {

@@ -67,22 +67,22 @@ fn build_subscriber_details_text(
 ) -> String {
     let notif_setting = settings.notification_settings.clone();
     let notif_text = match notif_setting {
-        NotificationSetting::All => locales::get_text(
+        NotificationSetting::All => locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::BtnSubAll,
             args!(marker = "").as_ref(),
         ),
-        NotificationSetting::JoinOff => locales::get_text(
+        NotificationSetting::JoinOff => locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::BtnSubLeave,
             args!(marker = "").as_ref(),
         ),
-        NotificationSetting::LeaveOff => locales::get_text(
+        NotificationSetting::LeaveOff => locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::BtnSubJoin,
             args!(marker = "").as_ref(),
         ),
-        NotificationSetting::None => locales::get_text(
+        NotificationSetting::None => locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::BtnSubNone,
             args!(marker = "").as_ref(),
@@ -92,38 +92,38 @@ fn build_subscriber_details_text(
     let mute_mode = settings.mute_list_mode.clone();
     let mode_text = match mute_mode {
         MuteListMode::Blacklist => {
-            locales::get_text(lang.as_str(), locales::LocaleKey::ModeBlacklist, None)
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ModeBlacklist, None)
         }
         MuteListMode::Whitelist => {
-            locales::get_text(lang.as_str(), locales::LocaleKey::ModeWhitelist, None)
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ModeWhitelist, None)
         }
     };
     let sub_lang = settings.language_code;
 
     let tt_user = settings.teamtalk_username.as_ref().map_or_else(
-        || locales::get_text(lang.as_str(), locales::LocaleKey::ValNone, None),
+        || locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ValNone, None),
         ToString::to_string,
     );
     let admin_label = if is_admin {
-        locales::get_text(lang.as_str(), locales::LocaleKey::ValYes, None)
+        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ValYes, None)
     } else {
-        locales::get_text(lang.as_str(), locales::LocaleKey::ValNo, None)
+        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ValNo, None)
     };
     let args = args!(
         name = display_name,
         tt_user = tt_user,
         lang = sub_lang.as_str(),
         noon = if settings.not_on_online_enabled {
-            locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
         } else {
-            locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
         },
         notif = notif_text,
         mode = mode_text,
         admin = admin_label
     );
 
-    locales::get_text(
+    locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::SubDetailsTitle,
         args.as_ref(),
@@ -140,7 +140,7 @@ fn build_subscriber_details_keyboard(
 ) -> InlineKeyboardMarkup {
     let btn = |text_key: locales::LocaleKey, action: SubAction| {
         callback_button(
-            locales::get_text(lang.as_str(), text_key, None),
+            locales::get_text_or_log(lang.as_str(), text_key, None),
             CallbackAction::Subscriber(action),
         )
     };

@@ -14,7 +14,7 @@ pub async fn send_sub_lang_menu(
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::SubLangTitle,
         args.as_ref(),
@@ -61,7 +61,7 @@ pub async fn send_sub_notif_menu(
     return_page: usize,
 ) -> ResponseResult<()> {
     let args = args!(id = target_id.to_string());
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::SubNotifTitle,
         args.as_ref(),
@@ -69,22 +69,22 @@ pub async fn send_sub_notif_menu(
 
     let marker_args = args!(marker = "");
 
-    let btn_all = locales::get_text(
+    let btn_all = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::BtnSubAll,
         marker_args.as_ref(),
     );
-    let btn_join = locales::get_text(
+    let btn_join = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::BtnSubJoin,
         marker_args.as_ref(),
     );
-    let btn_leave = locales::get_text(
+    let btn_leave = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::BtnSubLeave,
         marker_args.as_ref(),
     );
-    let btn_none = locales::get_text(
+    let btn_none = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::BtnSubNone,
         marker_args.as_ref(),

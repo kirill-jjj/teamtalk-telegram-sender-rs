@@ -19,7 +19,7 @@ pub(super) async fn admin_add_confirm(
         answer_callback_empty(ctx.bot, ctx.q_id).await?;
         return Ok(());
     }
-    let text = locales::get_text(ctx.lang.as_str(), locales::LocaleKey::ConfirmAdminAdd, None);
+    let text = locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::ConfirmAdminAdd, None);
     let keyboard = confirm_cancel_keyboard(
         ctx.lang,
         locales::LocaleKey::BtnYes,
@@ -45,7 +45,7 @@ pub(super) async fn admin_remove_confirm(
         answer_callback_empty(ctx.bot, ctx.q_id).await?;
         return Ok(());
     }
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         ctx.lang.as_str(),
         locales::LocaleKey::ConfirmAdminRemove,
         None,
@@ -93,7 +93,7 @@ pub(super) async fn admin_add(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text(ctx.lang.as_str(), locales::LocaleKey::ToastAdminAdded, None),
+        locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::ToastAdminAdded, None),
         true,
     )
     .await?;
@@ -129,7 +129,7 @@ pub(super) async fn admin_remove(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text(
+        locales::get_text_or_log(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastAdminRemoved,
             None,

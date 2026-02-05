@@ -11,13 +11,13 @@ pub(super) async fn handle_add_admin(ctx: &UserCtx) {
         .as_ref()
         .is_some_and(|u| u == &ctx.username);
     if !is_main_admin {
-        let text = locales::get_text(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
+        let text = locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
         ctx.send_reply(text).await;
         return;
     }
     let parts: Vec<&str> = ctx.content.split_whitespace().collect();
     if parts.len() < 2 {
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminNoIds,
             None,
@@ -50,7 +50,7 @@ pub(super) async fn handle_add_admin(ctx: &UserCtx) {
     }
     if added_count > 0 {
         let args = args!(count = added_count);
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminAdded,
             args.as_ref(),
@@ -59,7 +59,7 @@ pub(super) async fn handle_add_admin(ctx: &UserCtx) {
     }
     if failed_count > 0 {
         let args = args!(count = failed_count);
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminAddFail,
             args.as_ref(),
@@ -74,13 +74,13 @@ pub(super) async fn handle_remove_admin(ctx: &UserCtx) {
         .as_ref()
         .is_some_and(|u| u == &ctx.username);
     if !is_main_admin {
-        let text = locales::get_text(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
+        let text = locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
         ctx.send_reply(text).await;
         return;
     }
     let parts: Vec<&str> = ctx.content.split_whitespace().collect();
     if parts.len() < 2 {
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminNoIds,
             None,
@@ -116,7 +116,7 @@ pub(super) async fn handle_remove_admin(ctx: &UserCtx) {
     }
     if removed_count > 0 {
         let args = args!(count = removed_count);
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminRemoved,
             args.as_ref(),
@@ -125,7 +125,7 @@ pub(super) async fn handle_remove_admin(ctx: &UserCtx) {
     }
     if failed_count > 0 {
         let args = args!(count = failed_count);
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminRemoveFail,
             args.as_ref(),

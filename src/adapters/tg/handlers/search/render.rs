@@ -16,7 +16,7 @@ pub(super) async fn render_search_results(
     candidates: &[SearchCandidate],
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let title = locales::get_text(
+    let title = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::ListSearchTitle,
         args!(query = query.to_string()).as_ref(),

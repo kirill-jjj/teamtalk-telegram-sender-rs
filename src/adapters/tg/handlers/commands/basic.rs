@@ -51,7 +51,7 @@ pub(super) async fn handle_start(ctx: &CommandCtx<'_>, token: String) -> Respons
             ctx.bot
                 .send_message(
                     ctx.msg.chat.id,
-                    locales::get_text(
+                    locales::get_text_or_log(
                         ctx.lang.as_str(),
                         locales::LocaleKey::CmdTtBanned,
                         args.as_ref(),
@@ -75,7 +75,7 @@ pub(super) async fn handle_start(ctx: &CommandCtx<'_>, token: String) -> Respons
             ctx.bot
                 .send_message(
                     ctx.msg.chat.id,
-                    locales::get_text(
+                    locales::get_text_or_log(
                         ctx.lang.as_str(),
                         locales::LocaleKey::CmdSuccessSubGuest,
                         None,
@@ -118,7 +118,7 @@ pub(super) async fn handle_menu(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
     ctx.bot
         .send_message(
             ctx.msg.chat.id,
-            locales::get_text(ctx.lang.as_str(), locales::LocaleKey::MenuTitle, None),
+            locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::MenuTitle, None),
         )
         .parse_mode(ParseMode::Html)
         .reply_to(ctx.msg.id)
@@ -134,7 +134,7 @@ pub(super) async fn handle_help(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
     ctx.bot
         .send_message(
             ctx.msg.chat.id,
-            locales::get_text(ctx.lang.as_str(), locales::LocaleKey::HelpText, None),
+            locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::HelpText, None),
         )
         .parse_mode(ParseMode::Html)
         .reply_to(ctx.msg.id)
@@ -180,7 +180,7 @@ pub(super) async fn handle_unsub(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
     if !ensure_subscribed(ctx.bot, ctx.msg, ctx.db, ctx.config, ctx.lang).await {
         return Ok(());
     }
-    let text = locales::get_text(
+    let text = locales::get_text_or_log(
         ctx.lang.as_str(),
         locales::LocaleKey::UnsubConfirmText,
         None,

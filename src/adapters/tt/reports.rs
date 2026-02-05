@@ -51,7 +51,7 @@ pub(super) fn handle_who_command(
     let total = users.len();
 
     let header_args = args!(server = server_name.as_str(), count = total);
-    let header = locales::get_text(
+    let header = locales::get_text_or_log(
         lang.as_str(),
         locales::LocaleKey::TtReportHeader,
         header_args.as_ref(),
@@ -72,13 +72,13 @@ pub(super) fn handle_who_command(
             .join(", ");
 
         let location = if chan_name == ROOT_MARKER {
-            locales::get_text(lang.as_str(), locales::LocaleKey::TtReportRoot, None)
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::TtReportRoot, None)
         } else {
             chan_name
         };
 
         let row_args = args!(users = user_list, channel = location);
-        let row_text = locales::get_text(
+        let row_text = locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::TtReportRow,
             row_args.as_ref(),
@@ -90,7 +90,7 @@ pub(super) fn handle_who_command(
     }
     if !unauth_users.is_empty() {
         let unauth_label =
-            locales::get_text(lang.as_str(), locales::LocaleKey::TtReportUnauth, None);
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::TtReportUnauth, None);
         let unauth_list = unauth_users
             .iter()
             .map(TtNickname::as_str)

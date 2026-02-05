@@ -17,7 +17,7 @@ async fn send_count(
     key: locales::LocaleKey,
     count: u64,
 ) -> ResponseResult<()> {
-    let text = locales::get_text(ctx.lang.as_str(), key, args!(count = count).as_ref());
+    let text = locales::get_text_or_log(ctx.lang.as_str(), key, args!(count = count).as_ref());
     ctx.bot
         .send_message(ctx.msg.chat.id, text)
         .reply_to(ctx.msg.id)

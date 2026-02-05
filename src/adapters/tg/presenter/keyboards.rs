@@ -18,7 +18,7 @@ pub fn back_button(
     back_action: CallbackAction,
 ) -> InlineKeyboardButton {
     callback_button(
-        locales::get_text(lang.as_str(), back_key, None),
+        locales::get_text_or_log(lang.as_str(), back_key, None),
         back_action,
     )
 }
@@ -31,8 +31,8 @@ pub fn confirm_cancel_keyboard(
     no_action: CallbackAction,
 ) -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new(vec![vec![
-        callback_button(locales::get_text(lang.as_str(), yes_key, None), yes_action),
-        callback_button(locales::get_text(lang.as_str(), no_key, None), no_action),
+        callback_button(locales::get_text_or_log(lang.as_str(), yes_key, None), yes_action),
+        callback_button(locales::get_text_or_log(lang.as_str(), no_key, None), no_action),
     ]])
 }
 
@@ -42,7 +42,7 @@ pub fn back_button_keyboard(
     back_action: CallbackAction,
 ) -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new(vec![vec![callback_button(
-        locales::get_text(lang.as_str(), back_key, None),
+        locales::get_text_or_log(lang.as_str(), back_key, None),
         back_action,
     )]])
 }
@@ -53,7 +53,7 @@ pub fn back_btn(
     back_action: CallbackAction,
 ) -> (String, CallbackAction) {
     (
-        locales::get_text(lang.as_str(), back_key, None),
+        locales::get_text_or_log(lang.as_str(), back_key, None),
         back_action,
     )
 }
@@ -75,14 +75,14 @@ where
 
     if current_page > 0 {
         nav_row.push(callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnPrev, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnPrev, None),
             page_builder(current_page - 1),
         ));
     }
 
     if total_pages > 0 && current_page < total_pages - 1 {
         nav_row.push(callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnNext, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnNext, None),
             page_builder(current_page + 1),
         ));
     }
@@ -146,38 +146,38 @@ pub fn create_main_menu_keyboard(lang: LanguageCode, is_admin: bool) -> InlineKe
 
     let mut buttons = vec![
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuWho, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuWho, None),
             CallbackAction::Menu(MenuAction::Who),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuSettings, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuSettings, None),
             CallbackAction::Settings(crate::core::callbacks::SettingsAction::Main),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuUnsub, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuUnsub, None),
             CallbackAction::Menu(MenuAction::Unsub),
         )],
         vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuHelp, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuHelp, None),
             CallbackAction::Menu(MenuAction::Help),
         )],
     ];
 
     if is_admin {
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuKick, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuKick, None),
             CallbackAction::Admin(AdminAction::KickList { page: 0 }),
         )]);
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuBan, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuBan, None),
             CallbackAction::Admin(AdminAction::BanList { page: 0 }),
         )]);
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuUnban, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuUnban, None),
             CallbackAction::Admin(AdminAction::UnbanList { page: 0 }),
         )]);
         buttons.push(vec![callback_button(
-            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMenuSubs, None),
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMenuSubs, None),
             CallbackAction::Admin(AdminAction::SubsList { page: 0 }),
         )]);
     }

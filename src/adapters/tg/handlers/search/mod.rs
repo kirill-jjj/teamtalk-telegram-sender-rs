@@ -47,7 +47,7 @@ pub async fn maybe_handle_search_message(
 
     if matches.is_empty() {
         let args = args!(query = query.to_string());
-        let text = locales::get_text(
+        let text = locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::ListSearchEmpty,
             args.as_ref(),

@@ -4,13 +4,19 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use strum::{EnumIter, IntoStaticStr};
+use thiserror::Error;
 use unic_langid::LanguageIdentifier;
 
 static_loader! {
     static LOCALES = {
         locales: "./locales",
         fallback_language: "en",
-        customise: |bundle| bundle.set_use_isolating(false),
+        customise: |bundle| {
+            bundle.set_use_isolating(false);
+            if let Err(e) = bundle.add_builtins() {
+                tracing::error!(error = %e, "Failed to register Fluent builtins");
+            }
+        },
     };
 }
 
@@ -119,7 +125,8 @@ pub enum LocaleKey {
     CmdTtBanned,
     CmdUnauth,
     CmdUserBanned,
-    DisplayGuestAccount,    EventJoin,
+    DisplayGuestAccount,
+    EventJoin,
     EventJoinMale,
     EventJoinFemale,
     EventJoinNeutral,
@@ -254,14 +261,81 @@ pub fn get_text(
     lang_code: &str,
     key: LocaleKey,
     args: Option<&HashMap<Cow<'static, str>, FluentValue>>,
-) -> String {
+) -> Result<String, LocaleError> {
     let lang_id = get_lang_id(lang_code);
     let key = key.as_str();
 
-    args.map_or_else(
-        || LOCALES.lookup(lang_id, key),
-        |args_map| LOCALES.lookup_with_args(lang_id, key, args_map),
-    )
+    let value = args.map_or_else(
+        || LOCALES.try_lookup(lang_id, key),
+        |args_map| LOCALES.try_lookup_with_args(lang_id, key, args_map),
+    );
+
+    if let Some(value) = value {
+        return Ok(value);
+    }
+
+    let primary_error = args
+        .map_or_else(
+            || LOCALES.lookup_single_language::<Cow<'static, str>>(lang_id, key, None),
+            |args_map| {
+                LOCALES.lookup_single_language::<Cow<'static, str>>(lang_id, key, Some(args_map))
+            },
+        )
+        .err()
+        .map(|e| e.to_string());
+
+    let fallback = LOCALES.fallback();
+    let fallback_error = if lang_id == fallback {
+        None
+    } else {
+        args.map_or_else(
+            || LOCALES.lookup_single_language::<Cow<'static, str>>(fallback, key, None),
+            |args_map| {
+                LOCALES.lookup_single_language::<Cow<'static, str>>(fallback, key, Some(args_map))
+            },
+        )
+        .err()
+        .map(|e| e.to_string())
+    };
+
+    Err(LocaleError {
+        lang: lang_code.to_string(),
+        key: key.to_string(),
+        primary: primary_error,
+        fallback: fallback_error,
+    })
+}
+
+pub fn get_text_or_log(
+    lang_code: &str,
+    key: LocaleKey,
+    args: Option<&HashMap<Cow<'static, str>, FluentValue>>,
+) -> String {
+    let key_str = key.as_str();
+    match get_text(lang_code, key, args) {
+        Ok(value) => value,
+        Err(error) => {
+            tracing::error!(
+                lang = lang_code,
+                key = key_str,
+                has_args = args.is_some(),
+                error = %error,
+                "Localization lookup failed"
+            );
+            format!("Unknown localization key: {key_str:?}")
+        }
+    }
+}
+
+#[derive(Debug, Error)]
+#[error(
+    "localization lookup failed for key {key} lang {lang}: primary={primary:?}, fallback={fallback:?}"
+)]
+pub struct LocaleError {
+    lang: String,
+    key: String,
+    primary: Option<String>,
+    fallback: Option<String>,
 }
 
 #[cfg(test)]
@@ -282,5 +356,3 @@ macro_rules! args {
         Some(map)
     }};
 }
-
-

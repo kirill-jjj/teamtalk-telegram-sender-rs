@@ -33,7 +33,7 @@ pub(super) async fn handle_mode_set(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text(
+        locales::get_text_or_log(
             lang.as_str(),
             locales::LocaleKey::ToastMuteModeSet,
             args!(mode = mode.to_string()).as_ref(),

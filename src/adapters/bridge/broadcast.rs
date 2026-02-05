@@ -84,7 +84,7 @@ pub(super) async fn handle_broadcast(
                     nickname = escaped_nick.clone(),
                     server = escaped_server.clone()
                 );
-                locales::get_text(lang.as_str(), key, args.as_ref())
+                locales::get_text_or_log(lang.as_str(), key, args.as_ref())
             })
             .clone();
 

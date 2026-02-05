@@ -8,14 +8,14 @@ pub(super) async fn handle_help(ctx: &UserCtx) {
         .as_ref()
         .is_some_and(|u| u == &ctx.username);
     let mut help_msg =
-        locales::get_text(ctx.reply_lang.as_str(), locales::LocaleKey::HelpText, None);
+        locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::HelpText, None);
     if is_main_admin {
-        let header = locales::get_text(
+        let header = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminHelpHeader,
             None,
         );
-        let cmds = locales::get_text(
+        let cmds = locales::get_text_or_log(
             ctx.reply_lang.as_str(),
             locales::LocaleKey::TtAdminHelpCmds,
             None,

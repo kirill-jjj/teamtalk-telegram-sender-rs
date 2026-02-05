@@ -70,7 +70,7 @@ async fn load_user_lang(
             )
             .await;
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(
+                .text(locales::get_text_or_log(
                     default_lang.as_str(),
                     locales::LocaleKey::CmdError,
                     None,
@@ -94,7 +94,7 @@ async fn ensure_subscribed(
         Ok(true) => Ok(true),
         Ok(false) => {
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(
+                .text(locales::get_text_or_log(
                     lang.as_str(),
                     locales::LocaleKey::CmdNotSubscribed,
                     None,
@@ -120,7 +120,7 @@ async fn ensure_subscribed(
             )
             .await;
             bot.answer_callback_query(query_id)
-                .text(locales::get_text(
+                .text(locales::get_text_or_log(
                     lang.as_str(),
                     locales::LocaleKey::CmdError,
                     None,

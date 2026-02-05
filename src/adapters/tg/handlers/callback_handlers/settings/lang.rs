@@ -37,7 +37,7 @@ pub(super) async fn handle_lang_select(
     bot.edit_message_text(
         msg.chat.id,
         msg.id,
-        locales::get_text(lang.as_str(), locales::LocaleKey::MsgChooseLang, None),
+        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::MsgChooseLang, None),
     )
     .reply_markup(keyboard)
     .await?;
@@ -69,7 +69,7 @@ pub(super) async fn handle_lang_set(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text(
+        locales::get_text_or_log(
             new_lang.as_str(),
             locales::LocaleKey::ToastLangUpdated,
             None,

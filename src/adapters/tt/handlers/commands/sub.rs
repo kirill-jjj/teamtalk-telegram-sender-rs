@@ -40,14 +40,14 @@ pub(super) async fn handle_sub(ctx: &UserCtx) {
 
         if res.is_ok() {
             let link = format!("https://t.me/{bot_user}?start={token}");
-            let text = locales::get_text(
+            let text = locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtSubLink,
                 args!(link = link).as_ref(),
             );
             ctx.send_reply(text).await;
         } else {
-            let text = locales::get_text(
+            let text = locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtErrorGeneric,
                 None,
@@ -82,14 +82,14 @@ pub(super) async fn handle_unsub(ctx: &UserCtx) {
 
         if res.is_ok() {
             let link = format!("https://t.me/{bot_user}?start={token}");
-            let text = locales::get_text(
+            let text = locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtUnsubLink,
                 args!(link = link).as_ref(),
             );
             ctx.send_reply(text).await;
         } else {
-            let text = locales::get_text(
+            let text = locales::get_text_or_log(
                 ctx.reply_lang.as_str(),
                 locales::LocaleKey::TtErrorGeneric,
                 None,
