@@ -257,7 +257,7 @@ impl LocaleKey {
     }
 }
 
-pub fn get_text(
+pub fn try_get_text(
     lang_code: &str,
     key: LocaleKey,
     args: Option<&HashMap<Cow<'static, str>, FluentValue>>,
@@ -306,13 +306,13 @@ pub fn get_text(
     })
 }
 
-pub fn get_text_or_log(
+pub fn get_text(
     lang_code: &str,
     key: LocaleKey,
     args: Option<&HashMap<Cow<'static, str>, FluentValue>>,
 ) -> String {
     let key_str = key.as_str();
-    match get_text(lang_code, key, args) {
+    match try_get_text(lang_code, key, args) {
         Ok(value) => value,
         Err(error) => {
             tracing::error!(

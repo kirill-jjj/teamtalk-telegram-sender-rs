@@ -43,7 +43,7 @@ pub(super) async fn lang_set(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastLangSet,
             args!(id = sub_id.to_string(), lang = new_lang.as_str()).as_ref(),
@@ -85,7 +85,7 @@ pub(super) async fn notif_set(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastNotifSet,
             args!(id = sub_id.to_string(), val = val.to_string()).as_ref(),
@@ -118,7 +118,7 @@ pub(super) async fn noon_toggle(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastNoonToggled,
             args!(id = sub_id.to_string(), status = "toggled").as_ref(),
@@ -160,7 +160,7 @@ pub(super) async fn mode_set(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastMuteModeSubSet,
             args!(id = sub_id.to_string(), val = mode.to_string()).as_ref(),

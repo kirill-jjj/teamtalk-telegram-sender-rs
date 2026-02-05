@@ -39,18 +39,18 @@ pub async fn send_queue_settings(
         bot.edit_message_text(
             msg.chat.id,
             msg.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
         )
         .await?;
         return Ok(());
     }
 
     let user_status = if matches!(view.user, QueueToggleStatus::Enabled) {
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+        locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
     } else {
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+        locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
     };
-    let user_btn = locales::get_text_or_log(
+    let user_btn = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::BtnQueueUserToggle,
         args!(status = user_status).as_ref(),
@@ -63,11 +63,11 @@ pub async fn send_queue_settings(
 
     if matches!(view.admin, QueueAdminStatus::Admin) {
         let global_status = if matches!(view.global, QueueToggleStatus::Enabled) {
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+            locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
         } else {
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+            locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
         };
-        let global_btn = locales::get_text_or_log(
+        let global_btn = locales::get_text(
             lang.as_str(),
             locales::LocaleKey::BtnQueueGlobalToggle,
             args!(status = global_status).as_ref(),
@@ -79,13 +79,13 @@ pub async fn send_queue_settings(
     }
 
     rows.push(vec![callback_button(
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnQueueClear, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::BtnQueueClear, None),
         CallbackAction::Settings(SettingsAction::QueueClearSelf),
     )]);
 
     if matches!(view.admin, QueueAdminStatus::Admin) {
         rows.push(vec![callback_button(
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnQueueClearAll, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnQueueClearAll, None),
             CallbackAction::Settings(SettingsAction::QueueClearAll),
         )]);
     }
@@ -100,7 +100,7 @@ pub async fn send_queue_settings(
     bot.edit_message_text(
         msg.chat.id,
         msg.id,
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::QueueSettingsTitle, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::QueueSettingsTitle, None),
     )
     .reply_markup(keyboard)
     .parse_mode(ParseMode::Html)

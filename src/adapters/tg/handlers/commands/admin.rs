@@ -41,7 +41,7 @@ pub(super) async fn handle_kick_or_ban(ctx: &CommandCtx<'_>, cmd: Command) -> Re
     };
 
     let args = args!(server = ctx.config.teamtalk.display_name().to_string());
-    let base = locales::get_text_or_log(ctx.lang.as_str(), title_key, args.as_ref());
+    let base = locales::get_text(ctx.lang.as_str(), title_key, args.as_ref());
     let title = append_search_hint(&base, ctx.lang);
 
     let keyboard = create_user_list_keyboard(
@@ -164,7 +164,7 @@ pub(super) async fn handle_exit(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
     ctx.bot
         .send_message(
             ctx.msg.chat.id,
-            locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::CmdShuttingDown, None),
+            locales::get_text(ctx.lang.as_str(), locales::LocaleKey::CmdShuttingDown, None),
         )
         .reply_to(ctx.msg.id)
         .await?;
@@ -294,7 +294,7 @@ pub(super) async fn handle_message(ctx: &CommandCtx<'_>, text: String) -> Respon
         tg_admin_service::send_direct_message(ctx.bot, &subs, ctx.telegram_id, &text).await;
 
     let args = args!(sent = sent, failed = failed);
-    let reply = locales::get_text_or_log(
+    let reply = locales::get_text(
         ctx.lang.as_str(),
         locales::LocaleKey::CmdMessageSent,
         args.as_ref(),

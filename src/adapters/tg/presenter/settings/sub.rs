@@ -13,8 +13,7 @@ pub async fn send_sub_settings(
     lang: LanguageCode,
     current_notif: NotificationSetting,
 ) -> ResponseResult<()> {
-    let check_icon =
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::IconCheckSimple, None);
+    let check_icon = locales::get_text(lang.as_str(), locales::LocaleKey::IconCheckSimple, None);
     let mk = |ns: NotificationSetting| {
         if ns == current_notif {
             check_icon.clone()
@@ -23,22 +22,22 @@ pub async fn send_sub_settings(
         }
     };
 
-    let btn_all = locales::get_text_or_log(
+    let btn_all = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::BtnSubAll,
         args!(marker = mk(NotificationSetting::All)).as_ref(),
     );
-    let btn_join = locales::get_text_or_log(
+    let btn_join = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::BtnSubJoin,
         args!(marker = mk(NotificationSetting::LeaveOff)).as_ref(),
     );
-    let btn_leave = locales::get_text_or_log(
+    let btn_leave = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::BtnSubLeave,
         args!(marker = mk(NotificationSetting::JoinOff)).as_ref(),
     );
-    let btn_none = locales::get_text_or_log(
+    let btn_none = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::BtnSubNone,
         args!(marker = mk(NotificationSetting::None)).as_ref(),
@@ -69,7 +68,7 @@ pub async fn send_sub_settings(
     bot.edit_message_text(
         msg.chat.id,
         msg.id,
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnSubSettings, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::BtnSubSettings, None),
     )
     .reply_markup(keyboard)
     .parse_mode(ParseMode::Html)

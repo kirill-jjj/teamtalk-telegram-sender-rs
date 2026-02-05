@@ -28,7 +28,7 @@ pub(super) async fn handle_notif_select(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
             )
             .await?;
             return Ok(());
@@ -67,7 +67,7 @@ pub(super) async fn handle_noon_toggle(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdFailNoonGuest, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdFailNoonGuest, None),
             true,
         )
         .await?;
@@ -77,14 +77,14 @@ pub(super) async fn handle_noon_toggle(
     match tg_settings_service::toggle_noon(&state.db, telegram_id).await {
         Ok(new_val) => {
             let status = if new_val {
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+                locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
             } else {
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+                locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
             };
             if let Err(e) = answer_callback(
                 bot,
                 &q.id,
-                locales::get_text_or_log(
+                locales::get_text(
                     lang.as_str(),
                     locales::LocaleKey::RespNoonUpdated,
                     args!(status = status).as_ref(),

@@ -20,7 +20,7 @@ async fn send_voice_reply(
 ) -> Result<(), super::voice::StreamVoiceError> {
     let duration = format_duration(voice.duration.seconds());
     let args = args!(msg = original_text.to_string(), duration = duration);
-    let announce_text = locales::get_text_or_log(
+    let announce_text = locales::get_text(
         ctx.admin_lang.as_str(),
         locales::LocaleKey::TtChannelReply,
         args.as_ref(),
@@ -35,7 +35,7 @@ async fn send_text_reply(
     text: &str,
 ) -> Result<(), tokio::sync::mpsc::error::SendError<TtCommand>> {
     let args = args!(msg = original_text.to_string(), reply = text.to_string());
-    let channel_text = locales::get_text_or_log(
+    let channel_text = locales::get_text(
         ctx.admin_lang.as_str(),
         locales::LocaleKey::TtChannelReplyText,
         args.as_ref(),
@@ -86,7 +86,7 @@ pub(super) async fn handle_channel_reply(
                 if let Err(e) = send_voice_reply(&ctx, channel_id, &original_text, voice).await {
                     let error = e.to_string();
                     notify_send_error(&ctx, &error).await;
-                    let reply_text = locales::get_text_or_log(
+                    let reply_text = locales::get_text(
                         ctx.admin_lang.as_str(),
                         locales::LocaleKey::TgReplyFailed,
                         None,
@@ -107,7 +107,7 @@ pub(super) async fn handle_channel_reply(
                     );
                     let error = e.to_string();
                     notify_send_error(&ctx, &error).await;
-                    let reply_text = locales::get_text_or_log(
+                    let reply_text = locales::get_text(
                         ctx.admin_lang.as_str(),
                         locales::LocaleKey::TgReplyFailed,
                         None,
@@ -123,7 +123,7 @@ pub(super) async fn handle_channel_reply(
                 return Ok(true);
             }
 
-            let reply_text = locales::get_text_or_log(
+            let reply_text = locales::get_text(
                 ctx.admin_lang.as_str(),
                 locales::LocaleKey::TgReplySent,
                 None,

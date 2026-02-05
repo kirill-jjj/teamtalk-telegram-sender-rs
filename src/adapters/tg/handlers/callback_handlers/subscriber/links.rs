@@ -64,7 +64,7 @@ pub(super) async fn unlink(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastAccountUnlinked,
             args!(user = sub_id.to_string()).as_ref(),
@@ -145,7 +145,7 @@ pub(super) async fn link_perform(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastAccountLinked,
             args!(user = username.to_string()).as_ref(),

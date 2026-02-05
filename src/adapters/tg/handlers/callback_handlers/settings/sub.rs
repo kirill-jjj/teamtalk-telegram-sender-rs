@@ -28,7 +28,7 @@ pub(super) async fn handle_sub_select(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
             )
             .await?;
             return Ok(());
@@ -65,12 +65,11 @@ pub(super) async fn handle_sub_set(
         NotificationSetting::LeaveOff => locales::LocaleKey::BtnSubJoin,
         NotificationSetting::None => locales::LocaleKey::BtnSubNone,
     };
-    let setting_text =
-        locales::get_text_or_log(lang.as_str(), text_key, args!(marker = "").as_ref());
+    let setting_text = locales::get_text(lang.as_str(), text_key, args!(marker = "").as_ref());
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(
+        locales::get_text(
             lang.as_str(),
             locales::LocaleKey::RespSubUpdated,
             args!(text = setting_text).as_ref(),

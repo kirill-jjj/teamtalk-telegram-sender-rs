@@ -72,7 +72,7 @@ pub(super) async fn handle_unban_perform(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ToastUserUnbanned, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::ToastUserUnbanned, None),
         false,
     )
     .await?;

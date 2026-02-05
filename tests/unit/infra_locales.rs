@@ -438,15 +438,15 @@ fn locale_keys_have_nonempty_blocks() {
 
 #[test]
 fn get_text_requires_args_for_report_header() {
-    assert!(get_text("en", LocaleKey::TtReportHeader, None).is_err());
-    assert!(get_text("ru", LocaleKey::TtReportHeader, None).is_err());
+    assert!(try_get_text("en", LocaleKey::TtReportHeader, None).is_err());
+    assert!(try_get_text("ru", LocaleKey::TtReportHeader, None).is_err());
 }
 
 #[test]
 fn get_text_with_args_formats_report_header() {
     let args = args!(server = "Test", count = 2);
-    let en = get_text("en", LocaleKey::TtReportHeader, args.as_ref()).unwrap();
-    let ru = get_text("ru", LocaleKey::TtReportHeader, args.as_ref()).unwrap();
+    let en = try_get_text("en", LocaleKey::TtReportHeader, args.as_ref()).unwrap();
+    let ru = try_get_text("ru", LocaleKey::TtReportHeader, args.as_ref()).unwrap();
     assert!(en.contains("Test"));
     assert!(ru.contains("Test"));
 }

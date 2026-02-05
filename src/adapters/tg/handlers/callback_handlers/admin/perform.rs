@@ -27,7 +27,7 @@ pub(super) async fn handle_kick_perform(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ToastCommandSent, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::ToastCommandSent, None),
         false,
     )
     .await
@@ -48,7 +48,7 @@ pub(super) async fn handle_ban_perform(
         return answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdNoUsers, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdNoUsers, None),
             true,
         )
         .await;
@@ -69,7 +69,7 @@ pub(super) async fn handle_ban_perform(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
             true,
         )
         .await?;
@@ -96,7 +96,7 @@ pub(super) async fn handle_ban_perform(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::ToastCommandSent, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::ToastCommandSent, None),
         false,
     )
     .await

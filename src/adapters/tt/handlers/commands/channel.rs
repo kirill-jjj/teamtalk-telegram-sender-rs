@@ -55,7 +55,7 @@ pub(super) fn handle_channel_message(client: &Client, ctx: &WorkerContext, msg: 
             } else {
                 locales::LocaleKey::CmdUnauth
             };
-            let text = locales::get_text_or_log(reply_lang.as_str(), text_key, None);
+            let text = locales::get_text(reply_lang.as_str(), text_key, None);
             if let Err(e) = tx_tt_cmd
                 .send(TtCommand::SendToChannel { channel_id, text })
                 .await

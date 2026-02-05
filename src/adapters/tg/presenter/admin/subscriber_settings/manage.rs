@@ -20,7 +20,7 @@ pub async fn send_sub_manage_tt_menu(
     tt_user: Option<TtUsername>,
 ) -> ResponseResult<()> {
     let args = args!(id = sub_id.to_string());
-    let text = locales::get_text_or_log(
+    let text = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::SubManageTtTitle,
         args.as_ref(),
@@ -30,7 +30,7 @@ pub async fn send_sub_manage_tt_menu(
     if let Some(user) = tt_user {
         let args_btn = args!(user = user.to_string());
         buttons.push(vec![callback_button(
-            locales::get_text_or_log(
+            locales::get_text(
                 lang.as_str(),
                 locales::LocaleKey::BtnUnlink,
                 args_btn.as_ref(),
@@ -42,7 +42,7 @@ pub async fn send_sub_manage_tt_menu(
         )]);
     }
     buttons.push(vec![callback_button(
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnLinkNew, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::BtnLinkNew, None),
         CallbackAction::Subscriber(SubAction::LinkList {
             sub_id,
             page: return_page,
@@ -128,7 +128,7 @@ pub async fn send_sub_link_account_list(args: SubLinkAccountListArgs<'_>) -> Res
     );
 
     let args = args!(id = target_id.to_string());
-    let base = locales::get_text_or_log(
+    let base = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::ListLinkTitle,
         args.as_ref(),
@@ -184,7 +184,7 @@ pub async fn send_sub_mute_list(args: SubMuteListArgs<'_>) -> ResponseResult<()>
     } = args;
     let user_name = format!("{target_id}");
     let args = args!(name = user_name);
-    let base = locales::get_text_or_log(
+    let base = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::ListMuteTitleFor,
         args.as_ref(),

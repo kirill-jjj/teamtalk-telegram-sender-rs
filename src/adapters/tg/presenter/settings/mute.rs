@@ -19,19 +19,19 @@ const fn mute_mode_desc_key(current_mode: &MuteListMode) -> LocaleKey {
 }
 
 fn mute_menu_text(lang: LanguageCode, current_mode: &MuteListMode, has_guest: bool) -> String {
-    let mode_desc = locales::get_text_or_log(lang.as_str(), mute_mode_desc_key(current_mode), None);
+    let mode_desc = locales::get_text(lang.as_str(), mute_mode_desc_key(current_mode), None);
     let guest_note = if has_guest {
-        locales::get_text_or_log(lang.as_str(), LocaleKey::MuteGuestNote, None)
+        locales::get_text(lang.as_str(), LocaleKey::MuteGuestNote, None)
     } else {
         String::new()
     };
     let args = args!(mode_desc = mode_desc, guest_note = guest_note);
-    locales::get_text_or_log(lang.as_str(), LocaleKey::MuteTitle, args.as_ref())
+    locales::get_text(lang.as_str(), LocaleKey::MuteTitle, args.as_ref())
 }
 
 fn mute_menu_keyboard(lang: LanguageCode, current_mode: &MuteListMode) -> InlineKeyboardMarkup {
-    let icon_checked = locales::get_text_or_log(lang.as_str(), LocaleKey::IconChecked, None);
-    let icon_unchecked = locales::get_text_or_log(lang.as_str(), LocaleKey::IconUnchecked, None);
+    let icon_checked = locales::get_text(lang.as_str(), LocaleKey::IconChecked, None);
+    let icon_unchecked = locales::get_text(lang.as_str(), LocaleKey::IconUnchecked, None);
 
     let bl_marker = if current_mode == &MuteListMode::Blacklist {
         icon_checked.as_str()
@@ -44,25 +44,25 @@ fn mute_menu_keyboard(lang: LanguageCode, current_mode: &MuteListMode) -> Inline
         icon_unchecked.as_str()
     };
 
-    let btn_blacklist_text = locales::get_text_or_log(
+    let btn_blacklist_text = locales::get_text(
         lang.as_str(),
         LocaleKey::BtnModeBlacklist,
         args!(marker = bl_marker).as_ref(),
     );
-    let btn_whitelist_text = locales::get_text_or_log(
+    let btn_whitelist_text = locales::get_text(
         lang.as_str(),
         LocaleKey::BtnModeWhitelist,
         args!(marker = wl_marker).as_ref(),
     );
 
     let btn_manage_blacklist =
-        locales::get_text_or_log(lang.as_str(), LocaleKey::BtnManageBlacklist, None);
+        locales::get_text(lang.as_str(), LocaleKey::BtnManageBlacklist, None);
     let btn_manage_whitelist =
-        locales::get_text_or_log(lang.as_str(), LocaleKey::BtnManageWhitelist, None);
+        locales::get_text(lang.as_str(), LocaleKey::BtnManageWhitelist, None);
     let btn_server_blacklist =
-        locales::get_text_or_log(lang.as_str(), LocaleKey::BtnMuteServerListBlacklist, None);
+        locales::get_text(lang.as_str(), LocaleKey::BtnMuteServerListBlacklist, None);
     let btn_server_whitelist =
-        locales::get_text_or_log(lang.as_str(), LocaleKey::BtnMuteServerListWhitelist, None);
+        locales::get_text(lang.as_str(), LocaleKey::BtnMuteServerListWhitelist, None);
 
     InlineKeyboardMarkup::new(vec![
         vec![
@@ -175,7 +175,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
             };
 
             let display_name = if Some(acc.username.as_str()) == args.guest_username {
-                locales::get_text_or_log(
+                locales::get_text(
                     args.lang.as_str(),
                     locales::LocaleKey::DisplayGuestAccount,
                     None,
@@ -185,8 +185,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
             };
 
             let fmt_args = args!(name = display_name);
-            let display_text =
-                locales::get_text_or_log(args.lang.as_str(), icon_key, fmt_args.as_ref());
+            let display_text = locales::get_text(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::ServerToggle {
@@ -210,7 +209,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
         args.lang,
     );
 
-    let base = locales::get_text_or_log(args.lang.as_str(), args.title_key, None);
+    let base = locales::get_text(args.lang.as_str(), args.title_key, None);
     let text = append_search_hint(&base, args.lang);
     args.bot
         .edit_message_text(args.msg.chat.id, args.msg.id, text)
@@ -221,8 +220,7 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
 
 pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> ResponseResult<()> {
     if args.items.is_empty() {
-        let text =
-            locales::get_text_or_log(args.lang.as_str(), locales::LocaleKey::ListMuteEmpty, None);
+        let text = locales::get_text(args.lang.as_str(), locales::LocaleKey::ListMuteEmpty, None);
         let keyboard = back_button_keyboard(
             args.lang,
             LocaleKey::BtnBackMute,
@@ -243,7 +241,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
         args.page,
         |username| {
             let display_name = if Some(username.as_str()) == args.guest_username {
-                locales::get_text_or_log(
+                locales::get_text(
                     args.lang.as_str(),
                     locales::LocaleKey::DisplayGuestAccount,
                     None,
@@ -257,8 +255,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
                 MuteListMode::Blacklist => LocaleKey::ItemStatusBlacklistIn,
                 MuteListMode::Whitelist => LocaleKey::ItemStatusWhitelistIn,
             };
-            let display_text =
-                locales::get_text_or_log(args.lang.as_str(), icon_key, fmt_args.as_ref());
+            let display_text = locales::get_text(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {
@@ -282,7 +279,7 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
         args.lang,
     );
 
-    let base = locales::get_text_or_log(args.lang.as_str(), args.title_key, None);
+    let base = locales::get_text(args.lang.as_str(), args.title_key, None);
     let text = append_search_hint(&base, args.lang);
 
     args.bot

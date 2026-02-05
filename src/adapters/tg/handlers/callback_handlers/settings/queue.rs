@@ -83,7 +83,7 @@ pub(super) async fn handle_queue_menu(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
             )
             .await?;
             return Ok(());
@@ -139,7 +139,7 @@ pub(super) async fn handle_queue_toggle_user(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
             true,
         )
         .await?;
@@ -155,7 +155,7 @@ pub(super) async fn handle_queue_toggle_user(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(
+            locales::get_text(
                 lang.as_str(),
                 locales::LocaleKey::RespQueueGlobalDisabledUser,
                 None,
@@ -191,7 +191,7 @@ pub(super) async fn handle_queue_toggle_user(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(lang.as_str(), status_key, None),
+        locales::get_text(lang.as_str(), status_key, None),
         false,
     )
     .await?;
@@ -243,7 +243,7 @@ pub(super) async fn handle_queue_toggle_global(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
             true,
         )
         .await?;
@@ -274,7 +274,7 @@ pub(super) async fn handle_queue_toggle_global(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(lang.as_str(), status_key, None),
+        locales::get_text(lang.as_str(), status_key, None),
         false,
     )
     .await?;
@@ -329,7 +329,7 @@ pub(super) async fn handle_queue_clear_self(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdQueueNoLink, None),
             true,
         )
         .await?;
@@ -355,7 +355,7 @@ pub(super) async fn handle_queue_clear_self(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(
+        locales::get_text(
             lang.as_str(),
             locales::LocaleKey::RespQueueCleared,
             args!(count = cleared).as_ref(),
@@ -410,7 +410,7 @@ pub(super) async fn handle_queue_clear_all(
         answer_callback(
             bot,
             &q.id,
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
             true,
         )
         .await?;
@@ -435,7 +435,7 @@ pub(super) async fn handle_queue_clear_all(
     answer_callback(
         bot,
         &q.id,
-        locales::get_text_or_log(
+        locales::get_text(
             lang.as_str(),
             locales::LocaleKey::RespQueueClearedAll,
             args!(count = cleared).as_ref(),

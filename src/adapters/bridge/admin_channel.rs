@@ -53,7 +53,7 @@ pub(super) async fn handle_to_admin_channel(
         channel = html::escape(channel_name.as_str()),
         msg = html::escape(&msg_content)
     );
-    let text_admin = locales::get_text_or_log(
+    let text_admin = locales::get_text(
         admin_lang.as_str(),
         LocaleKey::AdminChannelPm,
         args_admin.as_ref(),

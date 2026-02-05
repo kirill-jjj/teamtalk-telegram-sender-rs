@@ -89,7 +89,7 @@ pub(super) async fn handle_user_reply(
     } else {
         locales::LocaleKey::TgReplyOffline
     };
-    let reply_text = locales::get_text_or_log(admin_lang.as_str(), reply_key, None);
+    let reply_text = locales::get_text(admin_lang.as_str(), reply_key, None);
     let _ = bot
         .send_message(msg.chat.id, reply_text)
         .reply_to(msg.id)

@@ -90,7 +90,7 @@ pub(super) async fn handle_toggle(
     answer_callback(
         ctx.bot,
         &ctx.q.id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastUserMuted,
             args.as_ref(),

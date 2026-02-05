@@ -21,11 +21,7 @@ pub async fn ensure_subscribed(
             if let Err(e) = bot
                 .send_message(
                     msg.chat.id,
-                    locales::get_text_or_log(
-                        lang.as_str(),
-                        locales::LocaleKey::CmdNotSubscribed,
-                        None,
-                    ),
+                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdNotSubscribed, None),
                 )
                 .parse_mode(ParseMode::Html)
                 .reply_to(msg.id)
@@ -57,7 +53,7 @@ pub async fn ensure_subscribed(
             if let Err(e) = bot
                 .send_message(
                     msg.chat.id,
-                    locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None),
+                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
                 )
                 .parse_mode(ParseMode::Html)
                 .reply_to(msg.id)
@@ -87,8 +83,7 @@ pub async fn check_db_err(
         tracing::error!(error = ?e, "Database error");
         notify_admin_error(bot, config, user_id, context, &e.to_string(), lang).await;
 
-        let error_text =
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None);
+        let error_text = locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None);
         bot.answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
             .text(error_text)
             .show_alert(true)
@@ -115,13 +110,13 @@ pub async fn notify_admin_error(
         AdminErrorContext::TtCommand => LocaleKey::AdminErrorContextTtCommand,
         AdminErrorContext::UpdateListener => LocaleKey::AdminErrorContextUpdateListener,
     };
-    let context_text = locales::get_text_or_log(lang.as_str(), context_key, None);
+    let context_text = locales::get_text(lang.as_str(), context_key, None);
     let args = crate::args!(
         user_id = user_id.to_string(),
         context = context_text,
         error = error.to_string()
     );
-    let text = locales::get_text_or_log(
+    let text = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::AdminErrorUser,
         args.as_ref(),
@@ -161,7 +156,7 @@ pub async fn send_text_key(
     key: LocaleKey,
     reply_to: Option<teloxide::types::MessageId>,
 ) -> ResponseResult<()> {
-    let req = bot.send_message(chat_id, locales::get_text_or_log(lang.as_str(), key, None));
+    let req = bot.send_message(chat_id, locales::get_text(lang.as_str(), key, None));
     if let Some(reply_to) = reply_to {
         req.reply_to(reply_to).await?;
     } else {

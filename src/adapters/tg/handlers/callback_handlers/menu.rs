@@ -47,15 +47,14 @@ pub async fn handle_menu(
         MenuAction::Help => {
             bot.send_message(
                 chat_id,
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::HelpText, None),
+                locales::get_text(lang.as_str(), locales::LocaleKey::HelpText, None),
             )
             .parse_mode(ParseMode::Html)
             .await?;
             answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Unsub => {
-            let text =
-                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::UnsubConfirmText, None);
+            let text = locales::get_text(lang.as_str(), locales::LocaleKey::UnsubConfirmText, None);
             let keyboard = confirm_cancel_keyboard(
                 lang,
                 locales::LocaleKey::BtnYes,

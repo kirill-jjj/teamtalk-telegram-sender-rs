@@ -42,7 +42,7 @@ pub(super) async fn delete(
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(
+        locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastSubscriberDeleted,
             None,
@@ -86,7 +86,7 @@ pub(super) async fn ban(ctx: &SubCtx<'_>, sub_id: TelegramId, page: usize) -> Re
     answer_callback(
         ctx.bot,
         ctx.q_id,
-        locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::ToastUserBanned, None),
+        locales::get_text(ctx.lang.as_str(), locales::LocaleKey::ToastUserBanned, None),
         true,
     )
     .await?;

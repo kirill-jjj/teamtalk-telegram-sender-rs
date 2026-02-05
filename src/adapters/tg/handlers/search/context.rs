@@ -68,7 +68,7 @@ pub async fn set_search_context_raw(
 }
 
 pub fn append_search_hint(text: &str, lang: LanguageCode) -> String {
-    let hint = crate::infra::locales::get_text_or_log(
+    let hint = crate::infra::locales::get_text(
         lang.as_str(),
         crate::infra::locales::LocaleKey::ListSearchHint,
         None,

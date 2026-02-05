@@ -14,11 +14,11 @@ pub async fn send_notif_settings(
     not_on_online_enabled: bool,
 ) -> ResponseResult<()> {
     let status_text = if not_on_online_enabled {
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+        locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
     } else {
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+        locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
     };
-    let noon_text = locales::get_text_or_log(
+    let noon_text = locales::get_text(
         lang.as_str(),
         locales::LocaleKey::BtnNoon,
         args!(status = status_text).as_ref(),
@@ -30,7 +30,7 @@ pub async fn send_notif_settings(
             CallbackAction::Settings(SettingsAction::NoonToggle),
         )],
         vec![callback_button(
-            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::BtnMuteManage, None),
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnMuteManage, None),
             CallbackAction::Settings(SettingsAction::MuteManage),
         )],
         vec![back_button(
@@ -43,7 +43,7 @@ pub async fn send_notif_settings(
     bot.edit_message_text(
         msg.chat.id,
         msg.id,
-        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::NotifSettingsTitle, None),
+        locales::get_text(lang.as_str(), locales::LocaleKey::NotifSettingsTitle, None),
     )
     .reply_markup(keyboard)
     .parse_mode(ParseMode::Html)
