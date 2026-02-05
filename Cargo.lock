@@ -3365,6 +3365,7 @@ dependencies = [
  "tokio-util",
  "toml",
  "tracing",
+ "tracing-log",
  "tracing-subscriber",
  "unic-langid",
  "uuid",

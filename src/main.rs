@@ -41,6 +41,7 @@ async fn main() -> Result<()> {
 
     let config_paths = bootstrap::cli::collect_config_paths(&args)?;
 
+    tracing_log::LogTracer::init()?;
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
     tracing_subscriber::fmt().with_env_filter(filter).init();
 
@@ -103,8 +104,9 @@ async fn main() -> Result<()> {
 }
 
 fn build_dispatch(level: &str) -> tracing::Dispatch {
+    let filter = format!("{level},sqlx=warn,sqlx::query=warn");
     let subscriber = tracing_subscriber::registry()
-        .with(EnvFilter::new(level))
+        .with(EnvFilter::new(filter))
         .with(tracing_subscriber::fmt::layer());
     tracing::Dispatch::new(subscriber)
 }
