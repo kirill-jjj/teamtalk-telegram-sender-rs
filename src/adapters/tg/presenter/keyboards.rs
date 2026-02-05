@@ -31,8 +31,14 @@ pub fn confirm_cancel_keyboard(
     no_action: CallbackAction,
 ) -> InlineKeyboardMarkup {
     InlineKeyboardMarkup::new(vec![vec![
-        callback_button(locales::get_text_or_log(lang.as_str(), yes_key, None), yes_action),
-        callback_button(locales::get_text_or_log(lang.as_str(), no_key, None), no_action),
+        callback_button(
+            locales::get_text_or_log(lang.as_str(), yes_key, None),
+            yes_action,
+        ),
+        callback_button(
+            locales::get_text_or_log(lang.as_str(), no_key, None),
+            no_action,
+        ),
     ]])
 }
 

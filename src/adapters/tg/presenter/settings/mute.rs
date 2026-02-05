@@ -185,7 +185,8 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
             };
 
             let fmt_args = args!(name = display_name);
-            let display_text = locales::get_text_or_log(args.lang.as_str(), icon_key, fmt_args.as_ref());
+            let display_text =
+                locales::get_text_or_log(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::ServerToggle {
@@ -220,7 +221,8 @@ pub async fn render_mute_list(args: RenderMuteListArgs<'_>) -> ResponseResult<()
 
 pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> ResponseResult<()> {
     if args.items.is_empty() {
-        let text = locales::get_text_or_log(args.lang.as_str(), locales::LocaleKey::ListMuteEmpty, None);
+        let text =
+            locales::get_text_or_log(args.lang.as_str(), locales::LocaleKey::ListMuteEmpty, None);
         let keyboard = back_button_keyboard(
             args.lang,
             LocaleKey::BtnBackMute,
@@ -255,7 +257,8 @@ pub async fn render_mute_list_strings(args: RenderMuteListStringsArgs<'_>) -> Re
                 MuteListMode::Blacklist => LocaleKey::ItemStatusBlacklistIn,
                 MuteListMode::Whitelist => LocaleKey::ItemStatusWhitelistIn,
             };
-            let display_text = locales::get_text_or_log(args.lang.as_str(), icon_key, fmt_args.as_ref());
+            let display_text =
+                locales::get_text_or_log(args.lang.as_str(), icon_key, fmt_args.as_ref());
             (
                 display_text,
                 CallbackAction::Mute(MuteAction::Toggle {

@@ -54,7 +54,8 @@ pub async fn handle_menu(
             answer_callback_empty(&bot, &q.id).await?;
         }
         MenuAction::Unsub => {
-            let text = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::UnsubConfirmText, None);
+            let text =
+                locales::get_text_or_log(lang.as_str(), locales::LocaleKey::UnsubConfirmText, None);
             let keyboard = confirm_cancel_keyboard(
                 lang,
                 locales::LocaleKey::BtnYes,

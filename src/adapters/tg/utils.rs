@@ -21,7 +21,11 @@ pub async fn ensure_subscribed(
             if let Err(e) = bot
                 .send_message(
                     msg.chat.id,
-                    locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdNotSubscribed, None),
+                    locales::get_text_or_log(
+                        lang.as_str(),
+                        locales::LocaleKey::CmdNotSubscribed,
+                        None,
+                    ),
                 )
                 .parse_mode(ParseMode::Html)
                 .reply_to(msg.id)
@@ -83,7 +87,8 @@ pub async fn check_db_err(
         tracing::error!(error = ?e, "Database error");
         notify_admin_error(bot, config, user_id, context, &e.to_string(), lang).await;
 
-        let error_text = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None);
+        let error_text =
+            locales::get_text_or_log(lang.as_str(), locales::LocaleKey::CmdError, None);
         bot.answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
             .text(error_text)
             .show_alert(true)

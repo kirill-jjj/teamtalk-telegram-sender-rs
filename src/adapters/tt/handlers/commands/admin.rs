@@ -11,7 +11,8 @@ pub(super) async fn handle_add_admin(ctx: &UserCtx) {
         .as_ref()
         .is_some_and(|u| u == &ctx.username);
     if !is_main_admin {
-        let text = locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
+        let text =
+            locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
         ctx.send_reply(text).await;
         return;
     }
@@ -74,7 +75,8 @@ pub(super) async fn handle_remove_admin(ctx: &UserCtx) {
         .as_ref()
         .is_some_and(|u| u == &ctx.username);
     if !is_main_admin {
-        let text = locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
+        let text =
+            locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
         ctx.send_reply(text).await;
         return;
     }

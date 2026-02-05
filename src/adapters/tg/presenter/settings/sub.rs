@@ -13,7 +13,8 @@ pub async fn send_sub_settings(
     lang: LanguageCode,
     current_notif: NotificationSetting,
 ) -> ResponseResult<()> {
-    let check_icon = locales::get_text_or_log(lang.as_str(), locales::LocaleKey::IconCheckSimple, None);
+    let check_icon =
+        locales::get_text_or_log(lang.as_str(), locales::LocaleKey::IconCheckSimple, None);
     let mk = |ns: NotificationSetting| {
         if ns == current_notif {
             check_icon.clone()

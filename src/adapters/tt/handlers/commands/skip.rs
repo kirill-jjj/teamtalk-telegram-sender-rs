@@ -5,7 +5,8 @@ use super::user::UserCtx;
 
 pub(super) async fn handle_skip(ctx: &UserCtx) {
     if !ctx.is_admin().await {
-        let text = locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
+        let text =
+            locales::get_text_or_log(ctx.reply_lang.as_str(), locales::LocaleKey::CmdUnauth, None);
         ctx.send_reply(text).await;
         return;
     }

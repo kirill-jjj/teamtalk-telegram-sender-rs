@@ -19,7 +19,8 @@ pub(super) async fn admin_add_confirm(
         answer_callback_empty(ctx.bot, ctx.q_id).await?;
         return Ok(());
     }
-    let text = locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::ConfirmAdminAdd, None);
+    let text =
+        locales::get_text_or_log(ctx.lang.as_str(), locales::LocaleKey::ConfirmAdminAdd, None);
     let keyboard = confirm_cancel_keyboard(
         ctx.lang,
         locales::LocaleKey::BtnYes,

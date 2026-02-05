@@ -65,7 +65,8 @@ pub(super) async fn handle_sub_set(
         NotificationSetting::LeaveOff => locales::LocaleKey::BtnSubJoin,
         NotificationSetting::None => locales::LocaleKey::BtnSubNone,
     };
-    let setting_text = locales::get_text_or_log(lang.as_str(), text_key, args!(marker = "").as_ref());
+    let setting_text =
+        locales::get_text_or_log(lang.as_str(), text_key, args!(marker = "").as_ref());
     answer_callback(
         bot,
         &q.id,
