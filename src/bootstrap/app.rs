@@ -9,7 +9,6 @@ use teamtalk::Client;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
 use tokio::sync::oneshot;
-use tokio::task::spawn_local;
 use tokio::time::Duration;
 use tokio_util::sync::CancellationToken;
 
@@ -263,7 +262,7 @@ async fn init_bots(config: &Arc<Config>) -> Result<BotInit> {
 
 async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task::JoinHandle<()>> {
     let (tx_init, rx_init) = oneshot::channel();
-    let tt_handle = {
+    let tt_handle = tokio::task::spawn_blocking(move || {
         let TeamtalkWorkerConfig {
             config,
             state,
@@ -274,8 +273,19 @@ async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task:
             bot_username,
             client,
         } = cfg;
-        spawn_local(adapters::tt::run_teamtalk_worker(
-            adapters::tt::RunTeamtalkArgs {
+        let runtime = match tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+        {
+            Ok(runtime) => runtime,
+            Err(e) => {
+                let _ = tx_init.send(Err(format!("Failed to create TeamTalk runtime: {e}")));
+                return;
+            }
+        };
+        let local = tokio::task::LocalSet::new();
+        local.block_on(&runtime, async move {
+            adapters::tt::run_teamtalk_worker(adapters::tt::RunTeamtalkArgs {
                 config,
                 state,
                 tx_bridge,
@@ -285,9 +295,10 @@ async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task:
                 bot_username,
                 client,
                 tx_init,
-            },
-        ))
-    };
+            })
+            .await;
+        });
+    });
 
     match rx_init.await {
         Ok(Ok(())) => tracing::info!("TeamTalk worker started successfully"),
