@@ -80,12 +80,8 @@ pub(super) async fn handle_queue_menu(
         Ok(s) => s,
         Err(e) => {
             tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load settings");
-            bot.edit_message_text(
-                msg.chat.id,
-                msg.id,
-                cmd_error_text(lang),
-            )
-            .await?;
+            bot.edit_message_text(msg.chat.id, msg.id, cmd_error_text(lang))
+                .await?;
             return Ok(());
         }
     };

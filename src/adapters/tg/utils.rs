@@ -87,7 +87,10 @@ pub fn telegram_id_from_callback_query(
     telegram_id_from_user_id(q.from.id.0, context)
 }
 
-pub fn telegram_id_from_user(user: &teloxide::types::User, context: &'static str) -> Option<TelegramId> {
+pub fn telegram_id_from_user(
+    user: &teloxide::types::User,
+    context: &'static str,
+) -> Option<TelegramId> {
     telegram_id_from_user_id(user.id.0, context)
 }
 
