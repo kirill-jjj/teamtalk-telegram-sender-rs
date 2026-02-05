@@ -2,7 +2,7 @@ use crate::adapters::tg::handlers::search::{SearchContext, SearchListType, set_s
 use crate::adapters::tg::presenter::settings::{
     RenderMuteListStringsArgs, render_mute_list_strings,
 };
-use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, TgErrorReporter};
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::args;
 use crate::core::types::{
@@ -70,16 +70,9 @@ pub(super) async fn handle_toggle(
     )
     .await
     {
-        check_db_err(
-            ctx.bot,
-            &ctx.q.id.0,
-            Err(e),
-            &ctx.state.config,
-            ctx.telegram_id,
-            AdminErrorContext::Callback,
-            ctx.lang,
-        )
-        .await?;
+        TgErrorReporter::new(ctx.bot, &ctx.state.config, ctx.telegram_id, ctx.lang)
+            .check_db_err(&ctx.q.id.0, Err(e), AdminErrorContext::Callback)
+            .await?;
         return Ok(());
     }
 

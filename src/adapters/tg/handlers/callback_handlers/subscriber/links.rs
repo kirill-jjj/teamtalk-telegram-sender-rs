@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::admin::subscriber_settings::{
     SubLinkAccountListArgs, send_sub_link_account_list, send_sub_manage_tt_menu,
 };
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_sub_links as tg_sub_links_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtUsername};
@@ -19,16 +19,9 @@ pub(super) async fn manage_tt(
     {
         Ok(s) => s,
         Err(e) => {
-            check_db_err(
-                ctx.bot,
-                &ctx.q_id.0,
-                Err(e),
-                ctx.config,
-                ctx.admin_chat_id,
-                AdminErrorContext::Callback,
-                ctx.lang,
-            )
-            .await?;
+            ctx.errors()
+                .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
             return Ok(());
         }
     };
@@ -48,16 +41,14 @@ pub(super) async fn unlink(
     sub_id: TelegramId,
     page: usize,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_sub_links_service::unlink_tt(ctx.db, sub_id).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_sub_links_service::unlink_tt(ctx.db, sub_id).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -76,16 +67,9 @@ pub(super) async fn unlink(
     {
         Ok(s) => s,
         Err(e) => {
-            check_db_err(
-                ctx.bot,
-                &ctx.q_id.0,
-                Err(e),
-                ctx.config,
-                ctx.admin_chat_id,
-                AdminErrorContext::Callback,
-                ctx.lang,
-            )
-            .await?;
+            ctx.errors()
+                .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
             return Ok(());
         }
     };
@@ -129,16 +113,14 @@ pub(super) async fn link_perform(
     page: usize,
     username: TtUsername,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_sub_links_service::link_tt(ctx.db, sub_id, &username).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_sub_links_service::link_tt(ctx.db, sub_id, &username).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -157,16 +139,9 @@ pub(super) async fn link_perform(
     {
         Ok(s) => s,
         Err(e) => {
-            check_db_err(
-                ctx.bot,
-                &ctx.q_id.0,
-                Err(e),
-                ctx.config,
-                ctx.admin_chat_id,
-                AdminErrorContext::Callback,
-                ctx.lang,
-            )
-            .await?;
+            ctx.errors()
+                .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
             return Ok(());
         }
     };

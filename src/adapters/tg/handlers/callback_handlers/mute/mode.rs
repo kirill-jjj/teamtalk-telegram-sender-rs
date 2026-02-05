@@ -1,5 +1,5 @@
 use crate::adapters::tg::presenter::settings::send_mute_menu;
-use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, TgErrorReporter};
 use crate::app::services::tg_sub_settings as tg_sub_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TelegramId};
@@ -17,16 +17,14 @@ pub(super) async fn handle_mode_set(
     lang: LanguageCode,
     mode: MuteListMode,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        bot,
-        &q.id.0,
-        tg_sub_settings_service::update_mute_mode(&state.db, telegram_id, mode.clone()).await,
-        &state.config,
-        telegram_id,
-        AdminErrorContext::Callback,
-        lang,
-    )
-    .await?
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
+    if errors
+        .check_db_err(
+            &q.id.0,
+            tg_sub_settings_service::update_mute_mode(&state.db, telegram_id, mode.clone()).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

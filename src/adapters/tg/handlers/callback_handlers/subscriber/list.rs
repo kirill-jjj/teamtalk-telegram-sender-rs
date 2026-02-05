@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::admin::subscribers::prepare_display_list;
 use crate::adapters::tg::presenter::admin::subscribers::{
     edit_subscribers_list, send_subscriber_details,
 };
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_subscribers as tg_subscribers_service;
 use crate::core::types::{AdminErrorContext, TelegramId};
@@ -17,16 +17,10 @@ async fn load_subscribers_or_reply(
     match tg_admin_service::list_subscribers(ctx.db).await {
         Ok(subs) => Ok(Some(subs)),
         Err(err) => {
-            let _ = check_db_err(
-                ctx.bot,
-                &ctx.q_id.0,
-                Err(err.into_error()),
-                ctx.config,
-                ctx.admin_chat_id,
-                AdminErrorContext::Callback,
-                ctx.lang,
-            )
-            .await?;
+            let _ = ctx
+                .errors()
+                .check_db_err(&ctx.q_id.0, Err(err.into_error()), AdminErrorContext::Callback)
+                .await?;
             Ok(None)
         }
     }
@@ -50,16 +44,14 @@ pub(super) async fn delete(
     let Some(subscribers) = load_subscribers_or_reply(ctx).await? else {
         return Ok(());
     };
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_subscribers_service::delete_subscriber(ctx.db, sub_id).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_subscribers_service::delete_subscriber(ctx.db, sub_id).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -90,16 +82,14 @@ pub(super) async fn ban(ctx: &SubCtx<'_>, sub_id: TelegramId, page: usize) -> Re
     let Some(subscribers) = load_subscribers_or_reply(ctx).await? else {
         return Ok(());
     };
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_subscribers_service::ban_subscriber(ctx.db, sub_id).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_subscribers_service::ban_subscriber(ctx.db, sub_id).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

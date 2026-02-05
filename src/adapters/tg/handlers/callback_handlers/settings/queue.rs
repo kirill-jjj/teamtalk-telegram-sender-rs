@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::settings::{
     QueueAdminStatus, QueueLinkStatus, QueueSettingsView, QueueToggleStatus, send_queue_settings,
 };
-use crate::adapters::tg::utils::{answer_callback, check_db_err, cmd_error_text};
+use crate::adapters::tg::utils::{answer_callback, cmd_error_text, TgErrorReporter};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_queue_settings as tg_queue_settings_service;
 use crate::args;
@@ -13,50 +13,32 @@ use super::AppState;
 use crate::infra::db::types::UserSettings;
 
 async fn load_settings_or_reply(
-    bot: &Bot,
+    errors: &TgErrorReporter<'_>,
     q_id: &str,
     state: &AppState,
-    telegram_id: TelegramId,
-    lang: LanguageCode,
 ) -> ResponseResult<Option<UserSettings>> {
-    match tg_queue_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En).await {
+    match tg_queue_settings_service::load_settings(&state.db, errors.user_id(), LanguageCode::En).await {
         Ok(s) => Ok(Some(s)),
         Err(e) => {
-            check_db_err(
-                bot,
-                q_id,
-                Err(e),
-                &state.config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                lang,
-            )
-            .await?;
+            errors
+                .check_db_err(q_id, Err(e), AdminErrorContext::Callback)
+                .await?;
             Ok(None)
         }
     }
 }
 
 async fn global_enabled_or_reply(
-    bot: &Bot,
+    errors: &TgErrorReporter<'_>,
     q_id: &str,
     state: &AppState,
-    telegram_id: TelegramId,
-    lang: LanguageCode,
 ) -> ResponseResult<Option<bool>> {
     match tg_queue_settings_service::global_enabled(&state.db).await {
         Ok(val) => Ok(Some(val)),
         Err(e) => {
-            check_db_err(
-                bot,
-                q_id,
-                Err(e),
-                &state.config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                lang,
-            )
-            .await?;
+            errors
+                .check_db_err(q_id, Err(e), AdminErrorContext::Callback)
+                .await?;
             Ok(None)
         }
     }
@@ -70,6 +52,7 @@ pub(super) async fn handle_queue_menu(
     lang: LanguageCode,
     is_admin: bool,
 ) -> ResponseResult<()> {
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
     let settings = match tg_queue_settings_service::load_settings(
         &state.db,
         telegram_id,
@@ -85,8 +68,7 @@ pub(super) async fn handle_queue_menu(
             return Ok(());
         }
     };
-    let Some(global_enabled) =
-        global_enabled_or_reply(bot, "queue_menu", state, telegram_id, lang).await?
+    let Some(global_enabled) = global_enabled_or_reply(&errors, "queue_menu", state).await?
     else {
         return Ok(());
     };
@@ -128,7 +110,8 @@ pub(super) async fn handle_queue_toggle_user(
     telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(settings) = load_settings_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
@@ -144,8 +127,7 @@ pub(super) async fn handle_queue_toggle_user(
         return Ok(());
     }
 
-    let Some(global_enabled) =
-        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
@@ -168,16 +150,9 @@ pub(super) async fn handle_queue_toggle_user(
     if let Err(e) =
         tg_queue_settings_service::set_user_enabled(&state.db, telegram_id, new_val).await
     {
-        check_db_err(
-            bot,
-            &q.id.0,
-            Err(e),
-            &state.config,
-            telegram_id,
-            AdminErrorContext::Callback,
-            lang,
-        )
-        .await?;
+        errors
+            .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+            .await?;
         return Ok(());
     }
 
@@ -195,8 +170,7 @@ pub(super) async fn handle_queue_toggle_user(
     .await?;
 
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
-    let Some(global_enabled) =
-        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
@@ -238,6 +212,7 @@ pub(super) async fn handle_queue_toggle_global(
     telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
     if !is_admin {
         answer_callback(
@@ -249,22 +224,15 @@ pub(super) async fn handle_queue_toggle_global(
         .await?;
         return Ok(());
     }
-    let Some(current) = global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(current) = global_enabled_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
     let new_val = !current;
     if let Err(e) = tg_queue_settings_service::set_global_enabled(&state.db, new_val).await {
-        check_db_err(
-            bot,
-            &q.id.0,
-            Err(e),
-            &state.config,
-            telegram_id,
-            AdminErrorContext::Callback,
-            lang,
-        )
-        .await?;
+        errors
+            .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+            .await?;
         return Ok(());
     }
     let status_key = if new_val {
@@ -279,7 +247,7 @@ pub(super) async fn handle_queue_toggle_global(
         false,
     )
     .await?;
-    let Some(settings) = load_settings_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
@@ -321,7 +289,8 @@ pub(super) async fn handle_queue_clear_self(
     telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(settings) = load_settings_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
@@ -340,16 +309,9 @@ pub(super) async fn handle_queue_clear_self(
     let cleared = match tg_queue_settings_service::clear_user(&state.db, &tt_username).await {
         Ok(count) => count,
         Err(e) => {
-            check_db_err(
-                bot,
-                &q.id.0,
-                Err(e),
-                &state.config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                lang,
-            )
-            .await?;
+            errors
+                .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
             return Ok(());
         }
     };
@@ -365,8 +327,7 @@ pub(super) async fn handle_queue_clear_self(
     )
     .await?;
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
-    let Some(global_enabled) =
-        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
@@ -408,6 +369,7 @@ pub(super) async fn handle_queue_clear_all(
     telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
     if !is_admin {
         answer_callback(
@@ -422,16 +384,9 @@ pub(super) async fn handle_queue_clear_all(
     let cleared = match tg_queue_settings_service::clear_all(&state.db).await {
         Ok(count) => count,
         Err(e) => {
-            check_db_err(
-                bot,
-                &q.id.0,
-                Err(e),
-                &state.config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                lang,
-            )
-            .await?;
+            errors
+                .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
             return Ok(());
         }
     };
@@ -446,12 +401,11 @@ pub(super) async fn handle_queue_clear_all(
         false,
     )
     .await?;
-    let Some(settings) = load_settings_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(settings) = load_settings_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };
-    let Some(global_enabled) =
-        global_enabled_or_reply(bot, &q.id.0, state, telegram_id, lang).await?
+    let Some(global_enabled) = global_enabled_or_reply(&errors, &q.id.0, state).await?
     else {
         return Ok(());
     };

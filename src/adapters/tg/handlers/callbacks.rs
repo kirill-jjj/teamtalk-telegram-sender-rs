@@ -3,7 +3,7 @@ use crate::adapters::tg::handlers::callback_handlers::{
 };
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_cmd_error_callback, notify_admin_error, telegram_id_from_callback_query,
+    answer_cmd_error_callback, telegram_id_from_callback_query, TgErrorReporter,
 };
 use crate::app::services::tg_callbacks as tg_callbacks_service;
 use crate::core::callbacks::CallbackAction;
@@ -66,6 +66,7 @@ async fn load_user_lang(
     default_lang: LanguageCode,
     query_id: teloxide::types::CallbackQueryId,
 ) -> ResponseResult<LanguageCode> {
+    let errors = TgErrorReporter::new(bot, config, telegram_id, default_lang);
     match tg_callbacks_service::load_user_lang(db, telegram_id, default_lang).await {
         Ok(lang) => Ok(lang),
         Err(err) => {
@@ -75,15 +76,9 @@ async fn load_user_lang(
                 error = %error,
                 "Failed to get/create user in callback"
             );
-            notify_admin_error(
-                bot,
-                config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                &error.to_string(),
-                default_lang,
-            )
-            .await;
+            errors
+                .notify(AdminErrorContext::Callback, &error.to_string())
+                .await;
             answer_cmd_error_callback(bot, &query_id, default_lang, true).await?;
             Ok(default_lang)
         }
@@ -98,6 +93,7 @@ async fn ensure_subscribed(
     lang: LanguageCode,
     query_id: teloxide::types::CallbackQueryId,
 ) -> ResponseResult<bool> {
+    let errors = TgErrorReporter::new(bot, config, telegram_id, lang);
     match tg_callbacks_service::ensure_subscribed(db, telegram_id).await {
         Ok(true) => Ok(true),
         Ok(false) => {
@@ -118,15 +114,9 @@ async fn ensure_subscribed(
                 error = %error,
                 "Failed to check subscription"
             );
-            notify_admin_error(
-                bot,
-                config,
-                telegram_id,
-                AdminErrorContext::Subscription,
-                &error.to_string(),
-                lang,
-            )
-            .await;
+            errors
+                .notify(AdminErrorContext::Subscription, &error.to_string())
+                .await;
             answer_cmd_error_callback(bot, &query_id, lang, true).await?;
             Ok(false)
         }
@@ -146,21 +136,19 @@ async fn handle_invalid_callback_data(
     callback_data: &str,
     error: &str,
 ) -> ResponseResult<()> {
+    let errors = TgErrorReporter::new(bot, config, telegram_id, lang);
     tracing::warn!(
         telegram_id = telegram_id.as_i64(),
         callback_data = %callback_data,
         error = %error,
         "Invalid callback data"
     );
-    notify_admin_error(
-        bot,
-        config,
-        telegram_id,
-        AdminErrorContext::Callback,
-        &format!("Invalid callback data: {error}; payload={callback_data}"),
-        lang,
-    )
-    .await;
+    errors
+        .notify(
+            AdminErrorContext::Callback,
+            &format!("Invalid callback data: {error}; payload={callback_data}"),
+        )
+        .await;
     bot.answer_callback_query(query_id)
         .text("Invalid button data. Please reopen the menu.")
         .show_alert(true)

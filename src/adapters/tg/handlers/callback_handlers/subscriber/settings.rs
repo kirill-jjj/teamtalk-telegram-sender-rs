@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::admin::subscriber_settings::{
     send_sub_lang_menu, send_sub_mute_mode_menu, send_sub_notif_menu,
 };
 use crate::adapters::tg::presenter::admin::subscribers::send_subscriber_details;
-use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::adapters::tg::utils::answer_callback;
 use crate::app::services::tg_sub_settings as tg_sub_settings_service;
 use crate::args;
 use crate::core::types::{
@@ -27,16 +27,14 @@ pub(super) async fn lang_set(
     page: usize,
     new_lang: LanguageCode,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_sub_settings_service::update_language(ctx.db, sub_id, new_lang).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_sub_settings_service::update_language(ctx.db, sub_id, new_lang).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -69,16 +67,14 @@ pub(super) async fn notif_set(
     page: usize,
     val: NotificationSetting,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_sub_settings_service::update_notifications(ctx.db, sub_id, val.clone()).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_sub_settings_service::update_notifications(ctx.db, sub_id, val.clone()).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -102,16 +98,14 @@ pub(super) async fn noon_toggle(
     sub_id: TelegramId,
     page: usize,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_sub_settings_service::toggle_noon(ctx.db, sub_id).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_sub_settings_service::toggle_noon(ctx.db, sub_id).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -144,16 +138,14 @@ pub(super) async fn mode_set(
     page: usize,
     mode: MuteListMode,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_sub_settings_service::update_mute_mode(ctx.db, sub_id, mode.clone()).await,
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_sub_settings_service::update_mute_mode(ctx.db, sub_id, mode.clone()).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

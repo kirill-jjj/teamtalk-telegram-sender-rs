@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::admin::bans::{edit_unban_list, send_unban_list};
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback, answer_callback_empty, answer_cmd_error_callback, check_db_err,
+    answer_callback, answer_callback_empty, answer_cmd_error_callback, TgErrorReporter,
     telegram_id_from_callback_query,
 };
 use crate::app::services::tg_admin as tg_admin_service;
@@ -67,18 +67,16 @@ pub(super) async fn handle_unban_perform(
     let Some(admin_id) = telegram_id_from_callback_query(q, "handle_unban_perform") else {
         return Ok(());
     };
-    if check_db_err(
-        bot,
-        &q.id.0,
-        tg_admin_service::remove_ban(&state.db, ban_db_id)
-            .await
-            .map_err(crate::app::services::tg_admin::AdminError::into_error),
-        &state.config,
-        admin_id,
-        AdminErrorContext::Callback,
-        lang,
-    )
-    .await?
+    let errors = TgErrorReporter::new(bot, &state.config, admin_id, lang);
+    if errors
+        .check_db_err(
+            &q.id.0,
+            tg_admin_service::remove_ban(&state.db, ban_db_id)
+                .await
+                .map_err(crate::app::services::tg_admin::AdminError::into_error),
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

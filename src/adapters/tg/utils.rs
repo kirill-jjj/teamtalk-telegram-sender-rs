@@ -98,6 +98,63 @@ pub fn cmd_error_text(lang: LanguageCode) -> String {
     locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None)
 }
 
+pub struct TgErrorReporter<'a> {
+    bot: &'a Bot,
+    config: &'a Config,
+    user_id: TelegramId,
+    lang: LanguageCode,
+}
+
+impl<'a> TgErrorReporter<'a> {
+    pub const fn new(
+        bot: &'a Bot,
+        config: &'a Config,
+        user_id: TelegramId,
+        lang: LanguageCode,
+    ) -> Self {
+        Self {
+            bot,
+            config,
+            user_id,
+            lang,
+        }
+    }
+
+    pub async fn notify(&self, context: AdminErrorContext, error: &str) {
+        notify_admin_error(
+            self.bot,
+            self.config,
+            self.user_id,
+            context,
+            error,
+            self.lang,
+        )
+        .await;
+    }
+
+    pub const fn user_id(&self) -> TelegramId {
+        self.user_id
+    }
+
+    pub async fn check_db_err(
+        &self,
+        query_id: &str,
+        result: anyhow::Result<()>,
+        context: AdminErrorContext,
+    ) -> ResponseResult<bool> {
+        check_db_err(
+            self.bot,
+            query_id,
+            result,
+            self.config,
+            self.user_id,
+            context,
+            self.lang,
+        )
+        .await
+    }
+}
+
 pub async fn answer_cmd_error_callback(
     bot: &Bot,
     query_id: &teloxide::types::CallbackQueryId,

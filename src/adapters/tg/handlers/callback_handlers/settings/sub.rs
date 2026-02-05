@@ -1,5 +1,5 @@
 use crate::adapters::tg::presenter::settings::send_sub_settings;
-use crate::adapters::tg::utils::{answer_callback, check_db_err, cmd_error_text};
+use crate::adapters::tg::utils::{answer_callback, cmd_error_text, TgErrorReporter};
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, NotificationSetting, TelegramId};
@@ -42,16 +42,15 @@ pub(super) async fn handle_sub_set(
     lang: LanguageCode,
     setting: NotificationSetting,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        bot,
-        &q.id.0,
-        tg_settings_service::update_notifications(&state.db, telegram_id, setting.clone()).await,
-        &state.config,
-        telegram_id,
-        AdminErrorContext::Callback,
-        lang,
-    )
-    .await?
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
+    if errors
+        .check_db_err(
+            &q.id.0,
+            tg_settings_service::update_notifications(&state.db, telegram_id, setting.clone())
+                .await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

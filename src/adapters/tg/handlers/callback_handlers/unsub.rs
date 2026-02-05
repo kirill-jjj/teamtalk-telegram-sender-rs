@@ -1,7 +1,8 @@
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback, answer_callback_empty, answer_cmd_error_callback, notify_admin_error,
+    answer_callback, answer_callback_empty, answer_cmd_error_callback,
     telegram_id_from_callback_query,
+    TgErrorReporter,
 };
 use crate::app::services::tg_basic as tg_basic_service;
 use crate::core::callbacks::UnsubAction;
@@ -23,7 +24,7 @@ pub async fn handle_unsub_action(
         return Ok(());
     };
     let db = &state.db;
-    let config = &state.config;
+    let errors = TgErrorReporter::new(&bot, &state.config, telegram_id, lang);
 
     match action {
         UnsubAction::Confirm => {
@@ -33,15 +34,9 @@ pub async fn handle_unsub_action(
                     error = %e,
                     "Failed to unsubscribe user"
                 );
-                notify_admin_error(
-                    &bot,
-                    config,
-                    telegram_id,
-                    AdminErrorContext::Callback,
-                    &e.to_string(),
-                    lang,
-                )
-                .await;
+                errors
+                    .notify(AdminErrorContext::Callback, &e.to_string())
+                    .await;
                 answer_cmd_error_callback(&bot, &q.id, lang, false).await?;
                 return Ok(());
             }

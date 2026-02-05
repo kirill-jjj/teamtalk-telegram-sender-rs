@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::admin::subscribers::{
     SubscriberDetailsArgs, default_user_settings,
 };
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{check_db_err, telegram_id_from_callback_query};
+use crate::adapters::tg::utils::{telegram_id_from_callback_query, TgErrorReporter};
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::core::callbacks::SubAction;
 use crate::core::types::AdminErrorContext;
@@ -70,6 +70,10 @@ pub async fn handle_subscriber_actions(
 }
 
 impl SubCtx<'_> {
+    const fn errors(&self) -> TgErrorReporter<'_> {
+        TgErrorReporter::new(self.bot, self.config, self.admin_chat_id, self.lang)
+    }
+
     async fn dispatch(&self, action: SubAction) -> ResponseResult<()> {
         match action {
             SubAction::Details { sub_id, page } => list::details(self, sub_id, page).await,
@@ -131,16 +135,10 @@ impl SubCtx<'_> {
                 is_admin = details.is_admin;
             }
             Err(e) => {
-                let _ = check_db_err(
-                    self.bot,
-                    &self.q_id.0,
-                    Err(e),
-                    self.config,
-                    self.admin_chat_id,
-                    AdminErrorContext::Callback,
-                    self.lang,
-                )
-                .await;
+                let _ = self
+                    .errors()
+                    .check_db_err(&self.q_id.0, Err(e), AdminErrorContext::Callback)
+                    .await;
             }
         }
         SubscriberDetailsArgs {

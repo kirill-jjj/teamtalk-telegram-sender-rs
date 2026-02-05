@@ -1,6 +1,6 @@
 use crate::adapters::tg::presenter::keyboards::{back_button, callback_button};
 use crate::adapters::tg::presenter::settings::send_main_settings_edit;
-use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, TgErrorReporter};
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
@@ -53,16 +53,14 @@ pub(super) async fn handle_lang_set(
     lang: LanguageCode,
     new_lang: LanguageCode,
 ) -> ResponseResult<()> {
-    if check_db_err(
-        bot,
-        &q.id.0,
-        tg_settings_service::update_language(&state.db, telegram_id, new_lang).await,
-        &state.config,
-        telegram_id,
-        AdminErrorContext::Callback,
-        lang,
-    )
-    .await?
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
+    if errors
+        .check_db_err(
+            &q.id.0,
+            tg_settings_service::update_language(&state.db, telegram_id, new_lang).await,
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

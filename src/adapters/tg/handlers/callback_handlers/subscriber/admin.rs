@@ -1,6 +1,6 @@
 use crate::adapters::tg::presenter::admin::subscribers::send_subscriber_details;
 use crate::adapters::tg::presenter::keyboards::confirm_cancel_keyboard;
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::callbacks::{CallbackAction, SubAction};
 use crate::core::types::{AdminErrorContext, TelegramId};
@@ -75,18 +75,16 @@ pub(super) async fn admin_add(
         answer_callback_empty(ctx.bot, ctx.q_id).await?;
         return Ok(());
     }
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_admin_service::add_admin(ctx.db, sub_id)
-            .await
-            .map_err(crate::app::services::tg_admin::AdminError::into_error),
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_admin_service::add_admin(ctx.db, sub_id)
+                .await
+                .map_err(crate::app::services::tg_admin::AdminError::into_error),
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }
@@ -111,18 +109,16 @@ pub(super) async fn admin_remove(
         answer_callback_empty(ctx.bot, ctx.q_id).await?;
         return Ok(());
     }
-    if check_db_err(
-        ctx.bot,
-        &ctx.q_id.0,
-        tg_admin_service::remove_admin(ctx.db, sub_id)
-            .await
-            .map_err(crate::app::services::tg_admin::AdminError::into_error),
-        ctx.config,
-        ctx.admin_chat_id,
-        AdminErrorContext::Callback,
-        ctx.lang,
-    )
-    .await?
+    if ctx
+        .errors()
+        .check_db_err(
+            &ctx.q_id.0,
+            tg_admin_service::remove_admin(ctx.db, sub_id)
+                .await
+                .map_err(crate::app::services::tg_admin::AdminError::into_error),
+            AdminErrorContext::Callback,
+        )
+        .await?
     {
         return Ok(());
     }

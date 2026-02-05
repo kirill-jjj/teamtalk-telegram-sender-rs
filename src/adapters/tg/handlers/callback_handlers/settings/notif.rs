@@ -1,5 +1,5 @@
 use crate::adapters::tg::presenter::settings::send_notif_settings;
-use crate::adapters::tg::utils::{answer_callback, check_db_err, cmd_error_text};
+use crate::adapters::tg::utils::{answer_callback, cmd_error_text, TgErrorReporter};
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
@@ -41,20 +41,14 @@ pub(super) async fn handle_noon_toggle(
     telegram_id: TelegramId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
     let user_settings =
         match tg_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En).await {
             Ok(u) => u,
             Err(e) => {
-                check_db_err(
-                    bot,
-                    &q.id.0,
-                    Err(e),
-                    &state.config,
-                    telegram_id,
-                    AdminErrorContext::Callback,
-                    lang,
-                )
-                .await?;
+                errors
+                    .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                    .await?;
                 return Ok(());
             }
         };
@@ -98,32 +92,18 @@ pub(super) async fn handle_noon_toggle(
                 {
                     Ok(s) => s,
                     Err(e) => {
-                        check_db_err(
-                            bot,
-                            &q.id.0,
-                            Err(e),
-                            &state.config,
-                            telegram_id,
-                            AdminErrorContext::Callback,
-                            lang,
-                        )
-                        .await?;
+                        errors
+                            .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                            .await?;
                         return Ok(());
                     }
                 };
             send_notif_settings(bot, msg, lang, settings.not_on_online_enabled).await?;
         }
         Err(e) => {
-            check_db_err(
-                bot,
-                &q.id.0,
-                Err(e),
-                &state.config,
-                telegram_id,
-                AdminErrorContext::Callback,
-                lang,
-            )
-            .await?;
+            errors
+                .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
         }
     }
     Ok(())
