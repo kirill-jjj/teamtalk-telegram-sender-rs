@@ -35,7 +35,22 @@ pub async fn answer_callback(
     if !ensure_subscribed(&bot, db, config, telegram_id, lang, query_id.clone()).await? {
         return Ok(());
     }
-    let action = parse_action(&callback_data_str);
+    let action = match parse_action(&callback_data_str) {
+        Ok(action) => action,
+        Err(error) => {
+            handle_invalid_callback_data(
+                &bot,
+                config,
+                query_id,
+                telegram_id,
+                lang,
+                callback_data_str.as_str(),
+                &error.to_string(),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
     dispatch_action(bot, q, state.as_ref(), action, lang).await?;
 
     Ok(())
@@ -130,18 +145,39 @@ async fn ensure_subscribed(
     }
 }
 
-fn parse_action(callback_data_str: &str) -> CallbackAction {
-    match CallbackAction::from_str(callback_data_str) {
-        Ok(action) => action,
-        Err(e) => {
-            tracing::warn!(
-                callback_data = %callback_data_str,
-                error = %e,
-                "Unknown or legacy callback data"
-            );
-            CallbackAction::NoOp
-        }
-    }
+fn parse_action(callback_data_str: &str) -> Result<CallbackAction, anyhow::Error> {
+    CallbackAction::from_str(callback_data_str)
+}
+
+async fn handle_invalid_callback_data(
+    bot: &Bot,
+    config: &crate::bootstrap::config::Config,
+    query_id: teloxide::types::CallbackQueryId,
+    telegram_id: TelegramId,
+    lang: LanguageCode,
+    callback_data: &str,
+    error: &str,
+) -> ResponseResult<()> {
+    tracing::warn!(
+        telegram_id = telegram_id.as_i64(),
+        callback_data = %callback_data,
+        error = %error,
+        "Invalid callback data"
+    );
+    notify_admin_error(
+        bot,
+        config,
+        telegram_id,
+        AdminErrorContext::Callback,
+        &format!("Invalid callback data: {error}; payload={callback_data}"),
+        lang,
+    )
+    .await;
+    bot.answer_callback_query(query_id)
+        .text("Invalid button data. Please reopen the menu.")
+        .show_alert(true)
+        .await?;
+    Ok(())
 }
 
 async fn dispatch_action(

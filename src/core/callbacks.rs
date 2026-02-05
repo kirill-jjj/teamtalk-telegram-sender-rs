@@ -6,6 +6,10 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
+const CALLBACK_NOOP_MARKER: &str = "noop";
+const CALLBACK_TOO_LONG_MARKER: &str = "__cb_too_long__";
+const CALLBACK_SERIALIZE_ERROR_MARKER: &str = "__cb_serialize_error__";
+
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize, From)]
 pub enum CallbackAction {
     Menu(MenuAction),
@@ -192,13 +196,13 @@ fn encode_callback(action: &CallbackAction) -> String {
         Ok(bytes) => bytes,
         Err(e) => {
             tracing::error!(error = %e, "Failed to serialize callback action");
-            return "noop".to_string();
+            return CALLBACK_SERIALIZE_ERROR_MARKER.to_string();
         }
     };
     let encoded = z85::encode(bytes);
     if encoded.len() > 64 {
         tracing::error!(len = encoded.len(), "Callback data too long");
-        return "noop".to_string();
+        return CALLBACK_TOO_LONG_MARKER.to_string();
     }
     encoded
 }
@@ -207,8 +211,14 @@ impl FromStr for CallbackAction {
     type Err = anyhow::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "noop" {
+        if s == CALLBACK_NOOP_MARKER {
             return Ok(Self::NoOp);
+        }
+        if s == CALLBACK_TOO_LONG_MARKER {
+            return Err(anyhow!("Callback data exceeded Telegram 64-byte limit"));
+        }
+        if s == CALLBACK_SERIALIZE_ERROR_MARKER {
+            return Err(anyhow!("Callback data serialization failed"));
         }
         let bytes =
             z85::decode(s.as_bytes()).map_err(|e| anyhow!("Invalid callback encoding: {e}"))?;

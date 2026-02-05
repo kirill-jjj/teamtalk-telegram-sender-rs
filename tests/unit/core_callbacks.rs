@@ -126,5 +126,11 @@ fn callback_oversized_payload_encodes_as_noop() {
         username: TtUsername::from(long_name),
     });
     let encoded = encode_callback(&action);
-    assert_eq!(encoded, "noop");
+    assert_eq!(encoded, "__cb_too_long__");
+}
+
+#[test]
+fn callback_oversized_payload_marker_reports_explicit_error() {
+    let err = CallbackAction::from_str("__cb_too_long__").unwrap_err();
+    assert!(err.to_string().contains("64-byte limit"));
 }
