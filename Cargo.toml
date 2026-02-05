@@ -32,6 +32,7 @@ teamtalk = { git = "https://github.com/BlindMaster24/TeamTalkRust.git", branch =
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
 self_update = { version = "0.42", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }
+strum = { version = "0.27.2", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 futures-util = "0.3.31"

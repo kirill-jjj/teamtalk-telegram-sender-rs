@@ -350,6 +350,8 @@ tt-queue-cleared-all = { -queue-cleared-all($count) }
 
 -queue-reply-already-enabled = Reply queue is already enabled.
 -queue-reply-already-disabled = Reply queue is already disabled.
+-queue-reply-enabled = Reply queue is enabled.
+-queue-reply-disabled = Reply queue is disabled.
 -queue-global-disabled-user = Global reply queue is disabled by the admin.
 -queue-cleared =
     Queue cleared ({ $count ->

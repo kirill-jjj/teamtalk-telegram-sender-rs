@@ -56,6 +56,8 @@ cmd-shutting-down = Выключение...
 cmd-desc-unsub = Отписаться от уведомлений
 unsub-confirm-text = Вы уверены, что хотите отписаться? Это удалит ваши настройки и остановит все уведомления.
 unsub-cancelled = Операция отменена. Вы остаетесь подписаны.
+confirm-admin-add = Добавить этого пользователя в админы?
+confirm-admin-remove = Удалить этого пользователя из админов?
 btn-yes = Да
 btn-no = Нет
 
@@ -287,6 +289,8 @@ sub-mode-title = Выберите режим тишины для подписч�
 
 btn-sub-delete = 🗑️ Удалить подписчика
 btn-sub-ban = 🚫 Забанить (TG и TT)
+btn-sub-admin-add = ➕ Добавить в админы
+btn-sub-admin-remove = ➖ Удалить из админов
 btn-sub-manage-tt = 🔗 Управлять аккаунтом TeamTalk
 btn-sub-lang = 🗣️ Сменить язык
 btn-sub-noon = 🌞 Только офлайн
