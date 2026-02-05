@@ -11,8 +11,11 @@ use tokio::sync::mpsc::Sender;
 pub struct AppState {
     pub db: Database,
     pub state: StateHandle,
-    pub search_contexts:
-        Arc<Mutex<HashMap<teloxide::types::ChatId, crate::adapters::tg::search::SearchContext>>>,
+    pub search_contexts: Arc<
+        Mutex<
+            HashMap<teloxide::types::ChatId, crate::adapters::tg::handlers::search::SearchContext>,
+        >,
+    >,
     pub tx_tt: Sender<TtCommand>,
     pub config: Arc<Config>,
     pub cancel_token: tokio_util::sync::CancellationToken,

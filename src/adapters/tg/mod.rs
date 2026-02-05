@@ -1,10 +1,5 @@
-pub mod admin_logic;
-pub mod callback_handlers;
-pub mod callbacks;
-pub mod commands;
-pub mod keyboards;
-pub mod search;
-pub mod settings_logic;
+pub mod handlers;
+pub mod presenter;
 pub mod state;
 pub mod utils;
 
@@ -25,7 +20,7 @@ use teloxide::{
 };
 use tokio::sync::mpsc::Sender;
 
-use self::commands::Command;
+use self::handlers::commands::Command;
 use self::state::AppState;
 
 pub struct TgRunArgs {
@@ -56,7 +51,7 @@ pub async fn run_tg_bot(args: TgRunArgs) {
 
     let msg_handle = message_bot
         .map(|bot| spawn_message_bot(bot, state.clone(), config.clone(), cancel_token.clone()));
-    run_event_bot(event_bot, state, config, cancel_token).await;
+    run_event_bot(event_bot, state.clone(), config, cancel_token).await;
 
     if let Some(handle) = msg_handle {
         handle.abort();
@@ -69,15 +64,15 @@ fn build_state(
     tx_tt_cmd: Sender<TtCommand>,
     config: &Arc<Config>,
     cancel_token: &tokio_util::sync::CancellationToken,
-) -> AppState {
-    AppState {
+) -> Arc<AppState> {
+    Arc::new(AppState {
         db,
         state,
-        search_contexts: crate::adapters::tg::search::new_search_contexts(),
+        search_contexts: crate::adapters::tg::handlers::search::new_search_contexts(),
         tx_tt: tx_tt_cmd,
         config: config.clone(),
         cancel_token: cancel_token.clone(),
-    }
+    })
 }
 
 fn make_error_handler(
@@ -114,15 +109,20 @@ fn make_error_handler(
 
 fn spawn_message_bot(
     message_bot: Bot,
-    state: AppState,
+    state: Arc<AppState>,
     config: Arc<Config>,
     cancel_token: tokio_util::sync::CancellationToken,
 ) -> tokio::task::JoinHandle<()> {
     tokio::spawn(async move {
-        let msg_handler =
-            dptree::entry().branch(Update::filter_message().endpoint(commands::answer_message));
+        let state_for_msg = state.clone();
+        let msg_handler = dptree::entry().branch(Update::filter_message().endpoint(
+            move |bot: Bot, msg: Message| {
+                let state = state_for_msg.clone();
+                async move { handlers::commands::answer_message(bot, msg, state).await }
+            },
+        ));
         let mut dispatcher = Dispatcher::builder(message_bot.clone(), msg_handler)
-            .dependencies(dptree::deps![state])
+            .dependencies(dptree::deps![state.clone()])
             .error_handler(make_error_handler(message_bot.clone(), config.clone()))
             .build();
         run_dispatcher(&mut dispatcher, cancel_token).await;
@@ -131,20 +131,26 @@ fn spawn_message_bot(
 
 async fn run_event_bot(
     event_bot: Bot,
-    state: AppState,
+    state: Arc<AppState>,
     config: Arc<Config>,
     cancel_token: tokio_util::sync::CancellationToken,
 ) {
+    let state_for_msg = state.clone();
     let handler = dptree::entry()
         .branch(
             Update::filter_message()
                 .filter_command::<Command>()
-                .endpoint(commands::answer_command),
+                .endpoint(handlers::commands::answer_command),
         )
-        .branch(Update::filter_message().endpoint(commands::answer_message))
-        .branch(Update::filter_callback_query().endpoint(callbacks::answer_callback));
+        .branch(
+            Update::filter_message().endpoint(move |bot: Bot, msg: Message| {
+                let state = state_for_msg.clone();
+                async move { handlers::commands::answer_message(bot, msg, state).await }
+            }),
+        )
+        .branch(Update::filter_callback_query().endpoint(handlers::callbacks::answer_callback));
     let mut dispatcher = Dispatcher::builder(event_bot.clone(), handler)
-        .dependencies(dptree::deps![state])
+        .dependencies(dptree::deps![state.clone()])
         .error_handler(make_error_handler(event_bot.clone(), config))
         .build();
     run_dispatcher(&mut dispatcher, cancel_token).await;

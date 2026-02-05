@@ -26,6 +26,14 @@ impl UserSettingsRepo for FakeUserSettingsRepo {
             reply_queue_enabled: false,
         })
     }
+
+    async fn update_language(&self, _telegram_id: TelegramId, _lang: LanguageCode) -> Result<()> {
+        Ok(())
+    }
+
+    async fn toggle_noon(&self, _telegram_id: TelegramId) -> Result<bool> {
+        Ok(true)
+    }
 }
 
 #[tokio::test]

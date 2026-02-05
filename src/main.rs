@@ -32,7 +32,6 @@ fn update_bot() -> Result<()> {
 }
 
 #[tokio::main]
-#[allow(clippy::large_futures)]
 async fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.iter().any(|a| a == "--update") {
@@ -48,59 +47,57 @@ async fn main() -> Result<()> {
     let cancel_token = tokio_util::sync::CancellationToken::new();
 
     let local = LocalSet::new();
-    local
-        .run_until(async move {
-            let mut set = JoinSet::new();
-            for config_path in config_paths {
-                let instance_name = bootstrap::cli::instance_name_from_path(&config_path);
-                let level = bootstrap::cli::read_log_level(&config_path)
-                    .unwrap_or_else(|| "info".to_string());
-                let dispatch = build_dispatch(&level);
-                let token = cancel_token.clone();
-                set.spawn_local(async move {
-                    let _guard = tracing::dispatcher::set_default(&dispatch);
-                    let span = tracing::info_span!(
-                        "instance",
-                        instance = %instance_name,
-                        config = %config_path
-                    );
-                    async move {
-                        tracing::info!(component = "main", "Starting application");
-                        let app = bootstrap::app::Application::build(std::path::PathBuf::from(
-                            &config_path,
-                        ))
-                        .await?;
-                        app.run(token).await
-                    }
-                    .instrument(span)
-                    .await
-                });
-            }
+    Box::pin(local.run_until(async move {
+        let mut set = JoinSet::new();
+        for config_path in config_paths {
+            let instance_name = bootstrap::cli::instance_name_from_path(&config_path);
+            let level =
+                bootstrap::cli::read_log_level(&config_path).unwrap_or_else(|| "info".to_string());
+            let dispatch = build_dispatch(&level);
+            let token = cancel_token.clone();
+            set.spawn_local(async move {
+                let _guard = tracing::dispatcher::set_default(&dispatch);
+                let span = tracing::info_span!(
+                    "instance",
+                    instance = %instance_name,
+                    config = %config_path
+                );
+                async move {
+                    tracing::info!(component = "main", "Starting application");
+                    let app =
+                        bootstrap::app::Application::build(std::path::PathBuf::from(&config_path))
+                            .await?;
+                    app.run(token).await
+                }
+                .instrument(span)
+                .await
+            });
+        }
 
-            let mut first_err: Option<anyhow::Error> = None;
-            while let Some(res) = set.join_next().await {
-                match res {
-                    Ok(Ok(())) => {}
-                    Ok(Err(e)) => {
-                        if first_err.is_none() {
-                            first_err = Some(e);
-                            cancel_token.cancel();
-                        }
+        let mut first_err: Option<anyhow::Error> = None;
+        while let Some(res) = set.join_next().await {
+            match res {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => {
+                    if first_err.is_none() {
+                        first_err = Some(e);
+                        cancel_token.cancel();
                     }
-                    Err(e) => {
-                        if first_err.is_none() {
-                            first_err = Some(anyhow::anyhow!(e));
-                            cancel_token.cancel();
-                        }
+                }
+                Err(e) => {
+                    if first_err.is_none() {
+                        first_err = Some(anyhow::anyhow!(e));
+                        cancel_token.cancel();
                     }
                 }
             }
-            if let Some(err) = first_err {
-                return Err(err);
-            }
-            Ok(())
-        })
-        .await?;
+        }
+        if let Some(err) = first_err {
+            return Err(err);
+        }
+        Ok(())
+    }))
+    .await?;
 
     Ok(())
 }

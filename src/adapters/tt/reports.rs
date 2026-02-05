@@ -1,5 +1,3 @@
-#![allow(clippy::pedantic)]
-
 use crate::adapters::tt::{WorkerContext, resolve_server_name};
 use crate::args;
 use crate::core::types::{BridgeEvent, TgChatId, TgMessageId, TtNickname};
@@ -60,7 +58,7 @@ pub(super) fn handle_who_command(
     );
 
     let mut report = String::with_capacity(1024);
-    if let Err(e) = writeln!(report, "{}\n", header) {
+    if let Err(e) = writeln!(report, "{header}\n") {
         tracing::error!(error = %e, "Failed to write who report header");
     }
 
@@ -69,7 +67,7 @@ pub(super) fn handle_who_command(
 
         let user_list = nicks
             .iter()
-            .map(|nick| nick.as_str())
+            .map(TtNickname::as_str)
             .collect::<Vec<_>>()
             .join(", ");
 
@@ -86,7 +84,7 @@ pub(super) fn handle_who_command(
             row_args.as_ref(),
         );
 
-        if let Err(e) = writeln!(report, "{}", row_text) {
+        if let Err(e) = writeln!(report, "{row_text}") {
             tracing::error!(error = %e, "Failed to write who report row");
         }
     }
@@ -95,10 +93,10 @@ pub(super) fn handle_who_command(
             locales::get_text(lang.as_str(), locales::LocaleKey::TtReportUnauth, None);
         let unauth_list = unauth_users
             .iter()
-            .map(|nick| nick.as_str())
+            .map(TtNickname::as_str)
             .collect::<Vec<_>>()
             .join(", ");
-        if let Err(e) = writeln!(report, "{} {}", unauth_list, unauth_label) {
+        if let Err(e) = writeln!(report, "{unauth_list} {unauth_label}") {
             tracing::error!(error = %e, "Failed to write who report unauth row");
         }
     }

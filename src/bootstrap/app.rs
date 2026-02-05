@@ -9,7 +9,7 @@ use teamtalk::Client;
 use teloxide::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
 use tokio::sync::oneshot;
-use tokio::task::{LocalSet, spawn_local};
+use tokio::task::spawn_local;
 use tokio::time::Duration;
 use tokio_util::sync::CancellationToken;
 
@@ -77,7 +77,6 @@ impl Application {
         Ok(Self { config, db })
     }
 
-    #[allow(clippy::future_not_send, clippy::large_futures)]
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
         let Self { config, db } = self;
 
@@ -88,70 +87,60 @@ impl Application {
         );
         spawn_pending_cleanup_task(db.clone(), 3600, 3600, cancel_token.clone());
 
-        let local = LocalSet::new();
         let client = tokio::task::spawn_blocking(Client::new)
             .await
             .map_err(|e| anyhow!("Failed to join TeamTalk SDK init task: {e}"))?
             .map_err(|e| anyhow!("Failed to initialize TeamTalk SDK: {e}"))?;
+        let shared = init_shared_state();
+        let (tx_bridge, rx_bridge) = tokio_mpsc::channel::<crate::core::types::BridgeEvent>(100);
+        let (tx_tt_cmd, rx_tt_cmd) = tokio_mpsc::channel::<crate::core::types::TtCommand>(256);
 
-        local
-            .run_until(async move {
-                let shared = init_shared_state();
-                let (tx_bridge, rx_bridge) =
-                    tokio_mpsc::channel::<crate::core::types::BridgeEvent>(100);
-                let (tx_tt_cmd, rx_tt_cmd) =
-                    tokio_mpsc::channel::<crate::core::types::TtCommand>(256);
+        let bots = init_bots(&config).await?;
+        let tt_handle = start_teamtalk_worker(TeamtalkWorkerConfig {
+            config: config.clone(),
+            state: shared.state.clone(),
+            tx_bridge: tx_bridge.clone(),
+            rx_tt_cmd,
+            tx_tt_cmd: tx_tt_cmd.clone(),
+            db: db.clone(),
+            bot_username: bots.bot_username.clone(),
+            client,
+        })
+        .await?;
 
-                let bots = init_bots(&config).await?;
-                let tt_handle = start_teamtalk_worker(TeamtalkWorkerConfig {
-                    config: config.clone(),
-                    state: shared.state.clone(),
-                    tx_bridge: tx_bridge.clone(),
-                    rx_tt_cmd,
-                    tx_tt_cmd: tx_tt_cmd.clone(),
-                    db: db.clone(),
-                    bot_username: bots.bot_username.clone(),
-                    client,
-                })
-                .await?;
+        let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
+            adapters::bridge::BridgeContext {
+                db: db.clone(),
+                state: shared.state.clone(),
+                config: config.clone(),
+                event_bot: bots.event_bot.clone(),
+                msg_bot: bots.message_bot.clone(),
+                message_token_present: bots.message_token_present,
+                tx_tt_cmd: tx_tt_cmd.clone(),
+                cancel_token: cancel_token.clone(),
+            },
+            rx_bridge,
+        ));
 
-                let bridge_handle = tokio::spawn(adapters::bridge::run_bridge(
-                    adapters::bridge::BridgeContext {
-                        db: db.clone(),
-                        state: shared.state.clone(),
-                        config: config.clone(),
-                        event_bot: bots.event_bot.clone(),
-                        msg_bot: bots.message_bot.clone(),
-                        message_token_present: bots.message_token_present,
-                        tx_tt_cmd: tx_tt_cmd.clone(),
-                        cancel_token: cancel_token.clone(),
-                    },
-                    rx_bridge,
-                ));
+        tokio::spawn(wait_for_cancel(cancel_token.clone(), tx_tt_cmd.clone()));
 
-                tokio::spawn(wait_for_cancel(cancel_token.clone(), tx_tt_cmd.clone()));
+        tokio::spawn(wait_for_shutdown_signal(
+            cancel_token.clone(),
+            tx_tt_cmd.clone(),
+        ));
 
-                tokio::spawn(wait_for_shutdown_signal(
-                    cancel_token.clone(),
-                    tx_tt_cmd.clone(),
-                ));
-
-                run_telegram_or_wait(TelegramRunContext {
-                    event_bot: bots.event_bot,
-                    message_bot: bots.message_bot,
-                    db,
-                    shared,
-                    tx_tt_cmd,
-                    config,
-                    cancel_token,
-                    bridge_handle,
-                    tt_handle,
-                })
-                .await?;
-
-                Ok::<(), anyhow::Error>(())
-            })
-            .await?;
+        run_telegram_or_wait(TelegramRunContext {
+            event_bot: bots.event_bot,
+            message_bot: bots.message_bot,
+            db,
+            shared,
+            tx_tt_cmd,
+            config,
+            cancel_token,
+            bridge_handle,
+            tt_handle,
+        })
+        .await?;
 
         Ok(())
     }
@@ -272,7 +261,6 @@ async fn init_bots(config: &Arc<Config>) -> Result<BotInit> {
     })
 }
 
-#[allow(clippy::future_not_send)]
 async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task::JoinHandle<()>> {
     let (tx_init, rx_init) = oneshot::channel();
     let tt_handle = {
