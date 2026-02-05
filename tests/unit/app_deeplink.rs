@@ -65,6 +65,17 @@ impl DeeplinkRepo for FakeDeeplinkRepo {
     async fn resolve_deeplink(&self, _token: &str) -> anyhow::Result<Option<Deeplink>> {
         Ok(self.deeplink.clone())
     }
+
+    async fn create_deeplink(
+        &self,
+        _token: &str,
+        _action: DeeplinkAction,
+        _payload: Option<&str>,
+        _expected_telegram_id: Option<TelegramId>,
+        _ttl_seconds: i64,
+    ) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 #[tokio::test]

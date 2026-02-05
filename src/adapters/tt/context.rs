@@ -1,3 +1,4 @@
+use crate::app::services::tt_context::TtServiceContext;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
 use crate::core::types::{
@@ -59,6 +60,12 @@ pub struct WorkerContext {
     pub bot_username: Option<TtUsername>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
+}
+
+impl WorkerContext {
+    pub fn services(&self) -> TtServiceContext {
+        TtServiceContext::new(self.db.clone(), self.state.clone())
+    }
 }
 
 pub struct RunTeamtalkArgs {

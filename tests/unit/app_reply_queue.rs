@@ -52,8 +52,39 @@ impl ReplyQueueRepo for FakeReplyQueueRepo {
         Ok(())
     }
 
-    async fn get_telegram_id_by_tt_user(&self, _tt_username: &TtUsername) -> Option<TelegramId> {
+    async fn fetch_telegram_id_by_tt_user(&self, _tt_username: &TtUsername) -> Option<TelegramId> {
         self.tt_to_tg
+    }
+
+    async fn add_reply_queue_item(
+        &self,
+        _tt_username: &TtUsername,
+        _admin_telegram_id: TelegramId,
+        _message_text: &str,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn get_reply_queue_for_user(
+        &self,
+        _tt_username: &TtUsername,
+    ) -> Result<Vec<crate::infra::db::reply_queue::ReplyQueueItem>> {
+        Ok(Vec::new())
+    }
+
+    async fn delete_reply_queue_ids(
+        &self,
+        _ids: &[crate::core::types::DbReplyQueueId],
+    ) -> Result<u64> {
+        Ok(0)
+    }
+
+    async fn clear_reply_queue_for_user(&self, _tt_username: &TtUsername) -> Result<u64> {
+        Ok(0)
+    }
+
+    async fn clear_reply_queue_all(&self) -> Result<u64> {
+        Ok(0)
     }
 }
 

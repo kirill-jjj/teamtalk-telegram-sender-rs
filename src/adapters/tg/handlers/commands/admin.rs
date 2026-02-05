@@ -1,0 +1,307 @@
+use crate::adapters::tg::handlers::search::{
+    SearchContext, SearchListType, append_search_hint, set_search_context,
+};
+use crate::adapters::tg::presenter::admin::bans::send_unban_list;
+use crate::adapters::tg::presenter::admin::subscribers::{
+    prepare_display_list, send_subscribers_list,
+};
+use crate::adapters::tg::presenter::keyboards::create_user_list_keyboard;
+use crate::adapters::tg::utils::{notify_admin_error, send_text_key};
+use crate::app::services::tg_admin as tg_admin_service;
+use crate::args;
+use crate::core::callbacks::{AdminAction, CallbackAction};
+use crate::core::types::{AdminErrorContext, LiteUser, TtCommand};
+use crate::infra::locales;
+use teloxide::prelude::*;
+use teloxide::sugar::request::RequestReplyExt;
+
+use super::{Command, CommandCtx};
+
+pub(super) async fn handle_kick_or_ban(ctx: &CommandCtx<'_>, cmd: Command) -> ResponseResult<()> {
+    if !ctx.is_admin {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdUnauth,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+    let users: Vec<LiteUser> = tg_admin_service::list_online_users(&ctx.state.state)
+        .await
+        .unwrap_or_default();
+
+    let is_kick = matches!(cmd, Command::Kick);
+    let title_key = if is_kick {
+        locales::LocaleKey::ListKickTitle
+    } else {
+        locales::LocaleKey::ListBanTitle
+    };
+
+    let args = args!(server = ctx.config.teamtalk.display_name().to_string());
+    let base = locales::get_text(ctx.lang.as_str(), title_key, args.as_ref());
+    let title = append_search_hint(&base, ctx.lang);
+
+    let keyboard = create_user_list_keyboard(
+        &users,
+        0,
+        move |u| {
+            let action = if is_kick {
+                AdminAction::KickPerform { user_id: u.id }
+            } else {
+                AdminAction::BanPerform { user_id: u.id }
+            };
+            (
+                u.nickname.as_str().to_string(),
+                CallbackAction::Admin(action),
+            )
+        },
+        move |p| {
+            let action = if is_kick {
+                AdminAction::KickList { page: p }
+            } else {
+                AdminAction::BanList { page: p }
+            };
+            CallbackAction::Admin(action)
+        },
+        None,
+        ctx.lang,
+    );
+
+    let sent = ctx
+        .bot
+        .send_message(ctx.msg.chat.id, title)
+        .reply_to(ctx.msg.id)
+        .reply_markup(keyboard)
+        .await?;
+    let list_type = if is_kick {
+        SearchListType::Kick
+    } else {
+        SearchListType::Ban
+    };
+    set_search_context(
+        ctx.state,
+        sent.chat.id,
+        SearchContext {
+            message_id: sent.id,
+            list_type,
+        },
+    )
+    .await;
+    Ok(())
+}
+
+pub(super) async fn handle_unban(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
+    if !ctx.is_admin {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdUnauth,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+    send_unban_list(
+        ctx.bot,
+        ctx.msg.chat.id,
+        tg_admin_service::list_ban_entries(ctx.db)
+            .await
+            .unwrap_or_default(),
+        &ctx.state.search_contexts,
+        ctx.lang,
+        0,
+        Some(ctx.msg.id),
+    )
+    .await
+}
+
+pub(super) async fn handle_subscribers(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
+    if !ctx.is_admin {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdUnauth,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+    send_subscribers_list(
+        ctx.bot,
+        ctx.msg.chat.id,
+        prepare_display_list(
+            ctx.bot,
+            tg_admin_service::list_subscribers(ctx.db)
+                .await
+                .unwrap_or_default(),
+        )
+        .await,
+        &ctx.state.search_contexts,
+        ctx.lang,
+        0,
+        Some(ctx.msg.id),
+    )
+    .await
+}
+
+pub(super) async fn handle_exit(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
+    if !ctx.is_admin {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdUnauth,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+    ctx.bot
+        .send_message(
+            ctx.msg.chat.id,
+            locales::get_text(ctx.lang.as_str(), locales::LocaleKey::CmdShuttingDown, None),
+        )
+        .reply_to(ctx.msg.id)
+        .await?;
+    let _ = ctx.state.tx_tt.send(TtCommand::Shutdown).await;
+    ctx.state.cancel_token.cancel();
+    Ok(())
+}
+
+pub(super) async fn handle_broadcast(ctx: &CommandCtx<'_>, text: String) -> ResponseResult<()> {
+    if !ctx.is_admin {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdUnauth,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let text = text.trim().to_string();
+    if text.is_empty() {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdBroadcastEmpty,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    if let Err(err) = tg_admin_service::broadcast(&ctx.state.tx_tt, text).await {
+        let notify = err.should_notify();
+        let error = err.into_error();
+        tracing::error!(error = %error, "Failed to send broadcast command");
+        if notify {
+            notify_admin_error(
+                ctx.bot,
+                ctx.config,
+                ctx.telegram_id,
+                AdminErrorContext::Command,
+                &error.to_string(),
+                ctx.lang,
+            )
+            .await;
+        }
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdError,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    send_text_key(
+        ctx.bot,
+        ctx.msg.chat.id,
+        ctx.lang,
+        locales::LocaleKey::CmdBroadcastSent,
+        Some(ctx.msg.id),
+    )
+    .await
+}
+
+pub(super) async fn handle_message(ctx: &CommandCtx<'_>, text: String) -> ResponseResult<()> {
+    if !ctx.is_admin {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdUnauth,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let text = text.trim().to_string();
+    if text.is_empty() {
+        send_text_key(
+            ctx.bot,
+            ctx.msg.chat.id,
+            ctx.lang,
+            locales::LocaleKey::CmdMessageEmpty,
+            Some(ctx.msg.id),
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let subs = match tg_admin_service::list_subscribers(ctx.db).await {
+        Ok(subs) => subs,
+        Err(err) => {
+            let notify = err.should_notify();
+            let error = err.into_error();
+            tracing::error!(error = %error, "Failed to load subscribers");
+            if notify {
+                notify_admin_error(
+                    ctx.bot,
+                    ctx.config,
+                    ctx.telegram_id,
+                    AdminErrorContext::Command,
+                    &error.to_string(),
+                    ctx.lang,
+                )
+                .await;
+            }
+            send_text_key(
+                ctx.bot,
+                ctx.msg.chat.id,
+                ctx.lang,
+                locales::LocaleKey::CmdError,
+                Some(ctx.msg.id),
+            )
+            .await?;
+            return Ok(());
+        }
+    };
+
+    let (sent, failed) =
+        tg_admin_service::send_direct_message(ctx.bot, &subs, ctx.telegram_id, &text).await;
+
+    let args = args!(sent = sent, failed = failed);
+    let reply = locales::get_text(
+        ctx.lang.as_str(),
+        locales::LocaleKey::CmdMessageSent,
+        args.as_ref(),
+    );
+    ctx.bot
+        .send_message(ctx.msg.chat.id, reply)
+        .reply_to(ctx.msg.id)
+        .await?;
+    Ok(())
+}

@@ -8,6 +8,14 @@ pub trait DeeplinkRepo: Sync {
         &self,
         token: &str,
     ) -> Result<Option<crate::infra::db::types::Deeplink>>;
+    async fn create_deeplink(
+        &self,
+        token: &str,
+        action: DeeplinkAction,
+        payload: Option<&str>,
+        expected_telegram_id: Option<TelegramId>,
+        ttl_seconds: i64,
+    ) -> Result<()>;
 }
 
 #[derive(Debug, Clone)]
@@ -37,6 +45,18 @@ pub async fn resolve_for_user(
     }))
 }
 
+pub async fn create(
+    db: &impl DeeplinkRepo,
+    token: &str,
+    action: DeeplinkAction,
+    payload: Option<&str>,
+    expected_telegram_id: Option<TelegramId>,
+    ttl_seconds: i64,
+) -> Result<()> {
+    db.create_deeplink(token, action, payload, expected_telegram_id, ttl_seconds)
+        .await
+}
+
 #[async_trait]
 impl DeeplinkRepo for crate::infra::db::Database {
     async fn resolve_deeplink(
@@ -44,6 +64,18 @@ impl DeeplinkRepo for crate::infra::db::Database {
         token: &str,
     ) -> Result<Option<crate::infra::db::types::Deeplink>> {
         self.resolve_deeplink(token).await
+    }
+
+    async fn create_deeplink(
+        &self,
+        token: &str,
+        action: DeeplinkAction,
+        payload: Option<&str>,
+        expected_telegram_id: Option<TelegramId>,
+        ttl_seconds: i64,
+    ) -> Result<()> {
+        self.create_deeplink(token, action, payload, expected_telegram_id, ttl_seconds)
+            .await
     }
 }
 

@@ -19,7 +19,23 @@ pub trait ReplyQueueRepo: Sync {
         telegram_id: TelegramId,
         enabled: bool,
     ) -> Result<()>;
-    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<TelegramId>;
+    async fn fetch_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<TelegramId>;
+    async fn add_reply_queue_item(
+        &self,
+        tt_username: &TtUsername,
+        admin_telegram_id: TelegramId,
+        message_text: &str,
+    ) -> Result<()>;
+    async fn get_reply_queue_for_user(
+        &self,
+        tt_username: &TtUsername,
+    ) -> Result<Vec<ReplyQueueItem>>;
+    async fn delete_reply_queue_ids(
+        &self,
+        ids: &[crate::core::types::DbReplyQueueId],
+    ) -> Result<u64>;
+    async fn clear_reply_queue_for_user(&self, tt_username: &TtUsername) -> Result<u64>;
+    async fn clear_reply_queue_all(&self) -> Result<u64>;
 }
 
 pub async fn get_reply_queue_global_enabled(db: &impl ReplyQueueRepo) -> Result<bool> {
@@ -58,10 +74,45 @@ pub async fn is_reply_queue_enabled_for_tt_user(
     if !get_reply_queue_global_enabled(db).await? {
         return Ok(false);
     }
-    let Some(tg_id) = db.get_telegram_id_by_tt_user(tt_username).await else {
+    let Some(tg_id) = db.fetch_telegram_id_by_tt_user(tt_username).await else {
         return Ok(false);
     };
     get_reply_queue_user_enabled(db, tg_id).await
+}
+
+pub async fn add_reply_queue_item(
+    db: &impl ReplyQueueRepo,
+    tt_username: &TtUsername,
+    admin_telegram_id: TelegramId,
+    message_text: &str,
+) -> Result<()> {
+    db.add_reply_queue_item(tt_username, admin_telegram_id, message_text)
+        .await
+}
+
+pub async fn get_reply_queue_for_user(
+    db: &impl ReplyQueueRepo,
+    tt_username: &TtUsername,
+) -> Result<Vec<ReplyQueueItem>> {
+    db.get_reply_queue_for_user(tt_username).await
+}
+
+pub async fn delete_reply_queue_ids(
+    db: &impl ReplyQueueRepo,
+    ids: &[crate::core::types::DbReplyQueueId],
+) -> Result<u64> {
+    db.delete_reply_queue_ids(ids).await
+}
+
+pub async fn clear_reply_queue_for_user(
+    db: &impl ReplyQueueRepo,
+    tt_username: &TtUsername,
+) -> Result<u64> {
+    db.clear_reply_queue_for_user(tt_username).await
+}
+
+pub async fn clear_reply_queue_all(db: &impl ReplyQueueRepo) -> Result<u64> {
+    db.clear_reply_queue_all().await
 }
 
 #[async_trait]
@@ -90,9 +141,40 @@ impl ReplyQueueRepo for crate::infra::db::Database {
         self.update_reply_queue_enabled(telegram_id, enabled).await
     }
 
-    #[allow(clippy::use_self)]
-    async fn get_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<TelegramId> {
-        crate::infra::db::Database::get_telegram_id_by_tt_user(self, tt_username).await
+    async fn fetch_telegram_id_by_tt_user(&self, tt_username: &TtUsername) -> Option<TelegramId> {
+        Self::get_telegram_id_by_tt_user(self, tt_username).await
+    }
+
+    async fn add_reply_queue_item(
+        &self,
+        tt_username: &TtUsername,
+        admin_telegram_id: TelegramId,
+        message_text: &str,
+    ) -> Result<()> {
+        self.add_reply_queue_item(tt_username, admin_telegram_id, message_text)
+            .await
+    }
+
+    async fn get_reply_queue_for_user(
+        &self,
+        tt_username: &TtUsername,
+    ) -> Result<Vec<ReplyQueueItem>> {
+        self.get_reply_queue_for_user(tt_username).await
+    }
+
+    async fn delete_reply_queue_ids(
+        &self,
+        ids: &[crate::core::types::DbReplyQueueId],
+    ) -> Result<u64> {
+        self.delete_reply_queue_ids(ids).await
+    }
+
+    async fn clear_reply_queue_for_user(&self, tt_username: &TtUsername) -> Result<u64> {
+        self.clear_reply_queue_for_user(tt_username).await
+    }
+
+    async fn clear_reply_queue_all(&self) -> Result<u64> {
+        self.clear_reply_queue_all().await
     }
 }
 

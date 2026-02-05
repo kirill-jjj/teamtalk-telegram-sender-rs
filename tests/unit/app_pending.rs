@@ -16,6 +16,26 @@ struct FakePendingRepo {
 
 #[async_trait]
 impl PendingRepo for FakePendingRepo {
+    async fn add_pending_reply(
+        &self,
+        _reply_id: TgMessageId,
+        _tt_user_id: TtUserId,
+        _tt_username: Option<&TtUsername>,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    async fn add_pending_channel_reply(
+        &self,
+        _reply_id: TgMessageId,
+        _channel_id: TtChannelId,
+        _channel_name: &TtChannelName,
+        _server_name: &TtServerName,
+        _original_text: &str,
+    ) -> Result<()> {
+        Ok(())
+    }
+
     async fn get_pending_reply(
         &self,
         _reply_id: TgMessageId,
