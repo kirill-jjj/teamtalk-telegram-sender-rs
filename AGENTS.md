@@ -50,6 +50,7 @@
 - Use Conventional Commits (e.g., `feat:`, `fix:`, `docs:`, `chore:`), imperative mood, <= 72 chars.
 - One change type per commit; add a body when rationale is needed.
 - PRs should describe the change, link related issues, and note test results.
+- Commit each context separately. When making a fix, commit it before moving on to other topics or changes.
 ## Commit Message Body Guidance
 - Use a body only for large or multi-part changes; keep small changes title-only.
 - If you are told to include or omit a body, follow the request.
