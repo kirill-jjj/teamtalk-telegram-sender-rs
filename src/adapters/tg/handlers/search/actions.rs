@@ -3,7 +3,7 @@ use crate::adapters::tg::presenter::admin::subscriber_settings as subscriber_set
 use crate::adapters::tg::presenter::admin::subscribers as subscribers_logic;
 use crate::adapters::tg::presenter::settings::{RenderMuteListArgs, RenderMuteListStringsArgs};
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user_id};
+use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::args;
@@ -462,5 +462,5 @@ async fn send_tt_command(
 
 fn requester_id_from_message(msg: &Message, context: &'static str) -> Option<TelegramId> {
     let user = msg.from.as_ref()?;
-    telegram_id_from_user_id(user.id.0, context)
+    telegram_id_from_user(user, context)
 }

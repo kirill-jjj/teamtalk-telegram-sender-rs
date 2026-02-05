@@ -1,6 +1,7 @@
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback, answer_callback_empty, notify_admin_error, telegram_id_from_user_id,
+    answer_callback, answer_callback_empty, answer_cmd_error_callback, notify_admin_error,
+    telegram_id_from_callback_query,
 };
 use crate::app::services::tg_basic as tg_basic_service;
 use crate::core::callbacks::UnsubAction;
@@ -15,10 +16,10 @@ pub async fn handle_unsub_action(
     action: UnsubAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
+    let Some(telegram_id) = telegram_id_from_callback_query(&q, "handle_unsub_action") else {
         return Ok(());
     };
-    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "handle_unsub_action") else {
+    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
     let db = &state.db;
@@ -41,13 +42,7 @@ pub async fn handle_unsub_action(
                     lang,
                 )
                 .await;
-                answer_callback(
-                    &bot,
-                    &q.id,
-                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                    false,
-                )
-                .await?;
+                answer_cmd_error_callback(&bot, &q.id, lang, false).await?;
                 return Ok(());
             }
             bot.edit_message_text(

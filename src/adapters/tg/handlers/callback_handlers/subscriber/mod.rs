@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::admin::subscribers::{
     SubscriberDetailsArgs, default_user_settings,
 };
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{check_db_err, telegram_id_from_user_id};
+use crate::adapters::tg::utils::{check_db_err, telegram_id_from_callback_query};
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::core::callbacks::SubAction;
 use crate::core::types::AdminErrorContext;
@@ -43,17 +43,16 @@ pub async fn handle_subscriber_actions(
     action: SubAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let Some(admin_chat_id) = telegram_id_from_callback_query(&q, "handle_subscriber_actions")
+    else {
+        return Ok(());
+    };
     let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
     let db = &state.db;
     let tx_tt = &state.tx_tt;
     let config = &state.config;
-    let Some(admin_chat_id) = telegram_id_from_user_id(q.from.id.0, "handle_subscriber_actions")
-    else {
-        return Ok(());
-    };
-
     let ctx = SubCtx {
         bot: &bot,
         msg: &msg,

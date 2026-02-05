@@ -2,7 +2,9 @@ use crate::adapters::tg::handlers::callback_handlers::{
     admin, menu, mute, settings, subscriber, unsub,
 };
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, telegram_id_from_user_id};
+use crate::adapters::tg::utils::{
+    answer_cmd_error_callback, notify_admin_error, telegram_id_from_callback_query,
+};
 use crate::app::services::tg_callbacks as tg_callbacks_service;
 use crate::core::callbacks::CallbackAction;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
@@ -18,7 +20,7 @@ pub async fn answer_callback(
     state: Arc<AppState>,
 ) -> ResponseResult<()> {
     let query_id = q.id.clone();
-    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "answer_callback") else {
+    let Some(telegram_id) = telegram_id_from_callback_query(&q, "answer_callback") else {
         return Ok(());
     };
     let callback_data_str = q.data.clone().unwrap_or_default();
@@ -82,14 +84,7 @@ async fn load_user_lang(
                 default_lang,
             )
             .await;
-            bot.answer_callback_query(query_id)
-                .text(locales::get_text(
-                    default_lang.as_str(),
-                    locales::LocaleKey::CmdError,
-                    None,
-                ))
-                .show_alert(true)
-                .await?;
+            answer_cmd_error_callback(bot, &query_id, default_lang, true).await?;
             Ok(default_lang)
         }
     }
@@ -132,14 +127,7 @@ async fn ensure_subscribed(
                 lang,
             )
             .await;
-            bot.answer_callback_query(query_id)
-                .text(locales::get_text(
-                    lang.as_str(),
-                    locales::LocaleKey::CmdError,
-                    None,
-                ))
-                .show_alert(true)
-                .await?;
+            answer_cmd_error_callback(bot, &query_id, lang, true).await?;
             Ok(false)
         }
     }

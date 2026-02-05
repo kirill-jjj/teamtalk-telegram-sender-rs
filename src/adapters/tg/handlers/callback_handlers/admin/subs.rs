@@ -2,10 +2,9 @@ use crate::adapters::tg::presenter::admin::subscribers::{
     edit_subscribers_list, prepare_display_list, send_subscribers_list,
 };
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
+use crate::adapters::tg::utils::{answer_callback_empty, answer_cmd_error_callback};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::types::LanguageCode;
-use crate::infra::locales;
 use teloxide::prelude::*;
 
 use super::lists::should_send_page;
@@ -23,13 +22,7 @@ pub(super) async fn handle_subs_list(
             Ok(subs) => subs,
             Err(err) => {
                 tracing::error!(error = ?err, "Failed to load subscribers for list");
-                answer_callback(
-                    bot,
-                    &q.id,
-                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                    true,
-                )
-                .await?;
+                answer_cmd_error_callback(bot, &q.id, lang, true).await?;
                 return Ok(());
             }
         };
@@ -48,13 +41,7 @@ pub(super) async fn handle_subs_list(
             Ok(subs) => subs,
             Err(err) => {
                 tracing::error!(error = ?err, "Failed to load subscribers for list edit");
-                answer_callback(
-                    bot,
-                    &q.id,
-                    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                    true,
-                )
-                .await?;
+                answer_cmd_error_callback(bot, &q.id, lang, true).await?;
                 return Ok(());
             }
         };

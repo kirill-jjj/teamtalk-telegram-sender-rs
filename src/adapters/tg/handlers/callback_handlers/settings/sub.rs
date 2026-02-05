@@ -1,5 +1,5 @@
 use crate::adapters::tg::presenter::settings::send_sub_settings;
-use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, check_db_err, cmd_error_text};
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, NotificationSetting, TelegramId};
@@ -28,7 +28,7 @@ pub(super) async fn handle_sub_select(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
+                cmd_error_text(lang),
             )
             .await?;
             return Ok(());

@@ -3,7 +3,7 @@ use crate::adapters::tg::handlers::search::{
 };
 use crate::adapters::tg::presenter::keyboards::create_user_list_keyboard;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
+use crate::adapters::tg::utils::{answer_callback_empty, answer_cmd_error_callback};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
@@ -23,13 +23,7 @@ pub(super) async fn handle_kick_list(
         Ok(users) => users,
         Err(err) => {
             tracing::error!(error = ?err, "Failed to list online users for kick list");
-            answer_callback(
-                bot,
-                &q.id,
-                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                true,
-            )
-            .await?;
+            answer_cmd_error_callback(bot, &q.id, lang, true).await?;
             return Ok(());
         }
     };
@@ -78,13 +72,7 @@ pub(super) async fn handle_ban_list(
         Ok(users) => users,
         Err(err) => {
             tracing::error!(error = ?err, "Failed to list online users for ban list");
-            answer_callback(
-                bot,
-                &q.id,
-                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                true,
-            )
-            .await?;
+            answer_cmd_error_callback(bot, &q.id, lang, true).await?;
             return Ok(());
         }
     };

@@ -1,7 +1,8 @@
 use crate::adapters::tg::presenter::admin::bans::{edit_unban_list, send_unban_list};
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback, answer_callback_empty, check_db_err, telegram_id_from_user_id,
+    answer_callback, answer_callback_empty, answer_cmd_error_callback, check_db_err,
+    telegram_id_from_callback_query,
 };
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::types::{AdminErrorContext, DbBanId, LanguageCode};
@@ -20,13 +21,7 @@ async fn load_bans_or_reply(
         Ok(entries) => Ok(Some(entries)),
         Err(err) => {
             tracing::error!(error = ?err, "Failed to load ban entries");
-            answer_callback(
-                bot,
-                &q.id,
-                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-                true,
-            )
-            .await?;
+            answer_cmd_error_callback(bot, &q.id, lang, true).await?;
             Ok(None)
         }
     }
@@ -69,7 +64,7 @@ pub(super) async fn handle_unban_perform(
     page: usize,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(admin_id) = telegram_id_from_user_id(q.from.id.0, "handle_unban_perform") else {
+    let Some(admin_id) = telegram_id_from_callback_query(q, "handle_unban_perform") else {
         return Ok(());
     };
     if check_db_err(

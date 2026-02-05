@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::keyboards::confirm_cancel_keyboard;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    answer_callback_empty, notify_admin_error, telegram_id_from_user_id,
+    answer_callback_empty, notify_admin_error, telegram_id_from_callback_query,
 };
 use crate::core::callbacks::{CallbackAction, MenuAction, UnsubAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
@@ -16,11 +16,11 @@ pub async fn handle_menu(
     action: MenuAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
+    let admin_id = telegram_id_from_callback_query(&q, "handle_menu");
     let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
     let chat_id = msg.chat.id;
-    let admin_id = telegram_id_from_user_id(q.from.id.0, "handle_menu");
 
     match action {
         MenuAction::Who => {

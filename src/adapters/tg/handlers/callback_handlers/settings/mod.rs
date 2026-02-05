@@ -1,6 +1,6 @@
 use crate::adapters::tg::presenter::settings::send_main_settings_edit;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::telegram_id_from_user_id;
+use crate::adapters::tg::utils::telegram_id_from_callback_query;
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::callbacks::SettingsAction;
 use crate::core::types::LanguageCode;
@@ -23,7 +23,7 @@ pub async fn handle_settings(
         return Ok(());
     };
     let msg = msg.as_ref();
-    let Some(telegram_id) = telegram_id_from_user_id(q.from.id.0, "handle_settings") else {
+    let Some(telegram_id) = telegram_id_from_callback_query(&q, "handle_settings") else {
         return Ok(());
     };
 

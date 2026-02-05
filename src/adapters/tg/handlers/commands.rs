@@ -7,7 +7,7 @@ mod voice;
 
 use crate::adapters::tg::handlers::search::maybe_handle_search_message;
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user_id};
+use crate::adapters::tg::utils::{notify_admin_error, send_text_key, telegram_id_from_user};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_commands as tg_commands_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
@@ -63,7 +63,7 @@ pub async fn answer_command(
     let Some(user) = &msg.from else {
         return Ok(());
     };
-    let Some(telegram_id) = telegram_id_from_user_id(user.id.0, "answer_command") else {
+    let Some(telegram_id) = telegram_id_from_user(user, "answer_command") else {
         return Ok(());
     };
     let Some(ctx) = CommandCtx::new(&bot, &msg, state.as_ref(), telegram_id).await? else {
@@ -225,7 +225,7 @@ pub async fn answer_message(bot: Bot, msg: Message, state: Arc<AppState>) -> Res
     let Some(user) = &msg.from else {
         return Ok(());
     };
-    let Some(telegram_id) = telegram_id_from_user_id(user.id.0, "answer_message") else {
+    let Some(telegram_id) = telegram_id_from_user(user, "answer_message") else {
         return Ok(());
     };
     let config = &state.config;

@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::settings::{
     QueueAdminStatus, QueueLinkStatus, QueueSettingsView, QueueToggleStatus, send_queue_settings,
 };
-use crate::adapters::tg::utils::{answer_callback, check_db_err};
+use crate::adapters::tg::utils::{answer_callback, check_db_err, cmd_error_text};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_queue_settings as tg_queue_settings_service;
 use crate::args;
@@ -83,7 +83,7 @@ pub(super) async fn handle_queue_menu(
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,
-                locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
+                cmd_error_text(lang),
             )
             .await?;
             return Ok(());

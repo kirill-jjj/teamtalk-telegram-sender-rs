@@ -80,6 +80,30 @@ pub fn telegram_id_from_user_id(user_id: u64, context: &'static str) -> Option<T
     )
 }
 
+pub fn telegram_id_from_callback_query(
+    q: &teloxide::types::CallbackQuery,
+    context: &'static str,
+) -> Option<TelegramId> {
+    telegram_id_from_user_id(q.from.id.0, context)
+}
+
+pub fn telegram_id_from_user(user: &teloxide::types::User, context: &'static str) -> Option<TelegramId> {
+    telegram_id_from_user_id(user.id.0, context)
+}
+
+pub fn cmd_error_text(lang: LanguageCode) -> String {
+    locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None)
+}
+
+pub async fn answer_cmd_error_callback(
+    bot: &Bot,
+    query_id: &teloxide::types::CallbackQueryId,
+    lang: LanguageCode,
+    show_alert: bool,
+) -> ResponseResult<()> {
+    answer_callback(bot, query_id, cmd_error_text(lang), show_alert).await
+}
+
 pub async fn check_db_err(
     bot: &Bot,
     query_id: &str,
@@ -93,9 +117,8 @@ pub async fn check_db_err(
         tracing::error!(error = ?e, "Database error");
         notify_admin_error(bot, config, user_id, context, &e.to_string(), lang).await;
 
-        let error_text = locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None);
         bot.answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
-            .text(error_text)
+            .text(cmd_error_text(lang))
             .show_alert(true)
             .await?;
 

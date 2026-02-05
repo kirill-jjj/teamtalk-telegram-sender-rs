@@ -1,5 +1,7 @@
 use crate::adapters::tg::state::AppState;
-use crate::adapters::tg::utils::{answer_callback, notify_admin_error, telegram_id_from_user_id};
+use crate::adapters::tg::utils::{
+    answer_callback, answer_cmd_error_callback, notify_admin_error, telegram_id_from_callback_query,
+};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand, TtUserId};
 use crate::infra::locales;
@@ -12,7 +14,7 @@ pub(super) async fn handle_kick_perform(
     user_id: TtUserId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(admin_id) = telegram_id_from_user_id(q.from.id.0, "handle_kick_perform") else {
+    let Some(admin_id) = telegram_id_from_callback_query(q, "handle_kick_perform") else {
         return Ok(());
     };
     if let Err(e) = state.tx_tt.send(TtCommand::KickUser { user_id }).await {
@@ -43,7 +45,7 @@ pub(super) async fn handle_ban_perform(
     user_id: TtUserId,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(admin_id) = telegram_id_from_user_id(q.from.id.0, "handle_ban_perform") else {
+    let Some(admin_id) = telegram_id_from_callback_query(q, "handle_ban_perform") else {
         return Ok(());
     };
     let user = match tg_admin_service::online_user_by_id(&state.state, user_id).await {
@@ -85,13 +87,7 @@ pub(super) async fn handle_ban_perform(
             lang,
         )
         .await;
-        answer_callback(
-            bot,
-            &q.id,
-            locales::get_text(lang.as_str(), locales::LocaleKey::CmdError, None),
-            true,
-        )
-        .await?;
+        answer_cmd_error_callback(bot, &q.id, lang, true).await?;
         return Ok(());
     }
 

@@ -17,16 +17,23 @@ use teloxide::sugar::request::RequestReplyExt;
 
 use super::{Command, CommandCtx};
 
+async fn reject_if_not_admin(ctx: &CommandCtx<'_>) -> ResponseResult<bool> {
+    if ctx.is_admin {
+        return Ok(false);
+    }
+    send_text_key(
+        ctx.bot,
+        ctx.msg.chat.id,
+        ctx.lang,
+        locales::LocaleKey::CmdUnauth,
+        Some(ctx.msg.id),
+    )
+    .await?;
+    Ok(true)
+}
+
 pub(super) async fn handle_kick_or_ban(ctx: &CommandCtx<'_>, cmd: Command) -> ResponseResult<()> {
-    if !ctx.is_admin {
-        send_text_key(
-            ctx.bot,
-            ctx.msg.chat.id,
-            ctx.lang,
-            locales::LocaleKey::CmdUnauth,
-            Some(ctx.msg.id),
-        )
-        .await?;
+    if reject_if_not_admin(ctx).await? {
         return Ok(());
     }
     let users: Vec<LiteUser> = match tg_admin_service::list_online_users(&ctx.state.state).await {
@@ -119,15 +126,7 @@ pub(super) async fn handle_kick_or_ban(ctx: &CommandCtx<'_>, cmd: Command) -> Re
 }
 
 pub(super) async fn handle_unban(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
-    if !ctx.is_admin {
-        send_text_key(
-            ctx.bot,
-            ctx.msg.chat.id,
-            ctx.lang,
-            locales::LocaleKey::CmdUnauth,
-            Some(ctx.msg.id),
-        )
-        .await?;
+    if reject_if_not_admin(ctx).await? {
         return Ok(());
     }
     send_unban_list(
@@ -170,15 +169,7 @@ pub(super) async fn handle_unban(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
 }
 
 pub(super) async fn handle_subscribers(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
-    if !ctx.is_admin {
-        send_text_key(
-            ctx.bot,
-            ctx.msg.chat.id,
-            ctx.lang,
-            locales::LocaleKey::CmdUnauth,
-            Some(ctx.msg.id),
-        )
-        .await?;
+    if reject_if_not_admin(ctx).await? {
         return Ok(());
     }
     send_subscribers_list(
@@ -225,15 +216,7 @@ pub(super) async fn handle_subscribers(ctx: &CommandCtx<'_>) -> ResponseResult<(
 }
 
 pub(super) async fn handle_exit(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
-    if !ctx.is_admin {
-        send_text_key(
-            ctx.bot,
-            ctx.msg.chat.id,
-            ctx.lang,
-            locales::LocaleKey::CmdUnauth,
-            Some(ctx.msg.id),
-        )
-        .await?;
+    if reject_if_not_admin(ctx).await? {
         return Ok(());
     }
     ctx.bot
@@ -260,15 +243,7 @@ pub(super) async fn handle_exit(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
 }
 
 pub(super) async fn handle_broadcast(ctx: &CommandCtx<'_>, text: String) -> ResponseResult<()> {
-    if !ctx.is_admin {
-        send_text_key(
-            ctx.bot,
-            ctx.msg.chat.id,
-            ctx.lang,
-            locales::LocaleKey::CmdUnauth,
-            Some(ctx.msg.id),
-        )
-        .await?;
+    if reject_if_not_admin(ctx).await? {
         return Ok(());
     }
 
@@ -322,15 +297,7 @@ pub(super) async fn handle_broadcast(ctx: &CommandCtx<'_>, text: String) -> Resp
 }
 
 pub(super) async fn handle_message(ctx: &CommandCtx<'_>, text: String) -> ResponseResult<()> {
-    if !ctx.is_admin {
-        send_text_key(
-            ctx.bot,
-            ctx.msg.chat.id,
-            ctx.lang,
-            locales::LocaleKey::CmdUnauth,
-            Some(ctx.msg.id),
-        )
-        .await?;
+    if reject_if_not_admin(ctx).await? {
         return Ok(());
     }
 
