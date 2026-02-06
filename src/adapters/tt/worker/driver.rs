@@ -6,8 +6,8 @@ use crate::core::types::TtCommand;
 use futures_util::StreamExt;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
 use teamtalk::client::{ConnectParams, ReconnectHandler};
+use tokio::sync::mpsc::Sender;
 
 pub(super) struct DriverCtx {
     pub(super) async_client: teamtalk::AsyncClient,

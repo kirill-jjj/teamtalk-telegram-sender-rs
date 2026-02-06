@@ -1,7 +1,12 @@
 pre-commit:
+  parallel: false
+  files: git diff --name-only --cached
   commands:
     fmt:
       run: cargo fmt
+      stage_fixed: true
+    fmt-check:
+      run: cargo fmt -- --check
     clippy:
       run: cargo clippy --all-targets --all-features -- -D warnings
     test:

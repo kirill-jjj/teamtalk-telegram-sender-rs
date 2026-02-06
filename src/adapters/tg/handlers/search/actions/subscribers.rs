@@ -90,7 +90,9 @@ pub(super) async fn handle_link_list(
         {
             Ok(s) => s,
             Err(e) => {
-                if let Some(requester_id) = super::requester_id_from_message(msg, "search_load_settings") {
+                if let Some(requester_id) =
+                    super::requester_id_from_message(msg, "search_load_settings")
+                {
                     TgErrorReporter::new(bot, &state.config, requester_id, lang)
                         .notify(AdminErrorContext::Callback, &e.to_string())
                         .await;

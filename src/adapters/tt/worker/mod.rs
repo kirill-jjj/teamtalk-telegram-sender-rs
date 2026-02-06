@@ -20,8 +20,10 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
     let tt_encrypted = args.config.teamtalk.encrypted;
     let tt_status_text = args.config.teamtalk.status_text.clone();
     let reconnect_retry_seconds = args.config.operational_parameters.tt_reconnect_retry;
-    let reconnect_check_interval_seconds =
-        args.config.operational_parameters.tt_reconnect_check_interval;
+    let reconnect_check_interval_seconds = args
+        .config
+        .operational_parameters
+        .tt_reconnect_check_interval;
     let ctx = setup::build_worker_context(&args);
 
     let mut rx_cmd = args.rx_cmd;
@@ -40,8 +42,10 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
     let stream_queue = VecDeque::new();
     let current_stream = None;
     let stream_seq = 0;
-    let set_streaming_status =
-        setup::build_set_streaming_status(args.config.general.gender.to_user_gender(), tt_status_text);
+    let set_streaming_status = setup::build_set_streaming_status(
+        args.config.general.gender.to_user_gender(),
+        tt_status_text,
+    );
 
     let reconnect_handler = setup::build_reconnect_handler();
 

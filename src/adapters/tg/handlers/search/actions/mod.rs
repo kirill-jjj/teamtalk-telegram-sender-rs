@@ -28,34 +28,38 @@ pub(super) async fn handle_single_match(
             telegram_id,
             mode,
             page,
-        } => mute::handle_mute(mute::HandleMuteArgs {
-            bot,
-            msg,
-            state,
-            candidate,
-            telegram_id: *telegram_id,
-            mode: mode.clone(),
-            page: *page,
-            server_list: true,
-            lang,
-        })
-        .await,
+        } => {
+            mute::handle_mute(mute::HandleMuteArgs {
+                bot,
+                msg,
+                state,
+                candidate,
+                telegram_id: *telegram_id,
+                mode: mode.clone(),
+                page: *page,
+                server_list: true,
+                lang,
+            })
+            .await
+        }
         SearchListType::MuteLocal {
             telegram_id,
             mode,
             page,
-        } => mute::handle_mute(mute::HandleMuteArgs {
-            bot,
-            msg,
-            state,
-            candidate,
-            telegram_id: *telegram_id,
-            mode: mode.clone(),
-            page: *page,
-            server_list: false,
-            lang,
-        })
-        .await,
+        } => {
+            mute::handle_mute(mute::HandleMuteArgs {
+                bot,
+                msg,
+                state,
+                candidate,
+                telegram_id: *telegram_id,
+                mode: mode.clone(),
+                page: *page,
+                server_list: false,
+                lang,
+            })
+            .await
+        }
         SearchListType::SubMuteView { .. } => Ok(false),
         SearchListType::LinkList { sub_id, page } => {
             subscribers::handle_link_list(bot, msg, state, candidate, *sub_id, *page, lang).await

@@ -20,7 +20,14 @@ pub(super) async fn handle_kick(
     let CallbackAction::Admin(AdminAction::KickPerform { user_id }) = &candidate.action else {
         return Ok(false);
     };
-    send_tt_command(bot, msg, state, TtCommand::KickUser { user_id: *user_id }, lang).await?;
+    send_tt_command(
+        bot,
+        msg,
+        state,
+        TtCommand::KickUser { user_id: *user_id },
+        lang,
+    )
+    .await?;
     Ok(true)
 }
 
@@ -34,7 +41,14 @@ pub(super) async fn handle_ban(
     let CallbackAction::Admin(AdminAction::BanPerform { user_id }) = &candidate.action else {
         return Ok(false);
     };
-    send_tt_command(bot, msg, state, TtCommand::BanUser { user_id: *user_id }, lang).await?;
+    send_tt_command(
+        bot,
+        msg,
+        state,
+        TtCommand::BanUser { user_id: *user_id },
+        lang,
+    )
+    .await?;
     Ok(true)
 }
 
@@ -71,7 +85,9 @@ pub(super) async fn handle_unban(
         match tg_admin_service::list_ban_entries(&state.db).await {
             Ok(entries) => entries,
             Err(err) => {
-                if let Some(requester_id) = super::requester_id_from_message(msg, "search_bans_reload") {
+                if let Some(requester_id) =
+                    super::requester_id_from_message(msg, "search_bans_reload")
+                {
                     TgErrorReporter::new(bot, &state.config, requester_id, lang)
                         .notify(AdminErrorContext::Callback, &err.into_error().to_string())
                         .await;
