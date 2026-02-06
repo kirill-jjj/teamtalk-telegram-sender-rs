@@ -1,5 +1,4 @@
 pre-commit:
-  parallel: false
   files: git diff --name-only --cached
   commands:
     fmt:
