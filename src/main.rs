@@ -41,9 +41,11 @@ async fn main() -> Result<()> {
 
     let config_paths = bootstrap::cli::collect_config_paths(&args)?;
 
-    tracing_log::LogTracer::init()?;
     let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-    tracing_subscriber::fmt().with_env_filter(filter).init();
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .try_init()
+        .map_err(|e| anyhow::anyhow!("failed to initialize tracing subscriber: {e}"))?;
 
     let cancel_token = tokio_util::sync::CancellationToken::new();
 
