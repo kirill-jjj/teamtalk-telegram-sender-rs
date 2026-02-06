@@ -94,6 +94,7 @@ mute-mode-blacklist = Current mode is Blacklist. You receive notifications from 
 mute-mode-whitelist = Current mode is Whitelist. You only receive notifications from users on the list.
 
 display-guest-account = 👤 Guest Account
+display-unknown-user = Unknown user
 alert-mute-guest = ⚠️ WARNING: You are muting the shared Guest account. This will mute/unmute ALL users currently logged in as guests!
 
 btn-mode-blacklist = { $marker } Blacklist Mode

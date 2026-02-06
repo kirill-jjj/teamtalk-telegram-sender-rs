@@ -48,7 +48,6 @@ pub(super) async fn handle_broadcast(
         }
     };
 
-    let escaped_nick = teloxide::utils::html::escape(nickname.as_str());
     let escaped_server = teloxide::utils::html::escape(server_name.as_str());
 
     let key = match event_type {
@@ -77,6 +76,13 @@ pub(super) async fn handle_broadcast(
         };
 
         let lang = sub.language_code;
+        let escaped_nick = if !nickname.as_str().trim().is_empty() {
+            teloxide::utils::html::escape(nickname.as_str())
+        } else if !related_tt_username.as_str().trim().is_empty() {
+            teloxide::utils::html::escape(related_tt_username.as_str())
+        } else {
+            locales::get_text(lang.as_str(), LocaleKey::DisplayUnknownUser, None)
+        };
         let text = rendered_text_cache
             .entry(lang)
             .or_insert_with(|| {

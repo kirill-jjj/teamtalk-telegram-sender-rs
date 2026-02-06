@@ -126,6 +126,7 @@ pub enum LocaleKey {
     CmdUnauth,
     CmdUserBanned,
     DisplayGuestAccount,
+    DisplayUnknownUser,
     EventJoin,
     EventJoinMale,
     EventJoinFemale,
