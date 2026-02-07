@@ -84,7 +84,7 @@
 - Multi-file plugins should use Lua `require` from the single `entry` file.
 - Keep plugin API backward-compatible: additive changes only unless explicitly approved.
 - When changing plugin runtime/loader/API, add or update dedicated tests in `tests/unit/app_plugins.rs`.
-- Keep plugin docs updated in `PLUGINS.md` and ensure examples remain runnable.
+- Keep `PLUGINS.md` user-facing: usage, API reference, examples, troubleshooting.
 - Lifecycle changes must keep rollback behavior: broken reload must keep previous active version.
 - Structured plugin logs should include plugin name and lifecycle action (`load`, `reload`, `disable`, `error`).
 - Any new Core/TG/TT capability that should be available to plugins must be explicitly wired into plugin API (`src/app/plugins/runtime.rs`) and documented.
@@ -102,3 +102,22 @@
   - feature behavior,
   - required config/manual values,
   - hot-reload verification steps.
+
+## Plugin Parity Policy
+- Default rule: if bot supports a Core/TG/TT capability, plugins should support it too.
+- Do not defer plugin mapping to a later PR without explicit approval.
+- Every Core/TG/TT feature change must include plugin decision in the same change-set:
+  - implemented mapping in plugin runtime, or
+  - explicit internal exception record in `docs/internal/plugin-parity.md`.
+- `PLUGINS.md` must not contain internal process/governance rules.
+
+## Plugin Change Checklist
+- For every plugin API change, include all of:
+  - runtime/manager mapping updates,
+  - deterministic tests (`tests/unit/app_plugins.rs` and related),
+  - user docs update in `PLUGINS.md`,
+  - example update in `plugins/example/` when behavior is user-visible.
+- For every Core/TG/TT feature change:
+  - verify plugin parity impact,
+  - add mapping or record exception in `docs/internal/plugin-parity.md`,
+  - keep CI green (`check`, `clippy`, `test`).

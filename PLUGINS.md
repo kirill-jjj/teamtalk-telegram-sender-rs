@@ -206,18 +206,6 @@ Current `tt.command` names:
 - `load_accounts`
 - `skip_stream`
 
-### API extension policy (for core contributors)
-
-When adding new bot features in Core/TG/TT modules:
-
-1. Decide if the feature should be plugin-accessible.
-2. If yes, add API mapping in `src/app/plugins/runtime.rs`.
-3. Add/adjust unit tests in `tests/unit/app_plugins.rs`.
-4. Update this document (`PLUGINS.md`) in the same commit.
-5. Update example plugin in `plugins/example/` when behavior is user-visible.
-
-No plugin API changes should be merged without docs + tests.
-
 ## Advanced examples
 
 ### Modular plugin with multiple Lua files
@@ -330,6 +318,33 @@ Recommended approach:
 - If errors exceed threshold, plugin is auto-disabled.
 - Auto-disabled plugin can be re-enabled by fixing code and reloading.
 - For production, keep `call_timeout_ms` strict and monitor logs.
+
+## Troubleshooting
+
+- Plugin does not load:
+  - verify `plugin.toml` fields (`name`, `version`, `entry`, `enabled`);
+  - verify `[plugins].enabled = true` and correct `[plugins].dir` in config;
+  - check runtime logs for plugin load/reload errors.
+- Command does not trigger:
+  - ensure command starts with `/`;
+  - verify `register_command` name and optional `opts` source filter;
+  - verify plugin is not disabled by config or runtime.
+- Event handler does not trigger:
+  - ensure exact event key in `events["..."]`;
+  - log `event.name` from `on_event` to inspect incoming event names.
+- Hot reload does not apply:
+  - ensure `[plugins].auto_reload = true`;
+  - save file under plugin root directory;
+  - verify logs contain reload attempt result.
+
+## Where to inspect code
+
+- Plugin runtime and Lua API: `src/app/plugins/runtime.rs`
+- Plugin loader/state/reload logic: `src/app/plugins/manager.rs`
+- File watcher: `src/app/plugins/watcher.rs`
+- TT event dispatch to plugins: `src/adapters/tt/handlers/events/mod.rs`
+- TG command dispatch to plugins: `src/adapters/tg/handlers/commands.rs`
+- TT command dispatch to plugins: `src/adapters/tt/handlers/commands/user.rs`
 
 ## Quick start checklist
 
