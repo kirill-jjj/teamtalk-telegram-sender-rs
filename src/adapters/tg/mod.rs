@@ -4,6 +4,7 @@ pub mod state;
 pub mod utils;
 
 use crate::adapters::tg::utils::TgErrorReporter;
+use crate::app::plugins::PluginManagerHandle;
 use crate::app::services::user_settings as user_settings_service;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
@@ -29,6 +30,7 @@ pub struct TgRunArgs {
     pub db: Database,
     pub state: StateHandle,
     pub tx_tt_cmd: Sender<TtCommand>,
+    pub plugins: PluginManagerHandle,
     pub config: Arc<Config>,
     pub cancel_token: tokio_util::sync::CancellationToken,
 }
@@ -40,10 +42,18 @@ pub async fn run_tg_bot(args: TgRunArgs) {
         db,
         state,
         tx_tt_cmd,
+        plugins,
         config,
         cancel_token,
     } = args;
-    let state = build_state(db.clone(), state, tx_tt_cmd, &config, &cancel_token);
+    let state = build_state(
+        db.clone(),
+        state,
+        tx_tt_cmd,
+        plugins,
+        &config,
+        &cancel_token,
+    );
 
     if let Err(e) = set_bot_commands(&event_bot, &db, &config).await {
         tracing::error!(error = %e, "Failed to set bot commands");
@@ -62,6 +72,7 @@ fn build_state(
     db: Database,
     state: StateHandle,
     tx_tt_cmd: Sender<TtCommand>,
+    plugins: PluginManagerHandle,
     config: &Arc<Config>,
     cancel_token: &tokio_util::sync::CancellationToken,
 ) -> Arc<AppState> {
@@ -70,6 +81,7 @@ fn build_state(
         state,
         search_contexts: crate::adapters::tg::handlers::search::new_search_contexts(),
         tx_tt: tx_tt_cmd,
+        plugins,
         config: config.clone(),
         cancel_token: cancel_token.clone(),
     })
@@ -306,6 +318,7 @@ fn get_admin_commands(lang: LanguageCode) -> Vec<BotCommand> {
             "message",
             locales::get_text(lang.as_str(), locales::LocaleKey::CmdDescMessage, None),
         ),
+        BotCommand::new("plugins", "Plugins"),
     ]);
     cmds
 }

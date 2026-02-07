@@ -67,8 +67,8 @@ pub async fn run_bridge(
             () = cancel_token.cancelled() => {
                 break;
             }
-            maybe_event = rx_bridge.recv() => {
-                match maybe_event {
+            bridge_event_opt = rx_bridge.recv() => {
+                match bridge_event_opt {
                     Some(event) => event,
                     None => break,
                 }

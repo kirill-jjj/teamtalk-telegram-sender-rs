@@ -1,11 +1,12 @@
 use crate::adapters::tt::{WorkerContext, resolve_server_name};
+use crate::app::plugins::{TtCommandContext, parse_command_text};
 use crate::app::services::tt_context::TtServiceContext;
 use crate::core::types::{TtCommand, TtNickname, TtUserId, TtUsername};
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
 use tokio::task::spawn_local;
 
-use super::{admin, bridge, help, queue, skip, sub};
+use super::{admin, bridge, help, plugins, queue, skip, sub};
 use crate::app::services::tt_users as tt_users_service;
 
 pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &TextMessage) {
@@ -23,6 +24,8 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
     let deeplink_ttl = ctx.config.operational_parameters.deeplink_ttl;
     let bot_username = ctx.bot_username.clone();
     let tt_msg_sem = ctx.tt_msg_sem.clone();
+    let plugins = ctx.plugins.clone();
+    let plugins_disabled = ctx.config.plugins.disabled.clone();
 
     spawn_local(async move {
         if msg_type != teamtalk::client::ffi::TextMsgType::MSGTYPE_USER {
@@ -60,6 +63,11 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
             return;
         }
         let cmd = parts[0].to_lowercase();
+        let cmd_args = parts
+            .iter()
+            .skip(1)
+            .map(|item| (*item).to_string())
+            .collect::<Vec<_>>();
         let needs_heavy = matches!(
             cmd.as_str(),
             "/sub" | "/unsub" | "/skip" | "/help" | "/start"
@@ -84,7 +92,12 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
             username,
             content,
             real_name_from_client,
+            plugins,
+            plugins_disabled,
         };
+        if handle_plugin_command(&ctx, &cmd, &cmd_args).await {
+            return;
+        }
 
         match cmd.as_str() {
             "/sub" => sub::handle_sub(&ctx).await,
@@ -92,6 +105,7 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
             "/help" => help::handle_help(&ctx).await,
             "/skip" => skip::handle_skip(&ctx).await,
             "/queue" => queue::handle_queue(&ctx).await,
+            "/plugins" => plugins::handle_plugins(&ctx).await,
             "/add_admin" => admin::handle_add_admin(&ctx).await,
             "/remove_admin" => admin::handle_remove_admin(&ctx).await,
             _ => bridge::handle_admin_bridge(&ctx).await,
@@ -113,6 +127,8 @@ pub(super) struct UserCtx {
     pub username: TtUsername,
     pub content: String,
     pub real_name_from_client: Option<String>,
+    pub plugins: crate::app::plugins::PluginManagerHandle,
+    pub plugins_disabled: Vec<String>,
 }
 
 impl UserCtx {
@@ -146,4 +162,24 @@ impl UserCtx {
     pub fn server_name(&self) -> crate::core::types::TtServerName {
         resolve_server_name(&self.tt_config, self.real_name_from_client.as_deref())
     }
+}
+
+async fn handle_plugin_command(ctx: &UserCtx, command: &str, args: &[String]) -> bool {
+    let is_admin = ctx.is_admin().await;
+    let Some((plugin_command, _)) = parse_command_text(command) else {
+        return false;
+    };
+    ctx.plugins
+        .dispatch_tt_command(
+            &plugin_command,
+            args,
+            TtCommandContext {
+                user_id: ctx.from_uid,
+                username: ctx.username.clone(),
+                nickname: ctx.nick.as_str().to_string(),
+                is_admin,
+                text: ctx.content.clone(),
+            },
+        )
+        .await
 }

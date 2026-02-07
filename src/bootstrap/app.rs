@@ -36,6 +36,7 @@ struct TeamtalkWorkerConfig {
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
     db: Database,
     bot_username: Option<TtUsername>,
+    plugins: crate::app::plugins::PluginManagerHandle,
     client: Client,
 }
 
@@ -45,6 +46,7 @@ struct TelegramRunContext {
     db: Database,
     shared: SharedState,
     tx_tt_cmd: tokio_mpsc::Sender<crate::core::types::TtCommand>,
+    plugins: crate::app::plugins::PluginManagerHandle,
     config: Arc<Config>,
     cancel_token: CancellationToken,
     bridge_handle: tokio::task::JoinHandle<()>,
@@ -95,6 +97,14 @@ impl Application {
         let (tx_tt_cmd, rx_tt_cmd) = tokio_mpsc::channel::<crate::core::types::TtCommand>(256);
 
         let bots = init_bots(&config).await?;
+        let plugins =
+            crate::app::plugins::PluginManagerHandle::new(crate::app::plugins::PluginInit {
+                config: config.clone(),
+                tx_tt_cmd: tx_tt_cmd.clone(),
+                event_bot: bots.event_bot.clone(),
+                cancel_token: cancel_token.clone(),
+            })
+            .await?;
         let tt_handle = start_teamtalk_worker(TeamtalkWorkerConfig {
             config: config.clone(),
             state: shared.state.clone(),
@@ -103,6 +113,7 @@ impl Application {
             tx_tt_cmd: tx_tt_cmd.clone(),
             db: db.clone(),
             bot_username: bots.bot_username.clone(),
+            plugins: plugins.clone(),
             client,
         })
         .await?;
@@ -134,6 +145,7 @@ impl Application {
             db,
             shared,
             tx_tt_cmd,
+            plugins,
             config,
             cancel_token,
             bridge_handle,
@@ -271,6 +283,7 @@ async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task:
             tx_tt_cmd,
             db,
             bot_username,
+            plugins,
             client,
         } = cfg;
         let runtime = match tokio::runtime::Builder::new_current_thread()
@@ -293,6 +306,7 @@ async fn start_teamtalk_worker(cfg: TeamtalkWorkerConfig) -> Result<tokio::task:
                 tx_cmd_clone: tx_tt_cmd,
                 db,
                 bot_username,
+                plugins,
                 client,
                 tx_init,
             })
@@ -317,6 +331,7 @@ async fn run_telegram_or_wait(ctx: TelegramRunContext) -> Result<()> {
             db: ctx.db.clone(),
             state: ctx.shared.state,
             tx_tt_cmd: ctx.tx_tt_cmd,
+            plugins: ctx.plugins,
             config: ctx.config,
             cancel_token: ctx.cancel_token,
         })

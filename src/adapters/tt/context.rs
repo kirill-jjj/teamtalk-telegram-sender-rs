@@ -1,3 +1,4 @@
+use crate::app::plugins::PluginManagerHandle;
 use crate::app::services::tt_context::TtServiceContext;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
@@ -60,6 +61,7 @@ pub struct WorkerContext {
     pub bot_username: Option<TtUsername>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
+    pub plugins: PluginManagerHandle,
 }
 
 impl WorkerContext {
@@ -76,6 +78,7 @@ pub struct RunTeamtalkArgs {
     pub tx_cmd_clone: Sender<TtCommand>,
     pub db: Database,
     pub bot_username: Option<TtUsername>,
+    pub plugins: PluginManagerHandle,
     pub client: Client,
     pub tx_init: oneshot::Sender<Result<(), String>>,
 }

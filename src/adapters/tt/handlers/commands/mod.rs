@@ -6,6 +6,7 @@ mod admin;
 mod bridge;
 mod channel;
 mod help;
+mod plugins;
 mod queue;
 mod skip;
 mod sub;

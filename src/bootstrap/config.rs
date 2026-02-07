@@ -13,6 +13,8 @@ pub struct Config {
     pub database: DatabaseConfig,
     pub telegram: TelegramConfig,
     pub teamtalk: TeamTalkConfig,
+    #[serde(default)]
+    pub plugins: PluginsConfig,
 
     #[serde(default)]
     pub operational_parameters: OperationalParameters,
@@ -126,6 +128,58 @@ impl TeamTalkConfig {
             .map(TtServerName::as_str)
             .filter(|s| !s.is_empty())
             .unwrap_or(self.host_name.as_str())
+    }
+}
+
+fn default_plugins_dir() -> PathBuf {
+    PathBuf::from("plugins")
+}
+
+const fn default_plugin_timeout_ms() -> u64 {
+    500
+}
+
+const fn default_plugin_error_window_seconds() -> u64 {
+    60
+}
+
+const fn default_plugin_error_threshold() -> u32 {
+    10
+}
+
+const fn default_true() -> bool {
+    true
+}
+
+#[derive(Deserialize, Clone)]
+pub struct PluginsConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    #[serde(default = "default_plugins_dir")]
+    pub dir: PathBuf,
+    #[serde(default = "default_true")]
+    pub auto_reload: bool,
+    #[serde(default = "default_plugin_timeout_ms")]
+    pub call_timeout_ms: u64,
+    #[serde(default = "default_plugin_error_window_seconds")]
+    pub error_window_seconds: u64,
+    #[serde(default = "default_plugin_error_threshold")]
+    pub error_threshold: u32,
+    #[serde(default)]
+    pub disabled: Vec<String>,
+}
+
+impl Default for PluginsConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            dir: default_plugins_dir(),
+            auto_reload: true,
+            call_timeout_ms: default_plugin_timeout_ms(),
+            error_window_seconds: default_plugin_error_window_seconds(),
+            error_threshold: default_plugin_error_threshold(),
+            disabled: Vec::new(),
+        }
     }
 }
 

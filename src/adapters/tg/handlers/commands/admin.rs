@@ -322,3 +322,57 @@ pub(super) async fn handle_message(ctx: &CommandCtx<'_>, text: String) -> Respon
         .await?;
     Ok(())
 }
+
+pub(super) async fn handle_plugins(ctx: &CommandCtx<'_>, text: String) -> ResponseResult<()> {
+    if reject_if_not_admin(ctx).await? {
+        return Ok(());
+    }
+    let input = text.trim();
+    let mut parts = input.split_whitespace();
+    let sub = parts.next().unwrap_or("status");
+
+    let result = match sub {
+        "status" => Ok(ctx.state.plugins.status_text().await),
+        "reload" => match parts.next() {
+            Some(name) => ctx
+                .state
+                .plugins
+                .reload_named(name, &ctx.config.plugins.disabled)
+                .await
+                .map(|()| format!("Plugin reloaded: {name}"))
+                .map_err(|error| error.to_string()),
+            None => Err("Usage: /plugins reload <name>".to_string()),
+        },
+        "enable" => match parts.next() {
+            Some(name) => ctx
+                .state
+                .plugins
+                .set_enabled(name, true)
+                .await
+                .map(|()| format!("Plugin enabled: {name}"))
+                .map_err(|error| error.to_string()),
+            None => Err("Usage: /plugins enable <name>".to_string()),
+        },
+        "disable" => match parts.next() {
+            Some(name) => ctx
+                .state
+                .plugins
+                .set_enabled(name, false)
+                .await
+                .map(|()| format!("Plugin disabled: {name}"))
+                .map_err(|error| error.to_string()),
+            None => Err("Usage: /plugins disable <name>".to_string()),
+        },
+        _ => Err("Usage: /plugins status|reload|enable|disable".to_string()),
+    };
+
+    let reply = match result {
+        Ok(message) => message,
+        Err(message) => format!("Plugin command failed: {message}"),
+    };
+    ctx.bot
+        .send_message(ctx.msg.chat.id, reply)
+        .reply_to(ctx.msg.id)
+        .await?;
+    Ok(())
+}

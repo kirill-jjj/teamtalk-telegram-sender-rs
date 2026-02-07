@@ -187,3 +187,14 @@ Translations are handled via **Fluent** (`fluent-templates`).
 *   Language files are located in `locales/`.
 *   Supported languages: **English (en)**, **Russian (ru)**.
 *   The bot automatically detects the user's language preference or falls back to the default defined in `config.toml`.
+
+## Plugins
+
+Plugin documentation is available in [PLUGINS.md](PLUGINS.md).
+
+Quick start:
+
+1. Create plugin folder under `plugins/<name>/`.
+2. Add `plugin.toml` and Lua entry file.
+3. Enable plugin system in `[plugins]` section of `config.toml`.
+4. Run bot and check plugin lifecycle logs.

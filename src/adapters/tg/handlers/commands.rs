@@ -8,10 +8,12 @@ mod voice;
 use crate::adapters::tg::handlers::search::maybe_handle_search_message;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{TgErrorReporter, send_text_key, telegram_id_from_user};
+use crate::app::plugins::{TgCommandContext, parse_command_text};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_commands as tg_commands_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
 use crate::infra::locales;
+use serde_json::json;
 use std::sync::Arc;
 use teloxide::prelude::*;
 use teloxide::sugar::request::RequestReplyExt;
@@ -52,6 +54,8 @@ pub enum Command {
     Message(String),
     #[command(description = "Reply Queue")]
     Queue(String),
+    #[command(description = "Plugins (Admin)")]
+    Plugins(String),
 }
 
 pub async fn answer_command(
@@ -66,6 +70,25 @@ pub async fn answer_command(
     let Some(telegram_id) = telegram_id_from_user(user, "answer_command") else {
         return Ok(());
     };
+    if let Some((command, args)) = parse_command_from_enum(&cmd) {
+        let is_admin = tg_commands_service::is_admin(&state.db, &state.config, telegram_id).await;
+        if state
+            .plugins
+            .dispatch_tg_command(
+                &command,
+                &args,
+                TgCommandContext {
+                    chat_id: msg.chat.id.0,
+                    user_id: telegram_id.as_i64(),
+                    is_admin,
+                    text: msg.text().unwrap_or_default().to_string(),
+                },
+            )
+            .await
+        {
+            return Ok(());
+        }
+    }
     let Some(ctx) = CommandCtx::new(&bot, &msg, state.as_ref(), telegram_id).await? else {
         return Ok(());
     };
@@ -163,6 +186,7 @@ impl<'a> CommandCtx<'a> {
             Command::Broadcast(text) => self.broadcast(text).await,
             Command::Message(text) => self.message(text).await,
             Command::Queue(text) => self.queue(text).await,
+            Command::Plugins(text) => self.plugins(text).await,
         }
     }
 
@@ -217,6 +241,10 @@ impl<'a> CommandCtx<'a> {
     async fn queue(&self, text: String) -> ResponseResult<()> {
         queue::handle_queue(self, text).await
     }
+
+    async fn plugins(&self, text: String) -> ResponseResult<()> {
+        admin::handle_plugins(self, text).await
+    }
 }
 
 pub async fn answer_message(bot: Bot, msg: Message, state: Arc<AppState>) -> ResponseResult<()> {
@@ -243,8 +271,50 @@ pub async fn answer_message(bot: Bot, msg: Message, state: Arc<AppState>) -> Res
         }
     };
 
+    state
+        .plugins
+        .dispatch_event(crate::app::plugins::PluginEvent {
+            name: "Message".to_string(),
+            source: "tg".to_string(),
+            normalized: json!({
+                "chat_id": msg.chat.id.0,
+                "user_id": telegram_id.as_i64(),
+                "has_text": msg.text().is_some(),
+                "is_reply": msg.reply_to_message().is_some(),
+            }),
+            raw: json!({
+                "text": msg.text(),
+                "message_id": msg.id.0,
+                "chat_id": msg.chat.id.0,
+            }),
+        })
+        .await;
+
     if maybe_handle_search_message(&bot, &msg, state.as_ref(), admin_lang).await? {
         return Ok(());
+    }
+
+    if let Some(text) = msg.text()
+        && text.starts_with('/')
+        && let Some((command, args)) = parse_command_text(text)
+    {
+        let is_admin = tg_commands_service::is_admin(db, config, telegram_id).await;
+        if state
+            .plugins
+            .dispatch_tg_command(
+                &command,
+                &args,
+                TgCommandContext {
+                    chat_id: msg.chat.id.0,
+                    user_id: telegram_id.as_i64(),
+                    is_admin,
+                    text: text.to_string(),
+                },
+            )
+            .await
+        {
+            return Ok(());
+        }
     }
 
     if !tg_commands_service::is_admin(db, config, telegram_id).await {
@@ -321,4 +391,24 @@ fn format_duration(duration_secs: u32) -> String {
     let minutes = duration_secs / 60;
     let seconds = duration_secs % 60;
     format!("{minutes:02}:{seconds:02}")
+}
+
+fn parse_command_from_enum(command: &Command) -> Option<(String, Vec<String>)> {
+    match command {
+        Command::Start(token) => Some(("start".to_string(), vec![token.clone()])),
+        Command::Menu => Some(("menu".to_string(), Vec::new())),
+        Command::Help => Some(("help".to_string(), Vec::new())),
+        Command::Who => Some(("who".to_string(), Vec::new())),
+        Command::Settings => Some(("settings".to_string(), Vec::new())),
+        Command::Unsub => Some(("unsub".to_string(), Vec::new())),
+        Command::Kick => Some(("kick".to_string(), Vec::new())),
+        Command::Ban => Some(("ban".to_string(), Vec::new())),
+        Command::Unban => Some(("unban".to_string(), Vec::new())),
+        Command::Subscribers => Some(("subscribers".to_string(), Vec::new())),
+        Command::Exit => Some(("exit".to_string(), Vec::new())),
+        Command::Broadcast(text) => Some(("broadcast".to_string(), vec![text.clone()])),
+        Command::Message(text) => Some(("message".to_string(), vec![text.clone()])),
+        Command::Queue(text) => parse_command_text(&format!("/queue {text}")),
+        Command::Plugins(text) => parse_command_text(&format!("/plugins {text}")),
+    }
 }

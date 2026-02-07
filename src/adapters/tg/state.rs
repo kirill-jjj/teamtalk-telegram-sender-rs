@@ -1,3 +1,4 @@
+use crate::app::plugins::PluginManagerHandle;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
 use crate::core::types::TtCommand;
@@ -17,6 +18,7 @@ pub struct AppState {
         >,
     >,
     pub tx_tt: Sender<TtCommand>,
+    pub plugins: PluginManagerHandle,
     pub config: Arc<Config>,
     pub cancel_token: tokio_util::sync::CancellationToken,
 }

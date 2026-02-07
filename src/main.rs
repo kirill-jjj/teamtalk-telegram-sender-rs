@@ -58,7 +58,7 @@ async fn main() -> Result<()> {
                 bootstrap::cli::read_log_level(&config_path).unwrap_or_else(|| "info".to_string());
             let dispatch = build_dispatch(&level);
             let token = cancel_token.clone();
-            set.spawn_local(async move {
+            set.spawn_local(Box::pin(async move {
                 let _guard = tracing::dispatcher::set_default(&dispatch);
                 let span = tracing::info_span!(
                     "instance",
@@ -70,11 +70,11 @@ async fn main() -> Result<()> {
                     let app =
                         bootstrap::app::Application::build(std::path::PathBuf::from(&config_path))
                             .await?;
-                    app.run(token).await
+                    Box::pin(app.run(token)).await
                 }
                 .instrument(span)
                 .await
-            });
+            }));
         }
 
         let mut first_err: Option<anyhow::Error> = None;

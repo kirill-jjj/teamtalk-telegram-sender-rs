@@ -25,3 +25,12 @@ log_level = "info"
 
 [database]
 db_file = "bot_data.db"
+
+[plugins]
+enabled = true
+dir = "plugins"
+auto_reload = true
+call_timeout_ms = 500
+error_window_seconds = 60
+error_threshold = 10
+disabled = []

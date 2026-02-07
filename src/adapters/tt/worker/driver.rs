@@ -55,8 +55,8 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
     };
     let shutdown = loop {
         tokio::select! {
-            maybe_cmd = cmd_rx.recv() => {
-                let Some(cmd) = maybe_cmd else {
+            received_cmd = cmd_rx.recv() => {
+                let Some(cmd) = received_cmd else {
                     break true;
                 };
                 let mut handle_ctx = HandleCmdCtx {
@@ -74,8 +74,8 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
                     break true;
                 }
             }
-            maybe_event = async_client.next() => {
-                let Some((event, msg)) = maybe_event else {
+            sdk_event = async_client.next() => {
+                let Some((event, msg)) = sdk_event else {
                     break true;
                 };
 

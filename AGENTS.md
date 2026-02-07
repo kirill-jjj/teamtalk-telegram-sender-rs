@@ -76,3 +76,23 @@
 - The Telegram bot uses `teloxide` on Tokio async tasks; the `bridge` module formats events and routes messages/commands.
 - Database access is via `sqlx` with a single `Database` struct implemented across `src/infra/db/*` modules.
  - App state/cache is managed by `StateHandle` in `src/app/state/`.
+
+## Plugin System Guidance
+- Plugin runtime lives under `src/app/plugins/`.
+- Plugin root directory is configured by `[plugins].dir` (default `plugins`).
+- Each plugin folder must contain `plugin.toml` and one `entry` Lua file.
+- Multi-file plugins should use Lua `require` from the single `entry` file.
+- Keep plugin API backward-compatible: additive changes only unless explicitly approved.
+- When changing plugin runtime/loader/API, add or update dedicated tests in `tests/unit/app_plugins.rs`.
+- Keep plugin docs updated in `PLUGINS.md` and ensure examples remain runnable.
+- Lifecycle changes must keep rollback behavior: broken reload must keep previous active version.
+- Structured plugin logs should include plugin name and lifecycle action (`load`, `reload`, `disable`, `error`).
+- Any new Core/TG/TT capability that should be available to plugins must be explicitly wired into plugin API (`src/app/plugins/runtime.rs`) and documented.
+- If a Core/TG/TT feature is changed or removed, update plugin docs and tests in the same change; no API drift is allowed.
+- Every plugin API extension must include:
+  - mapping implementation in runtime/manager,
+  - at least one deterministic unit test,
+  - `PLUGINS.md` section update,
+  - `plugins/example/` update when applicable.
+- Prefer stable plugin contracts over exposing internal implementation details directly.
+- Keep plugin command behavior deterministic: same input must produce same dispatch order and fallback rules.
