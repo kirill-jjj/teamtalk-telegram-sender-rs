@@ -12,6 +12,7 @@ pub async fn send_notif_settings(
     msg: &Message,
     lang: LanguageCode,
     not_on_online_enabled: bool,
+    admin_sub_events_enabled: Option<bool>,
 ) -> ResponseResult<()> {
     let status_text = if not_on_online_enabled {
         locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
@@ -24,11 +25,29 @@ pub async fn send_notif_settings(
         args!(status = status_text).as_ref(),
     );
 
-    let keyboard = InlineKeyboardMarkup::new(vec![
-        vec![callback_button(
-            noon_text,
-            CallbackAction::Settings(SettingsAction::NoonToggle),
-        )],
+    let mut rows = vec![vec![callback_button(
+        noon_text,
+        CallbackAction::Settings(SettingsAction::NoonToggle),
+    )]];
+
+    if let Some(enabled) = admin_sub_events_enabled {
+        let status_text = if enabled {
+            locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+        } else {
+            locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+        };
+        let admin_sub_events_text = locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::BtnAdminSubEvents,
+            args!(status = status_text).as_ref(),
+        );
+        rows.push(vec![callback_button(
+            admin_sub_events_text,
+            CallbackAction::Settings(SettingsAction::AdminSubEventsToggle),
+        )]);
+    }
+
+    rows.extend([
         vec![callback_button(
             locales::get_text(lang.as_str(), locales::LocaleKey::BtnMuteManage, None),
             CallbackAction::Settings(SettingsAction::MuteManage),
@@ -39,6 +58,7 @@ pub async fn send_notif_settings(
             CallbackAction::Settings(SettingsAction::Main),
         )],
     ]);
+    let keyboard = InlineKeyboardMarkup::new(rows);
 
     bot.edit_message_text(
         msg.chat.id,

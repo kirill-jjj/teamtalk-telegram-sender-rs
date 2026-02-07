@@ -2,11 +2,14 @@ use crate::adapters::tg::presenter::keyboards::{
     confirm_cancel_keyboard, create_main_menu_keyboard,
 };
 use crate::adapters::tg::presenter::settings::send_main_settings;
-use crate::adapters::tg::utils::{ensure_subscribed, send_text_key};
+use crate::adapters::tg::utils::{
+    AdminSubEventKind, ensure_subscribed, notify_admins_subscription_event, send_text_key,
+};
 use crate::app::services::tg_basic as tg_basic_service;
+use crate::app::services::tg_settings as tg_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, UnsubAction};
-use crate::core::types::{AdminErrorContext, TtCommand};
+use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
 use teloxide::prelude::*;
 use teloxide::sugar::request::RequestReplyExt;
@@ -62,6 +65,7 @@ pub(super) async fn handle_start(ctx: &CommandCtx<'_>, token: String) -> Respons
             Ok(())
         }
         Ok(tg_basic_service::StartOutcome::SubscribeLinked) => {
+            notify_subscribe_event(ctx, true).await;
             send_text_key(
                 ctx.bot,
                 ctx.msg.chat.id,
@@ -72,6 +76,7 @@ pub(super) async fn handle_start(ctx: &CommandCtx<'_>, token: String) -> Respons
             .await
         }
         Ok(tg_basic_service::StartOutcome::SubscribeGuest) => {
+            notify_subscribe_event(ctx, false).await;
             ctx.bot
                 .send_message(
                     ctx.msg.chat.id,
@@ -100,6 +105,35 @@ pub(super) async fn handle_start(ctx: &CommandCtx<'_>, token: String) -> Respons
                 Some(ctx.msg.id),
             )
             .await
+        }
+    }
+}
+
+async fn notify_subscribe_event(ctx: &CommandCtx<'_>, with_tt_username: bool) {
+    let tt_username = if with_tt_username {
+        load_tt_username_for_notify(ctx).await
+    } else {
+        None
+    };
+    notify_admins_subscription_event(
+        ctx.bot,
+        ctx.db,
+        ctx.config,
+        ctx.telegram_id,
+        tt_username.as_ref(),
+        AdminSubEventKind::Subscribed,
+    )
+    .await;
+}
+
+async fn load_tt_username_for_notify(
+    ctx: &CommandCtx<'_>,
+) -> Option<crate::core::types::TtUsername> {
+    match tg_settings_service::load_settings(ctx.db, ctx.telegram_id, LanguageCode::En).await {
+        Ok(settings) => settings.teamtalk_username,
+        Err(err) => {
+            tracing::warn!(error = %err, "Failed to load user settings for admin subscription notification");
+            None
         }
     }
 }
@@ -189,6 +223,7 @@ pub(super) async fn handle_unsub(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
 }
 
 pub(super) async fn handle_unsubscribe(ctx: &CommandCtx<'_>) -> ResponseResult<()> {
+    let tt_username = load_tt_username_for_notify(ctx).await;
     if let Err(e) = tg_basic_service::unsubscribe(ctx.db, ctx.telegram_id).await {
         tracing::error!(error = %e, "DB error unsubscribing");
         ctx.errors()
@@ -203,6 +238,15 @@ pub(super) async fn handle_unsubscribe(ctx: &CommandCtx<'_>) -> ResponseResult<(
         )
         .await;
     }
+    notify_admins_subscription_event(
+        ctx.bot,
+        ctx.db,
+        ctx.config,
+        ctx.telegram_id,
+        tt_username.as_ref(),
+        AdminSubEventKind::Unsubscribed,
+    )
+    .await;
     send_text_key(
         ctx.bot,
         ctx.msg.chat.id,

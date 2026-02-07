@@ -49,6 +49,9 @@ pub async fn handle_settings(
         SettingsAction::NoonToggle => {
             notif::handle_noon_toggle(&bot, &q, state, msg, telegram_id, lang).await?;
         }
+        SettingsAction::AdminSubEventsToggle => {
+            notif::handle_admin_sub_events_toggle(&bot, &q, state, msg, telegram_id, lang).await?;
+        }
         SettingsAction::MuteManage => {
             mute::handle_mute_manage(&bot, &q, state, msg, telegram_id, lang).await?;
         }

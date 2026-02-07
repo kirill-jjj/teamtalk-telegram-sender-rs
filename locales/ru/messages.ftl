@@ -81,8 +81,10 @@ btn-notif-settings = Настройки уведомлений
 # Notification Settings
 notif-settings-title = <b>Настройки уведомлений</b>
 btn-noon = Только офлайн: { $status }
+btn-admin-sub-events = Оповещения админу о подписке: { $status }
 btn-mute-manage = Управление списком игнора
 resp-noon-updated = Статус «Только офлайн» обновлён: { $status }
+resp-admin-sub-events-updated = Оповещения админу о подписке: { $status }
 
 # Mute Management
 mute-title = <b>Управление списком игнора</b>
@@ -188,6 +190,8 @@ admin-channel-pm =
     Сообщение с сервера <b>{ $server }</b>, канал <b>{ $channel }</b>:
 
     { $msg }
+admin-sub-event-subscribed = Пользователь <code>{ $user_id }</code> подписался. TeamTalk: <b>{ $tt_username }</b>
+admin-sub-event-unsubscribed = Пользователь <code>{ $user_id }</code> отписался. TeamTalk: <b>{ $tt_username }</b>
 tg-reply-sent = Сообщение отправлено.
 tg-reply-failed = Ошибка отправки сообщения.
 tg-reply-offline = Пользователь не в сети.

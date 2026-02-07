@@ -49,6 +49,7 @@ pub enum SettingsAction {
     SubSet { setting: NotificationSetting },
     NotifSelect,
     NoonToggle,
+    AdminSubEventsToggle,
     MuteManage,
     QueueMenu,
     QueueToggleUser,

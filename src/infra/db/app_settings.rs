@@ -5,12 +5,14 @@ use super::Database;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AppSettingKey {
     ReplyQueueEnabledGlobal,
+    AdminSubEventsEnabled,
 }
 
 impl AppSettingKey {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::ReplyQueueEnabledGlobal => "reply_queue_enabled_global",
+            Self::AdminSubEventsEnabled => "admin_sub_events_enabled",
         }
     }
 }

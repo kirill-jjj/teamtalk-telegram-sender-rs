@@ -79,8 +79,10 @@ btn-notif-settings = Notification Settings
 # Notification Settings
 notif-settings-title = <b>Notification Settings</b>
 btn-noon = Offline-only: { $status }
+btn-admin-sub-events = Admin sub/unsub alerts: { $status }
 btn-mute-manage = Manage Mute List
 resp-noon-updated = Offline-only updated: { $status }
+resp-admin-sub-events-updated = Admin sub/unsub alerts: { $status }
 
 # Mute Management
 mute-title = <b>Manage Mute List</b>
@@ -186,6 +188,8 @@ admin-channel-pm =
     Message from server <b>{ $server }</b>, channel <b>{ $channel }</b>:
 
     { $msg }
+admin-sub-event-subscribed = User <code>{ $user_id }</code> subscribed. TeamTalk: <b>{ $tt_username }</b>
+admin-sub-event-unsubscribed = User <code>{ $user_id }</code> unsubscribed. TeamTalk: <b>{ $tt_username }</b>
 tg-reply-sent = Message sent.
 tg-reply-failed = Failed to send message.
 tg-reply-offline = User is offline.

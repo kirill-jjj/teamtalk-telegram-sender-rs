@@ -1,6 +1,8 @@
 use crate::app::services::subscription as subscriptions_service;
+use crate::app::services::tg_settings as tg_settings_service;
+use crate::app::services::user_settings as user_settings_service;
 use crate::bootstrap::config::Config;
-use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
+use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtUsername};
 use crate::infra::db::Database;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
@@ -244,4 +246,88 @@ pub async fn send_text_key(
         req.await?;
     }
     Ok(())
+}
+
+#[derive(Clone, Copy)]
+pub enum AdminSubEventKind {
+    Subscribed,
+    Unsubscribed,
+}
+
+pub async fn notify_admins_subscription_event(
+    bot: &Bot,
+    db: &Database,
+    config: &Config,
+    actor_id: TelegramId,
+    tt_username: Option<&TtUsername>,
+    event: AdminSubEventKind,
+) {
+    let enabled = match tg_settings_service::admin_sub_events_enabled(db).await {
+        Ok(enabled) => enabled,
+        Err(err) => {
+            tracing::error!(error = %err, "Failed to read admin subscription events setting");
+            false
+        }
+    };
+    if !enabled {
+        return;
+    }
+
+    let mut admin_ids = match db.get_all_admins().await {
+        Ok(ids) => ids,
+        Err(err) => {
+            tracing::error!(error = %err, "Failed to load admin list for subscription event notify");
+            Vec::new()
+        }
+    };
+    if !admin_ids.contains(&config.telegram.admin_chat_id) {
+        admin_ids.push(config.telegram.admin_chat_id);
+    }
+
+    for admin_id in admin_ids {
+        let admin_lang = match user_settings_service::get_or_create(
+            db,
+            admin_id,
+            config.general.default_lang,
+        )
+        .await
+        {
+            Ok(settings) => settings.language_code,
+            Err(err) => {
+                tracing::error!(error = %err, admin_id = admin_id.as_i64(), "Failed to load admin language for subscription event notify");
+                config.general.default_lang
+            }
+        };
+
+        let tt_username_value = tt_username.map(TtUsername::as_str).map_or_else(
+            || locales::get_text(admin_lang.as_str(), LocaleKey::ValNone, None),
+            str::to_string,
+        );
+
+        let key = match event {
+            AdminSubEventKind::Subscribed => LocaleKey::AdminSubEventSubscribed,
+            AdminSubEventKind::Unsubscribed => LocaleKey::AdminSubEventUnsubscribed,
+        };
+        let text = locales::get_text(
+            admin_lang.as_str(),
+            key,
+            crate::args!(
+                user_id = actor_id.as_i64().to_string(),
+                tt_username = tt_username_value
+            )
+            .as_ref(),
+        );
+        if let Err(err) = bot
+            .send_message(teloxide::types::ChatId(admin_id.as_i64()), text)
+            .parse_mode(ParseMode::Html)
+            .await
+        {
+            tracing::error!(
+                error = %err,
+                admin_id = admin_id.as_i64(),
+                actor_id = actor_id.as_i64(),
+                "Failed to send admin subscription event notification"
+            );
+        }
+    }
 }

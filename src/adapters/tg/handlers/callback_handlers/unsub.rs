@@ -1,9 +1,10 @@
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{
-    TgErrorReporter, answer_callback, answer_callback_empty, answer_cmd_error_callback,
-    telegram_id_from_callback_query,
+    AdminSubEventKind, TgErrorReporter, answer_callback, answer_callback_empty,
+    answer_cmd_error_callback, notify_admins_subscription_event, telegram_id_from_callback_query,
 };
 use crate::app::services::tg_basic as tg_basic_service;
+use crate::app::services::tg_settings as tg_settings_service;
 use crate::core::callbacks::UnsubAction;
 use crate::core::types::{AdminErrorContext, LanguageCode};
 use crate::infra::locales;
@@ -27,6 +28,19 @@ pub async fn handle_unsub_action(
 
     match action {
         UnsubAction::Confirm => {
+            let tt_username = match tg_settings_service::load_settings(
+                db,
+                telegram_id,
+                LanguageCode::En,
+            )
+            .await
+            {
+                Ok(settings) => settings.teamtalk_username,
+                Err(err) => {
+                    tracing::warn!(error = %err, "Failed to load user settings before unsubscribe callback");
+                    None
+                }
+            };
             if let Err(e) = tg_basic_service::unsubscribe(db, telegram_id).await {
                 tracing::error!(
                     telegram_id = telegram_id.as_i64(),
@@ -39,6 +53,15 @@ pub async fn handle_unsub_action(
                 answer_cmd_error_callback(&bot, &q.id, lang, false).await?;
                 return Ok(());
             }
+            notify_admins_subscription_event(
+                &bot,
+                db,
+                &state.config,
+                telegram_id,
+                tt_username.as_ref(),
+                AdminSubEventKind::Unsubscribed,
+            )
+            .await;
             bot.edit_message_text(
                 msg.chat.id,
                 msg.id,

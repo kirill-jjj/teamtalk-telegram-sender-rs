@@ -1,5 +1,6 @@
 use crate::adapters::tg::presenter::settings::send_notif_settings;
 use crate::adapters::tg::utils::{TgErrorReporter, answer_callback, cmd_error_text};
+use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
@@ -30,7 +31,26 @@ pub(super) async fn handle_notif_select(
             return Ok(());
         }
     };
-    send_notif_settings(bot, msg, lang, settings.not_on_online_enabled).await
+    let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
+    let admin_sub_events_enabled = if is_admin {
+        match tg_settings_service::admin_sub_events_enabled(&state.db).await {
+            Ok(enabled) => Some(enabled),
+            Err(e) => {
+                tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load admin subscription events setting");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    send_notif_settings(
+        bot,
+        msg,
+        lang,
+        settings.not_on_online_enabled,
+        admin_sub_events_enabled,
+    )
+    .await
 }
 
 pub(super) async fn handle_noon_toggle(
@@ -98,7 +118,26 @@ pub(super) async fn handle_noon_toggle(
                         return Ok(());
                     }
                 };
-            send_notif_settings(bot, msg, lang, settings.not_on_online_enabled).await?;
+            let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
+            let admin_sub_events_enabled = if is_admin {
+                match tg_settings_service::admin_sub_events_enabled(&state.db).await {
+                    Ok(enabled) => Some(enabled),
+                    Err(e) => {
+                        tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load admin subscription events setting");
+                        None
+                    }
+                }
+            } else {
+                None
+            };
+            send_notif_settings(
+                bot,
+                msg,
+                lang,
+                settings.not_on_online_enabled,
+                admin_sub_events_enabled,
+            )
+            .await?;
         }
         Err(e) => {
             errors
@@ -106,5 +145,80 @@ pub(super) async fn handle_noon_toggle(
                 .await?;
         }
     }
+    Ok(())
+}
+
+pub(super) async fn handle_admin_sub_events_toggle(
+    bot: &Bot,
+    q: &CallbackQuery,
+    state: &AppState,
+    msg: &Message,
+    telegram_id: TelegramId,
+    lang: LanguageCode,
+) -> ResponseResult<()> {
+    if !tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await {
+        answer_callback(
+            bot,
+            &q.id,
+            locales::get_text(lang.as_str(), locales::LocaleKey::CmdUnauth, None),
+            true,
+        )
+        .await?;
+        return Ok(());
+    }
+
+    let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
+    let current = match tg_settings_service::admin_sub_events_enabled(&state.db).await {
+        Ok(value) => value,
+        Err(e) => {
+            errors
+                .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
+            return Ok(());
+        }
+    };
+    let new_value = !current;
+    if let Err(e) = tg_settings_service::set_admin_sub_events_enabled(&state.db, new_value).await {
+        errors
+            .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+            .await?;
+        return Ok(());
+    }
+
+    let status = if new_value {
+        locales::get_text(lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+    } else {
+        locales::get_text(lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+    };
+    answer_callback(
+        bot,
+        &q.id,
+        locales::get_text(
+            lang.as_str(),
+            locales::LocaleKey::RespAdminSubEventsUpdated,
+            args!(status = status).as_ref(),
+        ),
+        false,
+    )
+    .await?;
+
+    let settings =
+        match tg_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En).await {
+            Ok(s) => s,
+            Err(e) => {
+                errors
+                    .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                    .await?;
+                return Ok(());
+            }
+        };
+    send_notif_settings(
+        bot,
+        msg,
+        lang,
+        settings.not_on_online_enabled,
+        Some(new_value),
+    )
+    .await?;
     Ok(())
 }
