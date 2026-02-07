@@ -257,7 +257,7 @@ pub enum AdminSubEventKind {
 pub async fn notify_admins_subscription_event(
     bot: &Bot,
     db: &Database,
-    config: &Config,
+    admin_chat_id: TelegramId,
     actor_id: TelegramId,
     tt_username: Option<&TtUsername>,
     event: AdminSubEventKind,
@@ -269,8 +269,8 @@ pub async fn notify_admins_subscription_event(
             Vec::new()
         }
     };
-    if !admin_ids.contains(&config.telegram.admin_chat_id) {
-        admin_ids.push(config.telegram.admin_chat_id);
+    if !admin_ids.contains(&admin_chat_id) {
+        admin_ids.push(admin_chat_id);
     }
 
     for admin_id in admin_ids {
@@ -289,17 +289,13 @@ pub async fn notify_admins_subscription_event(
             continue;
         }
 
-        let admin_lang = match user_settings_service::get_or_create(
-            db,
-            admin_id,
-            config.general.default_lang,
-        )
-        .await
+        let admin_lang = match user_settings_service::get_or_create(db, admin_id, LanguageCode::En)
+            .await
         {
             Ok(settings) => settings.language_code,
             Err(err) => {
                 tracing::error!(error = %err, admin_id = admin_id.as_i64(), "Failed to load admin language for subscription event notify");
-                config.general.default_lang
+                LanguageCode::En
             }
         };
 

@@ -118,7 +118,7 @@ async fn notify_subscribe_event(ctx: &CommandCtx<'_>, with_tt_username: bool) {
     notify_admins_subscription_event(
         ctx.bot,
         ctx.db,
-        ctx.config,
+        ctx.config.telegram.admin_chat_id,
         ctx.telegram_id,
         tt_username.as_ref(),
         AdminSubEventKind::Subscribed,
@@ -241,7 +241,7 @@ pub(super) async fn handle_unsubscribe(ctx: &CommandCtx<'_>) -> ResponseResult<(
     notify_admins_subscription_event(
         ctx.bot,
         ctx.db,
-        ctx.config,
+        ctx.config.telegram.admin_chat_id,
         ctx.telegram_id,
         tt_username.as_ref(),
         AdminSubEventKind::Unsubscribed,

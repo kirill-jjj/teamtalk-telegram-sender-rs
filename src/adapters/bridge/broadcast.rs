@@ -1,3 +1,4 @@
+use crate::adapters::tg::utils::{AdminSubEventKind, notify_admins_subscription_event};
 use crate::app::services::notifications as notifications_service;
 use crate::app::services::pending as pending_service;
 use crate::app::services::subscription as subscription_service;
@@ -202,6 +203,15 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
                             tt_username = ?sub.teamtalk_username,
                             "Profile removed successfully"
                         );
+                        notify_admins_subscription_event(
+                            &ctx.bot,
+                            &ctx.services.db,
+                            crate::core::types::TelegramId::from(ctx.admin_id.0),
+                            sub.telegram_id,
+                            sub.teamtalk_username.as_ref(),
+                            AdminSubEventKind::Unsubscribed,
+                        )
+                        .await;
                     }
                 }
                 _ => {}
