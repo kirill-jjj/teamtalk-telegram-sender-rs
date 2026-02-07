@@ -56,6 +56,7 @@ pub async fn handle_unsub_action(
             notify_admins_subscription_event(
                 &bot,
                 db,
+                state.config.general.default_lang,
                 state.config.telegram.admin_chat_id,
                 telegram_id,
                 tt_username.as_ref(),

@@ -73,6 +73,7 @@ pub(super) async fn handle_broadcast(
             state: deps.state.clone(),
             services: deps.services.clone(),
             admin_id: deps.admin_id,
+            default_lang: deps.default_lang,
             related_tt_username: related_tt_username.clone(),
         };
 
@@ -112,6 +113,7 @@ struct BroadcastTaskCtx {
     state: crate::app::state::StateHandle,
     services: crate::app::services::tt_context::TtServiceContext,
     admin_id: teloxide::types::ChatId,
+    default_lang: LanguageCode,
     related_tt_username: TtUsername,
 }
 
@@ -206,6 +208,7 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
                         notify_admins_subscription_event(
                             &ctx.bot,
                             &ctx.services.db,
+                            ctx.default_lang,
                             crate::core::types::TelegramId::from(ctx.admin_id.0),
                             sub.telegram_id,
                             sub.teamtalk_username.as_ref(),

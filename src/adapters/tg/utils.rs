@@ -257,6 +257,7 @@ pub enum AdminSubEventKind {
 pub async fn notify_admins_subscription_event(
     bot: &Bot,
     db: &Database,
+    default_lang: LanguageCode,
     admin_chat_id: TelegramId,
     actor_id: TelegramId,
     tt_username: Option<&TtUsername>,
@@ -289,13 +290,13 @@ pub async fn notify_admins_subscription_event(
             continue;
         }
 
-        let admin_lang = match user_settings_service::get_or_create(db, admin_id, LanguageCode::En)
+        let admin_lang = match user_settings_service::get_or_create(db, admin_id, default_lang)
             .await
         {
             Ok(settings) => settings.language_code,
             Err(err) => {
                 tracing::error!(error = %err, admin_id = admin_id.as_i64(), "Failed to load admin language for subscription event notify");
-                LanguageCode::En
+                default_lang
             }
         };
 
