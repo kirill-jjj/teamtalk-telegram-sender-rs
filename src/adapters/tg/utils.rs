@@ -262,17 +262,6 @@ pub async fn notify_admins_subscription_event(
     tt_username: Option<&TtUsername>,
     event: AdminSubEventKind,
 ) {
-    let enabled = match tg_settings_service::admin_sub_events_enabled(db).await {
-        Ok(enabled) => enabled,
-        Err(err) => {
-            tracing::error!(error = %err, "Failed to read admin subscription events setting");
-            false
-        }
-    };
-    if !enabled {
-        return;
-    }
-
     let mut admin_ids = match db.get_all_admins().await {
         Ok(ids) => ids,
         Err(err) => {
@@ -285,6 +274,21 @@ pub async fn notify_admins_subscription_event(
     }
 
     for admin_id in admin_ids {
+        let enabled = match tg_settings_service::admin_sub_events_enabled(db, admin_id).await {
+            Ok(enabled) => enabled,
+            Err(err) => {
+                tracing::error!(
+                    error = %err,
+                    admin_id = admin_id.as_i64(),
+                    "Failed to read admin subscription events setting"
+                );
+                false
+            }
+        };
+        if !enabled {
+            continue;
+        }
+
         let admin_lang = match user_settings_service::get_or_create(
             db,
             admin_id,

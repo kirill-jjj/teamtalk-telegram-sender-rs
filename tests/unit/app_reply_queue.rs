@@ -41,6 +41,7 @@ impl ReplyQueueRepo for FakeReplyQueueRepo {
             not_on_online_enabled: false,
             not_on_online_confirmed: false,
             reply_queue_enabled: self.user_enabled,
+            admin_sub_events_enabled: false,
         })
     }
 

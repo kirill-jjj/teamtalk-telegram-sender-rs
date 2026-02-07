@@ -24,6 +24,7 @@ impl UserSettingsRepo for FakeUserSettingsRepo {
             not_on_online_enabled: false,
             not_on_online_confirmed: false,
             reply_queue_enabled: false,
+            admin_sub_events_enabled: false,
         })
     }
 

@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT\n                    telegram_id as \"telegram_id!: TelegramId\",\n                    language_code as \"language_code!: LanguageCode\",\n                    notification_settings as \"notification_settings!: NotificationSetting\",\n                    mute_list_mode as \"mute_list_mode!: MuteListMode\",\n                    teamtalk_username as \"teamtalk_username?: TtUsername\",\n                    not_on_online_enabled as \"not_on_online_enabled!\",\n                    not_on_online_confirmed as \"not_on_online_confirmed!\",\n                    reply_queue_enabled as \"reply_queue_enabled!\"\n                FROM user_settings\n                WHERE telegram_id = ?\n                ",
+  "query": "\n                SELECT\n                    telegram_id as \"telegram_id!: TelegramId\",\n                    language_code as \"language_code!: LanguageCode\",\n                    notification_settings as \"notification_settings!: NotificationSetting\",\n                    mute_list_mode as \"mute_list_mode!: MuteListMode\",\n                    teamtalk_username as \"teamtalk_username?: TtUsername\",\n                    not_on_online_enabled as \"not_on_online_enabled!\",\n                    not_on_online_confirmed as \"not_on_online_confirmed!\",\n                    reply_queue_enabled as \"reply_queue_enabled!\",\n                    admin_sub_events_enabled as \"admin_sub_events_enabled!\"\n                FROM user_settings\n                WHERE telegram_id = ?\n                ",
   "describe": {
     "columns": [
       {
@@ -42,6 +42,11 @@
         "name": "reply_queue_enabled!",
         "ordinal": 7,
         "type_info": "Bool"
+      },
+      {
+        "name": "admin_sub_events_enabled!",
+        "ordinal": 8,
+        "type_info": "Bool"
       }
     ],
     "parameters": {
@@ -55,8 +60,9 @@
       true,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "c03d878395ad5836daa97d528ae06923b23249199a893cdaa385844852940350"
+  "hash": "2f77325ed3aa00d16829d409313cc12548790312ab46c56468b2b268d656c674"
 }

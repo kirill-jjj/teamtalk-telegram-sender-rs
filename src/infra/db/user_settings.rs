@@ -22,7 +22,8 @@ impl Database {
                 teamtalk_username as "teamtalk_username?: TtUsername",
                 not_on_online_enabled as "not_on_online_enabled!",
                 not_on_online_confirmed as "not_on_online_confirmed!",
-                reply_queue_enabled as "reply_queue_enabled!"
+                reply_queue_enabled as "reply_queue_enabled!",
+                admin_sub_events_enabled as "admin_sub_events_enabled!"
             FROM user_settings
             WHERE telegram_id = ?
             "#,
@@ -53,7 +54,8 @@ impl Database {
                     teamtalk_username as "teamtalk_username?: TtUsername",
                     not_on_online_enabled as "not_on_online_enabled!",
                     not_on_online_confirmed as "not_on_online_confirmed!",
-                    reply_queue_enabled as "reply_queue_enabled!"
+                    reply_queue_enabled as "reply_queue_enabled!",
+                    admin_sub_events_enabled as "admin_sub_events_enabled!"
                 FROM user_settings
                 WHERE telegram_id = ?
                 "#,
@@ -241,6 +243,22 @@ impl Database {
         let enabled_int = i64::from(enabled);
         sqlx::query!(
             "UPDATE user_settings SET reply_queue_enabled = ? WHERE telegram_id = ?",
+            enabled_int,
+            telegram_id
+        )
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    pub async fn update_admin_sub_events_enabled(
+        &self,
+        telegram_id: TelegramId,
+        enabled: bool,
+    ) -> Result<()> {
+        let enabled_int = i64::from(enabled);
+        sqlx::query!(
+            "UPDATE user_settings SET admin_sub_events_enabled = ? WHERE telegram_id = ?",
             enabled_int,
             telegram_id
         )

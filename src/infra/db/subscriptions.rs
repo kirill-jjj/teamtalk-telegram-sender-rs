@@ -65,7 +65,8 @@ impl Database {
                 us.teamtalk_username as "teamtalk_username?: crate::core::types::TtUsername",
                 us.not_on_online_enabled as "not_on_online_enabled!",
                 us.not_on_online_confirmed as "not_on_online_confirmed!",
-                us.reply_queue_enabled as "reply_queue_enabled!"
+                us.reply_queue_enabled as "reply_queue_enabled!",
+                us.admin_sub_events_enabled as "admin_sub_events_enabled!"
             FROM user_settings us
             JOIN subscribed_users su ON us.telegram_id = su.telegram_id
             LEFT JOIN muted_users mu ON us.telegram_id = mu.user_settings_telegram_id

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE user_settings SET admin_sub_events_enabled = ? WHERE telegram_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "834a18a2e7ca424c764511937a26940d7bde6f709098f3d074afe4b5f6ae04f6"
+}

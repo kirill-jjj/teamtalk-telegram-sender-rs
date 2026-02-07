@@ -33,7 +33,7 @@ pub(super) async fn handle_notif_select(
     };
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
     let admin_sub_events_enabled = if is_admin {
-        match tg_settings_service::admin_sub_events_enabled(&state.db).await {
+        match tg_settings_service::admin_sub_events_enabled(&state.db, telegram_id).await {
             Ok(enabled) => Some(enabled),
             Err(e) => {
                 tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load admin subscription events setting");
@@ -120,7 +120,7 @@ pub(super) async fn handle_noon_toggle(
                 };
             let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
             let admin_sub_events_enabled = if is_admin {
-                match tg_settings_service::admin_sub_events_enabled(&state.db).await {
+                match tg_settings_service::admin_sub_events_enabled(&state.db, telegram_id).await {
                     Ok(enabled) => Some(enabled),
                     Err(e) => {
                         tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load admin subscription events setting");
@@ -168,7 +168,8 @@ pub(super) async fn handle_admin_sub_events_toggle(
     }
 
     let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
-    let current = match tg_settings_service::admin_sub_events_enabled(&state.db).await {
+    let current = match tg_settings_service::admin_sub_events_enabled(&state.db, telegram_id).await
+    {
         Ok(value) => value,
         Err(e) => {
             errors
@@ -178,7 +179,9 @@ pub(super) async fn handle_admin_sub_events_toggle(
         }
     };
     let new_value = !current;
-    if let Err(e) = tg_settings_service::set_admin_sub_events_enabled(&state.db, new_value).await {
+    if let Err(e) =
+        tg_settings_service::set_admin_sub_events_enabled(&state.db, telegram_id, new_value).await
+    {
         errors
             .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
             .await?;

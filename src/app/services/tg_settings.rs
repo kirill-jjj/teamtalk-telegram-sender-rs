@@ -2,7 +2,6 @@ use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::core::types::{LanguageCode, NotificationSetting, TelegramId};
 use crate::infra::db::Database;
-use crate::infra::db::app_settings::AppSettingKey;
 use anyhow::Result;
 
 pub async fn load_settings(
@@ -33,17 +32,17 @@ pub async fn toggle_noon(db: &Database, telegram_id: TelegramId) -> Result<bool>
     user_settings_service::toggle_noon(db, telegram_id).await
 }
 
-pub async fn admin_sub_events_enabled(db: &Database) -> Result<bool> {
-    Ok(db
-        .get_app_setting(AppSettingKey::AdminSubEventsEnabled)
+pub async fn admin_sub_events_enabled(db: &Database, telegram_id: TelegramId) -> Result<bool> {
+    Ok(load_settings(db, telegram_id, LanguageCode::En)
         .await?
-        .is_some_and(|v| v == "1"))
+        .admin_sub_events_enabled)
 }
 
-pub async fn set_admin_sub_events_enabled(db: &Database, enabled: bool) -> Result<()> {
-    db.set_app_setting(
-        AppSettingKey::AdminSubEventsEnabled,
-        if enabled { "1" } else { "0" },
-    )
-    .await
+pub async fn set_admin_sub_events_enabled(
+    db: &Database,
+    telegram_id: TelegramId,
+    enabled: bool,
+) -> Result<()> {
+    db.update_admin_sub_events_enabled(telegram_id, enabled)
+        .await
 }

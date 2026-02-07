@@ -5,6 +5,7 @@ use crate::core::types::{
 use chrono::NaiveDateTime;
 
 #[derive(sqlx::FromRow, Debug)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct UserSettings {
     pub telegram_id: TelegramId,
     pub language_code: LanguageCode,
@@ -14,6 +15,7 @@ pub struct UserSettings {
     pub not_on_online_enabled: bool,
     pub not_on_online_confirmed: bool,
     pub reply_queue_enabled: bool,
+    pub admin_sub_events_enabled: bool,
 }
 
 #[derive(sqlx::FromRow, Debug, Clone)]
