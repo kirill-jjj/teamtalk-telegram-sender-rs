@@ -96,3 +96,9 @@
   - `plugins/example/` update when applicable.
 - Prefer stable plugin contracts over exposing internal implementation details directly.
 - Keep plugin command behavior deterministic: same input must produce same dispatch order and fallback rules.
+- Core plugins shipped in repo must live under `plugins/<plugin_name>/` with `plugin.toml` + entry Lua file.
+- If plugin behavior depends on operator values (for example TG chat id), document exact edit points in `PLUGINS.md`.
+- For every new shipped core plugin, add a dedicated `PLUGINS.md` section with:
+  - feature behavior,
+  - required config/manual values,
+  - hot-reload verification steps.

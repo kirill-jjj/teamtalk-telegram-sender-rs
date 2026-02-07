@@ -1,4 +1,4 @@
-# Plugins Guide
+﻿# Plugins Guide
 
 This document explains how to create, enable, disable, and operate Lua plugins.
 
@@ -110,11 +110,21 @@ register_command("ping", function(args, ctx)
 end)
 ```
 
+Optional source filter:
+
+```lua
+register_command("ping", function(args, ctx)
+    tg.send(ctx.chat_id, "pong")
+    return true
+end, { tg = true, tt = false })
+```
+
 Rules:
 
 - command is registered without leading `/` (`"ping"`).
 - returning `true` means command handled.
 - plugin command priority is higher than built-in command handlers.
+- third argument `{ tg = bool, tt = bool }` is optional; defaults to both `true`.
 
 ## Context object for command handlers
 
@@ -138,6 +148,11 @@ TeamTalk command context fields:
 - `ctx.text`
 
 `args` is array-like table with command arguments.
+
+TeamTalk event normalized payload also includes:
+
+- `normalized.is_linked` - `true` when TT user is linked to Telegram.
+- `normalized.linked_telegram_id` - linked Telegram id or `null`.
 
 ## Event handling
 
@@ -167,8 +182,9 @@ end
 
 ## Lua API exposed by bot
 
-### `register_command(name, fn)`
+### `register_command(name, fn, opts?)`
 - Registers command handler callable from slash command flow.
+- `opts` is optional table: `{ tg = true/false, tt = true/false }`.
 
 ### `tg.*`
 - `tg.send(chat_id, text)`
@@ -324,3 +340,4 @@ Recommended approach:
 5. Optional: set `[plugins].disabled = []`.
 6. Start bot and verify logs.
 7. Trigger command/event and confirm behavior.
+

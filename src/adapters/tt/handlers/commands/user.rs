@@ -165,6 +165,9 @@ impl UserCtx {
 }
 
 async fn handle_plugin_command(ctx: &UserCtx, command: &str, args: &[String]) -> bool {
+    if !command.starts_with('/') {
+        return false;
+    }
     let is_admin = ctx.is_admin().await;
     let Some((plugin_command, _)) = parse_command_text(command) else {
         return false;

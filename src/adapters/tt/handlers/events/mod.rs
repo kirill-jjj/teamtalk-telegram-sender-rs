@@ -1,5 +1,6 @@
 use crate::adapters::tt::WorkerContext;
 use crate::bootstrap::config::GenderConfig;
+use crate::core::types::TtUsername;
 use serde_json::json;
 use std::time::Instant;
 use teamtalk::client::ReconnectHandler;
@@ -66,18 +67,34 @@ pub fn handle_sdk_event(
 
 fn emit_plugin_event(ctx: &WorkerContext, event: Event, msg: &Message) {
     let plugins = ctx.plugins.clone();
+    let db = ctx.db.clone();
     let event_name = format!("{event:?}");
-    let normalized = json!({
-        "event": event_name,
-        "has_user": msg.user().is_some(),
-        "has_text": msg.text().is_some(),
-        "source": msg.source().to_string(),
+    let has_user = msg.user().is_some();
+    let has_text = msg.text().is_some();
+    let source = msg.source().to_string();
+    let linked_tt_username = msg.user().and_then(|user| {
+        (!user.username.is_empty()).then(|| TtUsername::from(user.username.as_str()))
     });
     let raw = build_raw_payload(msg);
     tokio::task::spawn_local(async move {
+        let linked_telegram_id = if let Some(tt_username) = linked_tt_username {
+            db.get_telegram_id_by_tt_user(&tt_username)
+                .await
+                .map(crate::core::types::TelegramId::as_i64)
+        } else {
+            None
+        };
+        let normalized = json!({
+            "event": event_name,
+            "has_user": has_user,
+            "has_text": has_text,
+            "source": source,
+            "linked_telegram_id": linked_telegram_id,
+            "is_linked": linked_telegram_id.is_some(),
+        });
         plugins
             .dispatch_event(crate::app::plugins::PluginEvent {
-                name: event_name,
+                name: normalized["event"].as_str().unwrap_or_default().to_string(),
                 source: "tt".to_string(),
                 normalized,
                 raw,

@@ -1,5 +1,5 @@
 use crate::core::types::{TgChatId, TtChannelId, TtCommand, TtUserId};
-use mlua::{Function, Lua, LuaSerdeExt, Value};
+use mlua::{Function, Lua, LuaSerdeExt, Table, Value};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
 use std::collections::VecDeque;
@@ -65,6 +65,17 @@ impl PluginRuntime {
         let Value::Function(func) = func else {
             return Ok(false);
         };
+        let source = context["source"].as_str().unwrap_or_default();
+        let options = globals.get::<Value>("command_options")?;
+        if let Value::Table(options) = options
+            && let Value::Table(command_options) = options.get::<Value>(command)?
+        {
+            let telegram_enabled = command_options.get::<Option<bool>>("tg")?.unwrap_or(true);
+            let teamtalk_enabled = command_options.get::<Option<bool>>("tt")?.unwrap_or(true);
+            if (source == "tg" && !telegram_enabled) || (source == "tt" && !teamtalk_enabled) {
+                return Ok(false);
+            }
+        }
 
         let args_table = self.lua.create_table()?;
         for (idx, arg) in args.iter().enumerate() {
@@ -103,23 +114,46 @@ impl PluginRuntime {
         Ok(matches!(result, Value::Boolean(true)))
     }
 
+    #[allow(clippy::too_many_lines)]
     fn register_api(&self, action_tx: UnboundedSender<PluginAction>) -> anyhow::Result<()> {
         let globals = self.lua.globals();
 
-        let register_command =
-            self.lua
-                .create_function(|lua, (name, func): (String, Function)| {
-                    let commands =
-                        if let Value::Table(table) = lua.globals().get::<Value>("commands")? {
-                            table
-                        } else {
-                            let table = lua.create_table()?;
-                            lua.globals().set("commands", table.clone())?;
-                            table
-                        };
-                    commands.set(name.trim().trim_start_matches('/').to_lowercase(), func)?;
-                    Ok(())
-                })?;
+        let register_command = self.lua.create_function(
+            |lua, (name, func, options): (String, Function, Option<Table>)| {
+                let command_name = name.trim().trim_start_matches('/').to_lowercase();
+                let commands =
+                    if let Value::Table(table) = lua.globals().get::<Value>("commands")? {
+                        table
+                    } else {
+                        let table = lua.create_table()?;
+                        lua.globals().set("commands", table.clone())?;
+                        table
+                    };
+                commands.set(command_name.clone(), func)?;
+
+                let command_options =
+                    if let Value::Table(table) = lua.globals().get::<Value>("command_options")? {
+                        table
+                    } else {
+                        let table = lua.create_table()?;
+                        lua.globals().set("command_options", table.clone())?;
+                        table
+                    };
+                let normalized_options = lua.create_table()?;
+                let tg = options
+                    .as_ref()
+                    .and_then(|table| table.get::<Option<bool>>("tg").ok().flatten())
+                    .unwrap_or(true);
+                let tt = options
+                    .as_ref()
+                    .and_then(|table| table.get::<Option<bool>>("tt").ok().flatten())
+                    .unwrap_or(true);
+                normalized_options.set("tg", tg)?;
+                normalized_options.set("tt", tt)?;
+                command_options.set(command_name, normalized_options)?;
+                Ok(())
+            },
+        )?;
         globals.set("register_command", register_command)?;
 
         let tg = self.lua.create_table()?;
