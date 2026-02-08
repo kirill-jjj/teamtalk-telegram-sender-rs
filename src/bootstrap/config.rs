@@ -90,6 +90,18 @@ const fn default_deeplink_cleanup_interval_seconds() -> u64 {
     3600
 }
 
+const fn default_subscriber_notify_retry_interval_seconds() -> u64 {
+    30
+}
+
+const fn default_subscriber_notify_retry_backoff_seconds() -> u64 {
+    30
+}
+
+const fn default_subscriber_notify_max_attempts() -> u32 {
+    20
+}
+
 #[derive(Deserialize, Clone)]
 pub struct DatabaseConfig {
     pub db_file: PathBuf,
@@ -198,6 +210,15 @@ pub struct OperationalParameters {
     pub deeplink_cleanup_interval: u64,
     #[serde(rename = "tt_reconnect_check_interval_seconds")]
     pub tt_reconnect_check_interval: u64,
+    #[serde(default = "default_subscriber_notify_retry_interval_seconds")]
+    #[serde(rename = "subscriber_notify_retry_interval_seconds")]
+    pub subscriber_notify_retry_interval: u64,
+    #[serde(default = "default_subscriber_notify_retry_backoff_seconds")]
+    #[serde(rename = "subscriber_notify_retry_backoff_seconds")]
+    pub subscriber_notify_retry_backoff: u64,
+    #[serde(default = "default_subscriber_notify_max_attempts")]
+    #[serde(rename = "subscriber_notify_max_attempts")]
+    pub subscriber_notify_max_attempts: u32,
 }
 
 impl Default for OperationalParameters {
@@ -207,6 +228,9 @@ impl Default for OperationalParameters {
             tt_reconnect_retry: 10,
             deeplink_cleanup_interval: 3600,
             tt_reconnect_check_interval: 30,
+            subscriber_notify_retry_interval: default_subscriber_notify_retry_interval_seconds(),
+            subscriber_notify_retry_backoff: default_subscriber_notify_retry_backoff_seconds(),
+            subscriber_notify_max_attempts: default_subscriber_notify_max_attempts(),
         }
     }
 }

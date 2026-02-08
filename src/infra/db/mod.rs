@@ -6,6 +6,7 @@ pub mod mutes;
 pub mod pending_channel_replies;
 pub mod pending_replies;
 pub mod reply_queue;
+pub mod subscriber_notify_outbox;
 pub mod subscriptions;
 pub mod types;
 pub mod user_settings;

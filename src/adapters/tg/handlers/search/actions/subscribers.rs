@@ -1,6 +1,7 @@
 use crate::adapters::tg::presenter::admin::subscriber_settings as subscriber_settings_logic;
 use crate::adapters::tg::presenter::admin::subscribers as subscribers_logic;
 use crate::adapters::tg::state::AppState;
+use crate::adapters::tg::subscriber_notify::{AdminActor, SubscriberChangeKind};
 use crate::adapters::tg::utils::TgErrorReporter;
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::args;
@@ -77,6 +78,22 @@ pub(super) async fn handle_link_list(
         }
         return Ok(true);
     }
+    let actor = msg
+        .from
+        .as_ref()
+        .and_then(AdminActor::from_telegram_user)
+        .or_else(|| {
+            super::requester_id_from_message(msg, "search_link_tt_actor").map(AdminActor::fallback)
+        })
+        .unwrap_or_else(|| AdminActor::fallback(TelegramId::from(0)));
+    crate::adapters::tg::subscriber_notify::notify_subscriber_change(
+        bot,
+        &state.db,
+        sub_id,
+        &actor,
+        SubscriberChangeKind::Linked(username.clone()),
+    )
+    .await;
     let args = args!(user = username.to_string());
     let text = locales::get_text(
         lang.as_str(),

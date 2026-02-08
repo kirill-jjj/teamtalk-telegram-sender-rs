@@ -98,6 +98,18 @@ fn defaults_are_applied() {
     assert_eq!(cfg.general.gender, GenderConfig::Neutral);
     assert_eq!(cfg.operational_parameters.deeplink_ttl, 300);
     assert_eq!(cfg.operational_parameters.tt_reconnect_retry, 10);
+    assert_eq!(
+        cfg.operational_parameters.subscriber_notify_retry_interval,
+        30
+    );
+    assert_eq!(
+        cfg.operational_parameters.subscriber_notify_retry_backoff,
+        30
+    );
+    assert_eq!(
+        cfg.operational_parameters.subscriber_notify_max_attempts,
+        20
+    );
 }
 
 #[test]
@@ -130,6 +142,9 @@ fn operational_parameters_override() {
             tt_reconnect_retry_seconds = 22
             deeplink_cleanup_interval_seconds = 33
             tt_reconnect_check_interval_seconds = 44
+            subscriber_notify_retry_interval_seconds = 55
+            subscriber_notify_retry_backoff_seconds = 66
+            subscriber_notify_max_attempts = 77
             "#,
     );
 
@@ -137,4 +152,16 @@ fn operational_parameters_override() {
     assert_eq!(cfg.operational_parameters.tt_reconnect_retry, 22);
     assert_eq!(cfg.operational_parameters.deeplink_cleanup_interval, 33);
     assert_eq!(cfg.operational_parameters.tt_reconnect_check_interval, 44);
+    assert_eq!(
+        cfg.operational_parameters.subscriber_notify_retry_interval,
+        55
+    );
+    assert_eq!(
+        cfg.operational_parameters.subscriber_notify_retry_backoff,
+        66
+    );
+    assert_eq!(
+        cfg.operational_parameters.subscriber_notify_max_attempts,
+        77
+    );
 }

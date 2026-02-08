@@ -16,10 +16,8 @@ pub async fn update_notifications(
     subscriber_actions_service::update_notifications(db, sub_id, setting).await
 }
 
-pub async fn toggle_noon(db: &Database, sub_id: TelegramId) -> Result<()> {
-    user_settings_service::toggle_noon(db, sub_id)
-        .await
-        .map(|_| ())
+pub async fn toggle_noon(db: &Database, sub_id: TelegramId) -> Result<bool> {
+    user_settings_service::toggle_noon(db, sub_id).await
 }
 
 pub async fn update_mute_mode(db: &Database, sub_id: TelegramId, mode: MuteListMode) -> Result<()> {

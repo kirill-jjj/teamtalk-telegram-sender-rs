@@ -97,6 +97,20 @@ impl Application {
         let (tx_tt_cmd, rx_tt_cmd) = tokio_mpsc::channel::<crate::core::types::TtCommand>(256);
 
         let bots = init_bots(&config).await?;
+        if let Some(bot) = bots.event_bot.clone() {
+            crate::adapters::tg::subscriber_notify::spawn_subscriber_notify_retry_worker(
+                bot,
+                db.clone(),
+                config
+                    .operational_parameters
+                    .subscriber_notify_retry_interval,
+                config
+                    .operational_parameters
+                    .subscriber_notify_retry_backoff,
+                config.operational_parameters.subscriber_notify_max_attempts,
+                cancel_token.clone(),
+            );
+        }
         let plugins =
             crate::app::plugins::PluginManagerHandle::new(crate::app::plugins::PluginInit {
                 config: config.clone(),

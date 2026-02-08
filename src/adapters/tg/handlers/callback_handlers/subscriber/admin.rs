@@ -1,5 +1,6 @@
 use crate::adapters::tg::presenter::admin::subscribers::send_subscriber_details;
 use crate::adapters::tg::presenter::keyboards::confirm_cancel_keyboard;
+use crate::adapters::tg::subscriber_notify::SubscriberChangeKind;
 use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::callbacks::{CallbackAction, SubAction};
@@ -88,6 +89,8 @@ pub(super) async fn admin_add(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::AdminAdded)
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
@@ -122,6 +125,8 @@ pub(super) async fn admin_remove(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::AdminRemoved)
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,

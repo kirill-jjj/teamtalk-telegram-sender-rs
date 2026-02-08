@@ -292,6 +292,19 @@ sub-lang-title = Выберите новый язык для подписчик�
 sub-notif-title = Выберите настройку уведомлений для подписчика { $id }:
 sub-mode-title = Выберите режим тишины для подписчика { $id }:
 
+sub-user-notify-lang = Ваш язык был изменён на: { $value }.
+sub-user-notify-notif = Ваши настройки уведомлений были изменены на: { $value }.
+sub-user-notify-noon = Настройка «Только офлайн» была изменена на: { $value }.
+sub-user-notify-mute-mode = Ваш режим игнорирования был изменён на: { $value }.
+sub-user-notify-admin-added = Вам выданы права администратора бота.
+sub-user-notify-admin-removed = Ваши права администратора бота были сняты.
+sub-user-notify-linked = Ваш аккаунт TeamTalk был привязан: { $value }.
+sub-user-notify-unlinked = Привязка вашего аккаунта TeamTalk была удалена.
+sub-user-notify-deleted = Ваш профиль подписчика был удалён.
+sub-user-notify-banned = Ваш профиль был удалён, а доступ заблокирован.
+sub-user-notify-actor = Изменил администратор: { $name }.
+sub-user-notify-actor-username = Изменил администратор: { $name } ({ $username }).
+
 btn-sub-delete = 🗑️ Удалить подписчика
 btn-sub-ban = 🚫 Забанить (TG и TT)
 btn-sub-admin-add = ➕ Добавить в админы
@@ -319,6 +332,8 @@ cmd-desc-exit = Выключить бота
 cmd-desc-broadcast = Отправить объявление в TeamTalk
 cmd-desc-message = Отправить сообщение подписчикам в Telegram
 val-none = Нет
+val-lang-en = Английский
+val-lang-ru = Русский
 val-yes = Да
 val-no = Нет
 

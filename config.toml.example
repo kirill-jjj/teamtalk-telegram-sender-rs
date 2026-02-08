@@ -34,3 +34,12 @@ call_timeout_ms = 500
 error_window_seconds = 60
 error_threshold = 10
 disabled = []
+
+[operational_parameters]
+deeplink_ttl_seconds = 300
+tt_reconnect_retry_seconds = 10
+deeplink_cleanup_interval_seconds = 3600
+tt_reconnect_check_interval_seconds = 30
+subscriber_notify_retry_interval_seconds = 30
+subscriber_notify_retry_backoff_seconds = 30
+subscriber_notify_max_attempts = 20

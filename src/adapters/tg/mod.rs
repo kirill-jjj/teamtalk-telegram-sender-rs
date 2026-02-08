@@ -1,6 +1,7 @@
 pub mod handlers;
 pub mod presenter;
 pub mod state;
+pub mod subscriber_notify;
 pub mod utils;
 
 use crate::adapters::tg::utils::TgErrorReporter;

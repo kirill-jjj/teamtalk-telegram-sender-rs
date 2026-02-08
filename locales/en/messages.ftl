@@ -285,6 +285,19 @@ sub-lang-title = Select new language for subscriber { $id }:
 sub-notif-title = Select notification preference for subscriber { $id }:
 sub-mode-title = Select mute list mode for subscriber { $id }:
 
+sub-user-notify-lang = Your language was changed to: { $value }.
+sub-user-notify-notif = Your notification preference was changed to: { $value }.
+sub-user-notify-noon = Your Offline-only setting was changed to: { $value }.
+sub-user-notify-mute-mode = Your mute mode was changed to: { $value }.
+sub-user-notify-admin-added = You were granted bot admin rights.
+sub-user-notify-admin-removed = Your bot admin rights were removed.
+sub-user-notify-linked = Your TeamTalk account was linked: { $value }.
+sub-user-notify-unlinked = Your TeamTalk account link was removed.
+sub-user-notify-deleted = Your subscription profile was deleted.
+sub-user-notify-banned = Your profile was deleted and access was banned.
+sub-user-notify-actor = Changed by: { $name }.
+sub-user-notify-actor-username = Changed by: { $name } ({ $username }).
+
 btn-sub-delete = 🗑️ Delete Subscriber
 btn-sub-ban = 🚫 Ban User (TG & TT)
 btn-sub-admin-add = ➕ Add to admins
@@ -312,6 +325,8 @@ cmd-desc-exit = Shut down the bot
 cmd-desc-broadcast = Send a TeamTalk broadcast message
 cmd-desc-message = Send a Telegram message to subscribers
 val-none = None
+val-lang-en = English
+val-lang-ru = Russian
 val-yes = Yes
 val-no = No
 

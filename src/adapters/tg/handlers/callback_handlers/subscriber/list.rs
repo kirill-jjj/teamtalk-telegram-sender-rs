@@ -2,6 +2,7 @@ use crate::adapters::tg::presenter::admin::subscribers::prepare_display_list;
 use crate::adapters::tg::presenter::admin::subscribers::{
     edit_subscribers_list, send_subscriber_details,
 };
+use crate::adapters::tg::subscriber_notify::SubscriberChangeKind;
 use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_subscribers as tg_subscribers_service;
@@ -59,6 +60,8 @@ pub(super) async fn delete(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::Deleted)
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
@@ -97,6 +100,8 @@ pub(super) async fn ban(ctx: &SubCtx<'_>, sub_id: TelegramId, page: usize) -> Re
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::Banned)
+        .await;
 
     answer_callback(
         ctx.bot,

@@ -2,6 +2,7 @@ use crate::adapters::tg::presenter::admin::subscribers::{
     SubscriberDetailsArgs, default_user_settings,
 };
 use crate::adapters::tg::state::AppState;
+use crate::adapters::tg::subscriber_notify::{AdminActor, SubscriberChangeKind};
 use crate::adapters::tg::utils::{TgErrorReporter, telegram_id_from_callback_query};
 use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::core::callbacks::SubAction;
@@ -34,6 +35,7 @@ struct SubCtx<'a> {
     lang: LanguageCode,
     q_id: &'a teloxide::types::CallbackQueryId,
     admin_chat_id: TelegramId,
+    actor: AdminActor,
 }
 
 pub async fn handle_subscriber_actions(
@@ -53,6 +55,8 @@ pub async fn handle_subscriber_actions(
     let db = &state.db;
     let tx_tt = &state.tx_tt;
     let config = &state.config;
+    let actor = AdminActor::from_telegram_user(&q.from)
+        .unwrap_or_else(|| AdminActor::fallback(admin_chat_id));
     let ctx = SubCtx {
         bot: &bot,
         msg: &msg,
@@ -64,6 +68,7 @@ pub async fn handle_subscriber_actions(
         lang,
         q_id: &q.id,
         admin_chat_id,
+        actor,
     };
     ctx.dispatch(action).await?;
     Ok(())
@@ -72,6 +77,17 @@ pub async fn handle_subscriber_actions(
 impl SubCtx<'_> {
     const fn errors(&self) -> TgErrorReporter<'_> {
         TgErrorReporter::new(self.bot, self.config, self.admin_chat_id, self.lang)
+    }
+
+    async fn notify_change(&self, sub_id: TelegramId, change: SubscriberChangeKind) {
+        crate::adapters::tg::subscriber_notify::notify_subscriber_change(
+            self.bot,
+            self.db,
+            sub_id,
+            &self.actor,
+            change,
+        )
+        .await;
     }
 
     async fn dispatch(&self, action: SubAction) -> ResponseResult<()> {

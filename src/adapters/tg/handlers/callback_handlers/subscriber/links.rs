@@ -1,6 +1,7 @@
 use crate::adapters::tg::presenter::admin::subscriber_settings::{
     SubLinkAccountListArgs, send_sub_link_account_list, send_sub_manage_tt_menu,
 };
+use crate::adapters::tg::subscriber_notify::SubscriberChangeKind;
 use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_sub_links as tg_sub_links_service;
 use crate::args;
@@ -52,6 +53,8 @@ pub(super) async fn unlink(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::Unlinked)
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
@@ -124,6 +127,8 @@ pub(super) async fn link_perform(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::Linked(username.clone()))
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,

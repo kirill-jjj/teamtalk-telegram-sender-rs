@@ -2,6 +2,7 @@ use crate::adapters::tg::presenter::admin::subscriber_settings::{
     send_sub_lang_menu, send_sub_mute_mode_menu, send_sub_notif_menu,
 };
 use crate::adapters::tg::presenter::admin::subscribers::send_subscriber_details;
+use crate::adapters::tg::subscriber_notify::SubscriberChangeKind;
 use crate::adapters::tg::utils::answer_callback;
 use crate::app::services::tg_sub_settings as tg_sub_settings_service;
 use crate::args;
@@ -38,6 +39,8 @@ pub(super) async fn lang_set(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::Language(new_lang))
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
@@ -78,6 +81,8 @@ pub(super) async fn notif_set(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::Notifications(val.clone()))
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
@@ -98,24 +103,33 @@ pub(super) async fn noon_toggle(
     sub_id: TelegramId,
     page: usize,
 ) -> ResponseResult<()> {
-    if ctx
-        .errors()
-        .check_db_err(
-            &ctx.q_id.0,
-            tg_sub_settings_service::toggle_noon(ctx.db, sub_id).await,
-            AdminErrorContext::Callback,
-        )
-        .await?
-    {
-        return Ok(());
-    }
+    let enabled = match tg_sub_settings_service::toggle_noon(ctx.db, sub_id).await {
+        Ok(enabled) => enabled,
+        Err(error) => {
+            let _ = ctx
+                .errors()
+                .check_db_err(&ctx.q_id.0, Err(error), AdminErrorContext::Callback)
+                .await?;
+            return Ok(());
+        }
+    };
+    ctx.notify_change(sub_id, SubscriberChangeKind::OfflineOnly(enabled))
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
         locales::get_text(
             ctx.lang.as_str(),
             locales::LocaleKey::ToastNoonToggled,
-            args!(id = sub_id.to_string(), status = "toggled").as_ref(),
+            args!(
+                id = sub_id.to_string(),
+                status = if enabled {
+                    locales::get_text(ctx.lang.as_str(), locales::LocaleKey::StatusEnabled, None)
+                } else {
+                    locales::get_text(ctx.lang.as_str(), locales::LocaleKey::StatusDisabled, None)
+                }
+            )
+            .as_ref(),
         ),
         false,
     )
@@ -149,6 +163,8 @@ pub(super) async fn mode_set(
     {
         return Ok(());
     }
+    ctx.notify_change(sub_id, SubscriberChangeKind::MuteMode(mode.clone()))
+        .await;
     answer_callback(
         ctx.bot,
         ctx.q_id,
