@@ -1,5 +1,6 @@
 use crate::adapters;
 use crate::bootstrap::config::Config;
+use crate::bootstrap::config_errors::load_config;
 use crate::core::types::TtUsername;
 use crate::infra::db::Database;
 use anyhow::{Result, anyhow};
@@ -57,8 +58,7 @@ impl Application {
     pub async fn build(config_path: PathBuf) -> Result<Self> {
         tracing::info!(path = %config_path.display(), "Loading config");
 
-        let config_content = std::fs::read_to_string(&config_path)?;
-        let mut config: Config = toml::from_str(&config_content)?;
+        let mut config: Config = load_config(&config_path)?;
 
         let config_dir = config_path.parent().unwrap_or_else(|| Path::new("."));
 
