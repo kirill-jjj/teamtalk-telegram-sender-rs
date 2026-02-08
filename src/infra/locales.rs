@@ -229,6 +229,7 @@ pub enum LocaleKey {
     TtAdminNoIds,
     TtAdminRemoveFail,
     TtAdminRemoved,
+    TtBridgeDisabledUser,
     TtChannelReply,
     TtChannelReplyText,
     TtErrorGeneric,

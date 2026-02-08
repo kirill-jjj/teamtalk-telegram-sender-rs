@@ -110,6 +110,11 @@ fn defaults_are_applied() {
         cfg.operational_parameters.subscriber_notify_max_attempts,
         20
     );
+    assert_eq!(
+        cfg.operational_parameters
+            .tt_bridge_disabled_reply_cooldown_seconds,
+        120
+    );
 }
 
 #[test]
@@ -145,6 +150,7 @@ fn operational_parameters_override() {
             subscriber_notify_retry_interval_seconds = 55
             subscriber_notify_retry_backoff_seconds = 66
             subscriber_notify_max_attempts = 77
+            tt_bridge_disabled_reply_cooldown_seconds = 88
             "#,
     );
 
@@ -163,5 +169,10 @@ fn operational_parameters_override() {
     assert_eq!(
         cfg.operational_parameters.subscriber_notify_max_attempts,
         77
+    );
+    assert_eq!(
+        cfg.operational_parameters
+            .tt_bridge_disabled_reply_cooldown_seconds,
+        88
     );
 }

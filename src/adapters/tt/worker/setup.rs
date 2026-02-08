@@ -210,6 +210,9 @@ pub(super) fn build_worker_context(args: &RunTeamtalkArgs) -> WorkerContext {
         bot_username: args.bot_username.clone(),
         is_streaming: Arc::new(std::sync::atomic::AtomicBool::new(false)),
         tt_msg_sem: Arc::new(Semaphore::new(8)),
+        tt_bridge_disabled_reply_state: Arc::new(tokio::sync::Mutex::new(
+            std::collections::HashMap::new(),
+        )),
         plugins: args.plugins.clone(),
     }
 }

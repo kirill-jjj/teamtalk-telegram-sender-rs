@@ -3,13 +3,16 @@ use crate::app::services::tt_context::TtServiceContext;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
 use crate::core::types::{
-    BridgeEvent, LanguageCode, TtChannelName, TtCommand, TtServerName, TtUsername,
+    BridgeEvent, LanguageCode, TtChannelName, TtCommand, TtServerName, TtUserId, TtUsername,
 };
 use crate::infra::db::Database;
 use crate::infra::locales;
+use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Instant;
 use teamtalk::Client;
 use teamtalk::types::ChannelId;
+use tokio::sync::Mutex;
 use tokio::sync::Semaphore;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::oneshot;
@@ -61,6 +64,7 @@ pub struct WorkerContext {
     pub bot_username: Option<TtUsername>,
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
+    pub tt_bridge_disabled_reply_state: Arc<Mutex<HashMap<TtUserId, Instant>>>,
     pub plugins: PluginManagerHandle,
 }
 

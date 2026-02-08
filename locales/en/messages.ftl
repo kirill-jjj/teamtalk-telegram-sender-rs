@@ -241,6 +241,7 @@ tt-sub-fail-nouser = Your TeamTalk account must have a username to subscribe.
 tt-sub-link = Click this link to subscribe: { $link }
 tt-unsub-link = Click this link to unsubscribe: { $link }
 tt-error-generic = Error. Try again.
+tt-bridge-disabled-user = Direct messages to the admin are currently disabled. Please try again later.
 
 # Icons & Symbols
 icon-muted = 🔇

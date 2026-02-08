@@ -2,12 +2,28 @@ use crate::adapters::tt::{WorkerContext, resolve_server_name};
 use crate::app::plugins::{TtCommandContext, parse_command_text};
 use crate::app::services::tt_context::TtServiceContext;
 use crate::core::types::{TtCommand, TtNickname, TtUserId, TtUsername};
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use teamtalk::Client;
 use teamtalk::types::TextMessage;
+use tokio::sync::Mutex;
 use tokio::task::spawn_local;
 
 use super::{admin, bridge, help, plugins, queue, skip, sub};
 use crate::app::services::tt_users as tt_users_service;
+
+fn bridge_reply_config(ctx: &WorkerContext) -> (bool, Duration) {
+    (
+        ctx.config.telegram.message_token.is_some(),
+        Duration::from_secs(
+            ctx.config
+                .operational_parameters
+                .tt_bridge_disabled_reply_cooldown_seconds
+                .max(1),
+        ),
+    )
+}
 
 pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &TextMessage) {
     let real_name_from_client = client.get_server_properties().map(|p| p.name);
@@ -24,8 +40,10 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
     let deeplink_ttl = ctx.config.operational_parameters.deeplink_ttl;
     let bot_username = ctx.bot_username.clone();
     let tt_msg_sem = ctx.tt_msg_sem.clone();
+    let tt_bridge_disabled_reply_state = ctx.tt_bridge_disabled_reply_state.clone();
     let plugins = ctx.plugins.clone();
     let plugins_disabled = ctx.config.plugins.disabled.clone();
+    let (message_token_present, tt_bridge_disabled_reply_cooldown) = bridge_reply_config(ctx);
 
     spawn_local(async move {
         if msg_type != teamtalk::client::ffi::TextMsgType::MSGTYPE_USER {
@@ -94,6 +112,9 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
             real_name_from_client,
             plugins,
             plugins_disabled,
+            message_token_present,
+            tt_bridge_disabled_reply_cooldown,
+            tt_bridge_disabled_reply_state,
         };
         if handle_plugin_command(&ctx, &cmd, &cmd_args).await {
             return;
@@ -129,6 +150,9 @@ pub(super) struct UserCtx {
     pub real_name_from_client: Option<String>,
     pub plugins: crate::app::plugins::PluginManagerHandle,
     pub plugins_disabled: Vec<String>,
+    pub message_token_present: bool,
+    pub tt_bridge_disabled_reply_cooldown: Duration,
+    pub tt_bridge_disabled_reply_state: Arc<Mutex<HashMap<TtUserId, Instant>>>,
 }
 
 impl UserCtx {

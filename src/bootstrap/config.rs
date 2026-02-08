@@ -102,6 +102,10 @@ const fn default_subscriber_notify_max_attempts() -> u32 {
     20
 }
 
+const fn default_tt_bridge_disabled_reply_cooldown_seconds() -> u64 {
+    120
+}
+
 #[derive(Deserialize, Clone)]
 pub struct DatabaseConfig {
     pub db_file: PathBuf,
@@ -219,6 +223,9 @@ pub struct OperationalParameters {
     #[serde(default = "default_subscriber_notify_max_attempts")]
     #[serde(rename = "subscriber_notify_max_attempts")]
     pub subscriber_notify_max_attempts: u32,
+    #[serde(default = "default_tt_bridge_disabled_reply_cooldown_seconds")]
+    #[serde(rename = "tt_bridge_disabled_reply_cooldown_seconds")]
+    pub tt_bridge_disabled_reply_cooldown_seconds: u64,
 }
 
 impl Default for OperationalParameters {
@@ -231,6 +238,8 @@ impl Default for OperationalParameters {
             subscriber_notify_retry_interval: default_subscriber_notify_retry_interval_seconds(),
             subscriber_notify_retry_backoff: default_subscriber_notify_retry_backoff_seconds(),
             subscriber_notify_max_attempts: default_subscriber_notify_max_attempts(),
+            tt_bridge_disabled_reply_cooldown_seconds:
+                default_tt_bridge_disabled_reply_cooldown_seconds(),
         }
     }
 }
