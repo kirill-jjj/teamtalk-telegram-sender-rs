@@ -9,7 +9,7 @@ async fn setup_db() -> (Database, std::path::PathBuf) {
 }
 
 #[tokio::test]
-async fn resolve_deeplink_is_one_time() {
+async fn resolve_deeplink_requires_explicit_consume_for_one_time() {
     let (db, path) = setup_db().await;
     db.create_deeplink("token", DeeplinkAction::Subscribe, None, None, 60)
         .await
@@ -18,7 +18,12 @@ async fn resolve_deeplink_is_one_time() {
     let first = db.resolve_deeplink("token").await.unwrap();
     assert!(first.is_some());
     let second = db.resolve_deeplink("token").await.unwrap();
-    assert!(second.is_none());
+    assert!(second.is_some());
+
+    let consumed = db.consume_deeplink("token").await.unwrap();
+    assert!(consumed);
+    let third = db.resolve_deeplink("token").await.unwrap();
+    assert!(third.is_none());
 
     db.close().await;
     let _ = std::fs::remove_file(path);

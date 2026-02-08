@@ -26,12 +26,12 @@ pub async fn resolve_start(
         return Ok(StartOutcome::InvalidToken);
     };
 
-    match deeplink.action {
+    let outcome = match deeplink.action {
         DeeplinkAction::Subscribe => {
             let outcome =
                 subscription_service::subscribe_via_deeplink(db, telegram_id, deeplink.payload)
                     .await?;
-            Ok(match outcome {
+            match outcome {
                 subscription_service::SubscribeOutcome::BannedUser => {
                     StartOutcome::SubscribeBannedUser
                 }
@@ -44,10 +44,13 @@ pub async fn resolve_start(
                 subscription_service::SubscribeOutcome::SubscribedGuest => {
                     StartOutcome::SubscribeGuest
                 }
-            })
+            }
         }
-        DeeplinkAction::Unsubscribe => Ok(StartOutcome::Unsubscribe),
-    }
+        DeeplinkAction::Unsubscribe => StartOutcome::Unsubscribe,
+    };
+
+    deeplink_service::consume(db, token).await?;
+    Ok(outcome)
 }
 
 pub async fn unsubscribe(

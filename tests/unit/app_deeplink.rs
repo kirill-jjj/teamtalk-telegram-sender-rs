@@ -33,16 +33,6 @@ async fn resolve_for_user_honors_expected_id() {
         .expect("resolve");
     assert!(denied.is_none());
 
-    db.create_deeplink(
-        "token123",
-        DeeplinkAction::Subscribe,
-        Some("payload"),
-        Some(TelegramId::from(42)),
-        60,
-    )
-    .await
-    .expect("insert deeplink");
-
     let allowed = resolve_for_user(&db, "token123", TelegramId::from(42))
         .await
         .expect("resolve")
@@ -75,6 +65,10 @@ impl DeeplinkRepo for FakeDeeplinkRepo {
         _ttl_seconds: i64,
     ) -> anyhow::Result<()> {
         Ok(())
+    }
+
+    async fn consume_deeplink(&self, _token: &str) -> anyhow::Result<bool> {
+        Ok(true)
     }
 }
 

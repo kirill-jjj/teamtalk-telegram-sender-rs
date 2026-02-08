@@ -16,6 +16,7 @@ pub trait DeeplinkRepo: Sync {
         expected_telegram_id: Option<TelegramId>,
         ttl_seconds: i64,
     ) -> Result<()>;
+    async fn consume_deeplink(&self, token: &str) -> Result<bool>;
 }
 
 #[derive(Debug, Clone)]
@@ -57,6 +58,10 @@ pub async fn create(
         .await
 }
 
+pub async fn consume(db: &impl DeeplinkRepo, token: &str) -> Result<bool> {
+    db.consume_deeplink(token).await
+}
+
 #[async_trait]
 impl DeeplinkRepo for crate::infra::db::Database {
     async fn resolve_deeplink(
@@ -76,6 +81,10 @@ impl DeeplinkRepo for crate::infra::db::Database {
     ) -> Result<()> {
         self.create_deeplink(token, action, payload, expected_telegram_id, ttl_seconds)
             .await
+    }
+
+    async fn consume_deeplink(&self, token: &str) -> Result<bool> {
+        self.consume_deeplink(token).await
     }
 }
 

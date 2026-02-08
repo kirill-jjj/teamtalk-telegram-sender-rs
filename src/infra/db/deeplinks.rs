@@ -50,12 +50,16 @@ impl Database {
                     .await?;
                 return Ok(None);
             }
-            sqlx::query!("DELETE FROM deeplinks WHERE token = ?", token)
-                .execute(&self.pool)
-                .await?;
             return Ok(Some(d));
         }
         Ok(None)
+    }
+
+    pub async fn consume_deeplink(&self, token: &str) -> Result<bool> {
+        let res = sqlx::query!("DELETE FROM deeplinks WHERE token = ?", token)
+            .execute(&self.pool)
+            .await?;
+        Ok(res.rows_affected() > 0)
     }
 
     pub async fn cleanup_expired_deeplinks(&self) -> Result<u64> {
