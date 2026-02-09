@@ -289,6 +289,20 @@ fn parse_tt_command(name: &str, args: &[String]) -> Option<TtCommand> {
         }
         "load_accounts" => Some(TtCommand::LoadAccounts),
         "skip_stream" => Some(TtCommand::SkipStream),
+        "record_start" => {
+            let notify_chat = args
+                .first()
+                .and_then(|value| value.parse::<i64>().ok())
+                .map(TgChatId::from);
+            Some(TtCommand::StartRecording { notify_chat })
+        }
+        "record_stop" => {
+            let notify_chat = args
+                .first()
+                .and_then(|value| value.parse::<i64>().ok())
+                .map(TgChatId::from);
+            Some(TtCommand::StopRecording { notify_chat })
+        }
         _ => None,
     }
 }

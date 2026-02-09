@@ -10,6 +10,7 @@ use tokio::sync::mpsc::Sender;
 mod admin;
 mod admin_channel;
 mod broadcast;
+mod tg_document;
 mod who;
 
 struct BridgeDeps<'a> {
@@ -129,6 +130,13 @@ async fn handle_bridge_event(deps: &BridgeDeps<'_>, event: BridgeEvent) {
             reply_to,
         } => {
             who::handle_who_report(deps, chat_id, text, reply_to).await;
+        }
+        types::BridgeEvent::TgDocument {
+            chat_id,
+            file_path,
+            caption,
+        } => {
+            tg_document::handle_tg_document(deps, chat_id, file_path, caption).await;
         }
     }
 }

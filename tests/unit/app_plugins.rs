@@ -1,9 +1,9 @@
 use crate::app::plugins::runtime::{
-    PluginManifest, PluginRuntime, event_envelope, normalized_tg_context, normalized_tt_context,
-    should_disable,
+    PluginAction, PluginManifest, PluginRuntime, event_envelope, normalized_tg_context,
+    normalized_tt_context, should_disable,
 };
 use crate::app::plugins::{parse_command_text, plugin_name_from_path};
-use crate::core::types::{TtUserId, TtUsername};
+use crate::core::types::{TgChatId, TtCommand, TtUserId, TtUsername};
 use serde_json::json;
 use std::collections::VecDeque;
 use std::path::Path;
@@ -198,5 +198,85 @@ end)
             .dispatch_command("ping", &Vec::<String>::new(), &tt_ctx)
             .expect("dispatch tt")
     );
+    let _ = std::fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn tt_command_record_start_maps_to_tt_command() {
+    let temp_dir = make_temp_plugin_dir("plugin_test_record_start");
+    let entry_path = temp_dir.join("main.lua");
+    std::fs::write(
+        &entry_path,
+        r#"
+register_command("rec", function(args, ctx)
+    tt.command("record_start", {"123"})
+    return true
+end)
+"#,
+    )
+    .expect("write lua");
+
+    let manifest = PluginManifest {
+        name: "test".to_string(),
+        version: "0.1.0".to_string(),
+        entry: "main.lua".to_string(),
+        enabled: true,
+    };
+    let (tx, mut rx) = unbounded_channel();
+    let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
+        .expect("runtime load");
+
+    let ctx = json!({"source":"tg","chat_id":123});
+    assert!(
+        runtime
+            .dispatch_command("rec", &Vec::<String>::new(), &ctx)
+            .expect("dispatch rec")
+    );
+    let cmd = rx.try_recv().expect("record start command expected");
+    assert!(matches!(
+        cmd,
+        PluginAction::Tt(TtCommand::StartRecording {
+            notify_chat: Some(chat_id)
+        }) if chat_id == TgChatId::from(123_i64)
+    ));
+    let _ = std::fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn tt_command_record_stop_maps_to_tt_command() {
+    let temp_dir = make_temp_plugin_dir("plugin_test_record_stop");
+    let entry_path = temp_dir.join("main.lua");
+    std::fs::write(
+        &entry_path,
+        r#"
+register_command("rec", function(args, ctx)
+    tt.command("record_stop", {})
+    return true
+end)
+"#,
+    )
+    .expect("write lua");
+
+    let manifest = PluginManifest {
+        name: "test".to_string(),
+        version: "0.1.0".to_string(),
+        entry: "main.lua".to_string(),
+        enabled: true,
+    };
+    let (tx, mut rx) = unbounded_channel();
+    let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
+        .expect("runtime load");
+
+    let ctx = json!({"source":"tt","user_id":55});
+    assert!(
+        runtime
+            .dispatch_command("rec", &Vec::<String>::new(), &ctx)
+            .expect("dispatch rec")
+    );
+    let cmd = rx.try_recv().expect("record stop command expected");
+    assert!(matches!(
+        cmd,
+        PluginAction::Tt(TtCommand::StopRecording { notify_chat: None })
+    ));
     let _ = std::fs::remove_dir_all(temp_dir);
 }

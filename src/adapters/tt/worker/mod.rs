@@ -41,6 +41,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
     let is_connected = false;
     let stream_queue = VecDeque::new();
     let current_stream = None;
+    let recording = None;
     let stream_seq = 0;
     let set_streaming_status = setup::build_set_streaming_status(
         args.config.general.gender.to_user_gender(),
@@ -79,6 +80,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         stream_seq,
         stream_queue,
         current_stream,
+        recording,
         tx_cmd: tx_cmd_clone,
         is_streaming,
         ctx,

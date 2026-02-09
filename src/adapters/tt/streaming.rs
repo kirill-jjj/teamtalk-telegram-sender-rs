@@ -16,6 +16,12 @@ pub struct StreamItem {
     pub announce_text: Option<String>,
 }
 
+pub struct ActiveRecording {
+    pub channel_id: TtChannelId,
+    pub file_path: PathBuf,
+    pub notify_chat: Option<crate::core::types::TgChatId>,
+}
+
 pub type StartNextFn = dyn Fn(&Client, &mut VecDeque<StreamItem>, &mut Option<StreamItem>, &Sender<TtCommand>)
     + Send
     + Sync;
@@ -32,6 +38,7 @@ pub struct HandleCmdCtx<'a> {
     pub worker_ctx: &'a WorkerContext,
     pub start_next: &'a StartNextFn,
     pub set_streaming_status: &'a SetStreamingStatusFn,
+    pub recording: &'a mut Option<ActiveRecording>,
 }
 
 pub fn handle_cmd(cmd: TtCommand, ctx: &mut HandleCmdCtx<'_>) -> bool {
@@ -59,6 +66,8 @@ pub fn handle_cmd(cmd: TtCommand, ctx: &mut HandleCmdCtx<'_>) -> bool {
             reply_to,
         } => send_who(ctx, chat_id, lang, reply_to),
         TtCommand::LoadAccounts => request_accounts(ctx),
+        TtCommand::StartRecording { notify_chat } => start_recording(ctx, notify_chat),
+        TtCommand::StopRecording { notify_chat } => stop_recording(ctx, notify_chat),
     }
     false
 }
@@ -178,4 +187,91 @@ fn request_accounts(ctx: &mut HandleCmdCtx<'_>) {
     ctx.async_client.with_client_mut(|client_ref| {
         client_ref.list_user_accounts(0, 1000);
     });
+}
+
+fn start_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::types::TgChatId>) {
+    if ctx.recording.is_some() {
+        tracing::warn!(component = "tt_worker", "Recording already active");
+        return;
+    }
+
+    ctx.async_client.with_client_mut(|client_ref| {
+        let channel_id = client_ref.my_channel_id().0;
+        if channel_id <= 0 {
+            tracing::warn!(
+                component = "tt_worker",
+                "Cannot start recording: bot is not in a channel"
+            );
+            return;
+        }
+
+        let mut dir = PathBuf::from("recordings");
+        if let Err(error) = std::fs::create_dir_all(&dir) {
+            tracing::error!(
+                component = "tt_worker",
+                error = %error,
+                "Failed to create recordings directory"
+            );
+            return;
+        }
+        let stamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+        dir.push(format!("tt_record_{stamp}.ogg"));
+
+        let ok = client_ref.start_recording_channel(
+            channel_id,
+            dir.to_string_lossy().as_ref(),
+            teamtalk::client::ffi::AudioFileFormat::AFF_CHANNELCODEC_FORMAT,
+        );
+        if !ok {
+            tracing::error!(component = "tt_worker", "Failed to start recording");
+            return;
+        }
+
+        *ctx.recording = Some(ActiveRecording {
+            channel_id: TtChannelId::from(channel_id),
+            file_path: dir.clone(),
+            notify_chat,
+        });
+        tracing::info!(
+            component = "tt_worker",
+            path = %dir.display(),
+            channel_id,
+            "Recording started"
+        );
+    });
+}
+
+fn stop_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::types::TgChatId>) {
+    let Some(active) = ctx.recording.take() else {
+        tracing::warn!(component = "tt_worker", "Recording is not active");
+        return;
+    };
+
+    let mut stop_ok = false;
+    ctx.async_client.with_client_mut(|client_ref| {
+        stop_ok = client_ref.stop_recording_channel(active.channel_id.as_i32());
+    });
+
+    if !stop_ok {
+        tracing::error!(component = "tt_worker", "Failed to stop recording");
+        return;
+    }
+
+    let target_chat = notify_chat.or(active.notify_chat);
+    if let Some(chat_id) = target_chat {
+        let _ = ctx
+            .worker_ctx
+            .tx_bridge
+            .try_send(crate::core::types::BridgeEvent::TgDocument {
+                chat_id,
+                file_path: active.file_path.clone(),
+                caption: Some("Запись готова".to_string()),
+            });
+    }
+
+    tracing::info!(
+        component = "tt_worker",
+        path = %active.file_path.display(),
+        "Recording stopped"
+    );
 }

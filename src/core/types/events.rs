@@ -31,6 +31,11 @@ pub enum BridgeEvent {
         text: String,
         reply_to: Option<TgMessageId>,
     },
+    TgDocument {
+        chat_id: TgChatId,
+        file_path: PathBuf,
+        caption: Option<String>,
+    },
 }
 
 #[derive(Debug)]
@@ -72,4 +77,10 @@ pub enum TtCommand {
         reply_to: Option<TgMessageId>,
     },
     LoadAccounts,
+    StartRecording {
+        notify_chat: Option<TgChatId>,
+    },
+    StopRecording {
+        notify_chat: Option<TgChatId>,
+    },
 }

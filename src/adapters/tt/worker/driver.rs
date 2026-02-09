@@ -1,7 +1,7 @@
 use crate::adapters::tt::context::WorkerContext;
 use crate::adapters::tt::handlers::events;
 use crate::adapters::tt::streaming;
-use crate::adapters::tt::streaming::{HandleCmdCtx, StreamItem, handle_cmd};
+use crate::adapters::tt::streaming::{ActiveRecording, HandleCmdCtx, StreamItem, handle_cmd};
 use crate::core::types::TtCommand;
 use futures_util::StreamExt;
 use std::collections::VecDeque;
@@ -15,6 +15,7 @@ pub(super) struct DriverCtx {
     pub(super) stream_seq: u64,
     pub(super) stream_queue: VecDeque<StreamItem>,
     pub(super) current_stream: Option<StreamItem>,
+    pub(super) recording: Option<ActiveRecording>,
     pub(super) tx_cmd: Sender<TtCommand>,
     pub(super) is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub(super) ctx: WorkerContext,
@@ -35,6 +36,7 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
         mut stream_seq,
         mut stream_queue,
         mut current_stream,
+        mut recording,
         tx_cmd,
         is_streaming,
         ctx,
@@ -69,6 +71,7 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
                     worker_ctx: &ctx,
                     start_next: start_next.as_ref(),
                     set_streaming_status: set_streaming_status.as_ref(),
+                    recording: &mut recording,
                 };
                 if handle_cmd(cmd, &mut handle_ctx) {
                     break true;
@@ -112,6 +115,7 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
                         worker_ctx: &ctx,
                         start_next: start_next.as_ref(),
                         set_streaming_status: set_streaming_status.as_ref(),
+                        recording: &mut recording,
                     };
                     if handle_cmd(cmd, &mut handle_ctx) {
                         shutdown_now = true;
