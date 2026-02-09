@@ -23,6 +23,8 @@ pub struct PluginManifest {
     pub entry: String,
     #[serde(default = "default_enabled")]
     pub enabled: bool,
+    #[serde(default)]
+    pub config: toml::Table,
 }
 
 const fn default_enabled() -> bool {
@@ -44,6 +46,7 @@ impl PluginRuntime {
         let lua = Lua::new();
         let runtime = Self { lua, call_timeout };
         runtime.register_api(action_tx)?;
+        runtime.register_plugin_config(manifest)?;
         let entry_path = plugin_dir.join(&manifest.entry);
         let source = std::fs::read_to_string(&entry_path)?;
         runtime.lua.load(&source).set_name(&manifest.name).exec()?;
@@ -112,6 +115,14 @@ impl PluginRuntime {
             anyhow::bail!("plugin call timeout exceeded");
         }
         Ok(matches!(result, Value::Boolean(true)))
+    }
+
+    fn register_plugin_config(&self, manifest: &PluginManifest) -> anyhow::Result<()> {
+        let globals = self.lua.globals();
+        let cfg_value = serde_json::to_value(&manifest.config)?;
+        let lua_cfg = self.lua.to_value(&cfg_value)?;
+        globals.set("plugin_config", lua_cfg)?;
+        Ok(())
     }
 
     #[allow(clippy::too_many_lines)]
@@ -238,6 +249,24 @@ impl PluginRuntime {
                 .create_function(|_lua, (level, message): (String, String)| {
                     tracing::info!(target: "plugin", level = %level, %message);
                     Ok(())
+                })?,
+        )?;
+        bot.set(
+            "config",
+            self.lua
+                .create_function(|lua, (key, default): (String, Option<Value>)| {
+                    let root = lua.globals().get::<Value>("plugin_config")?;
+                    let mut current = root;
+                    for part in key.split('.') {
+                        current = match current {
+                            Value::Table(ref table) => table.get::<Value>(part)?,
+                            _ => Value::Nil,
+                        };
+                        if matches!(current, Value::Nil) {
+                            return Ok(default.unwrap_or(Value::Nil));
+                        }
+                    }
+                    Ok(current)
                 })?,
         )?;
         globals.set("bot", bot)?;

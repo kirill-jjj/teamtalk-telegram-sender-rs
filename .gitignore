@@ -3,6 +3,7 @@
 
 *.toml
 !config.toml.example
+!plugins/**/plugin.toml
 
 *.db
 *.db-shm

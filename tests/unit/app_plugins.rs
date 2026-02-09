@@ -142,6 +142,7 @@ end, { tg = true, tt = false })
         version: "0.1.0".to_string(),
         entry: "main.lua".to_string(),
         enabled: true,
+        config: toml::Table::new(),
     };
     let (tx, _rx) = unbounded_channel();
     let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
@@ -181,6 +182,7 @@ end)
         version: "0.1.0".to_string(),
         entry: "main.lua".to_string(),
         enabled: true,
+        config: toml::Table::new(),
     };
     let (tx, _rx) = unbounded_channel();
     let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
@@ -221,6 +223,7 @@ end)
         version: "0.1.0".to_string(),
         entry: "main.lua".to_string(),
         enabled: true,
+        config: toml::Table::new(),
     };
     let (tx, mut rx) = unbounded_channel();
     let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
@@ -262,6 +265,7 @@ end)
         version: "0.1.0".to_string(),
         entry: "main.lua".to_string(),
         enabled: true,
+        config: toml::Table::new(),
     };
     let (tx, mut rx) = unbounded_channel();
     let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
@@ -277,6 +281,60 @@ end)
     assert!(matches!(
         cmd,
         PluginAction::Tt(TtCommand::StopRecording { notify_chat: None })
+    ));
+    let _ = std::fs::remove_dir_all(temp_dir);
+}
+
+#[test]
+fn plugin_config_is_available_via_bot_config() {
+    let temp_dir = make_temp_plugin_dir("plugin_test_config");
+    let entry_path = temp_dir.join("main.lua");
+    std::fs::write(
+        &entry_path,
+        r#"
+register_command("cfg", function(args, ctx)
+    local title = bot.config("messages.title", "none")
+    tg.send(ctx.chat_id, title)
+    return true
+end)
+"#,
+    )
+    .expect("write lua");
+
+    let manifest = PluginManifest {
+        name: "test".to_string(),
+        version: "0.1.0".to_string(),
+        entry: "main.lua".to_string(),
+        enabled: true,
+        config: {
+            let mut messages = toml::Table::new();
+            messages.insert(
+                "title".to_string(),
+                toml::Value::String("configured".to_string()),
+            );
+            let mut root = toml::Table::new();
+            root.insert("messages".to_string(), toml::Value::Table(messages));
+            root
+        },
+    };
+    let (tx, mut rx) = unbounded_channel();
+    let runtime = PluginRuntime::load(&temp_dir, &manifest, tx, Duration::from_millis(100))
+        .expect("runtime load");
+
+    let ctx = json!({"source":"tg","chat_id":500});
+    assert!(
+        runtime
+            .dispatch_command("cfg", &Vec::<String>::new(), &ctx)
+            .expect("dispatch cfg")
+    );
+    let msg = rx.try_recv().expect("message expected");
+    assert!(matches!(
+        msg,
+        PluginAction::TgSend {
+            chat_id,
+            text,
+            reply_to: None
+        } if chat_id == 500 && text == "configured"
     ));
     let _ = std::fs::remove_dir_all(temp_dir);
 }
