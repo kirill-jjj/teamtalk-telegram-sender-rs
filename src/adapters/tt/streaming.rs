@@ -71,6 +71,9 @@ pub fn handle_cmd(cmd: TtCommand, ctx: &mut HandleCmdCtx<'_>) -> bool {
         TtCommand::LoadAccounts => request_accounts(ctx),
         TtCommand::StartRecording { request } => start_recording(ctx, &request),
         TtCommand::StopRecording { request } => stop_recording(ctx, request),
+        TtCommand::SyncRecordingSubscription { user_id } => {
+            sync_recording_subscription(ctx, user_id);
+        }
     }
     false
 }
@@ -308,4 +311,24 @@ fn stop_recording(ctx: &mut HandleCmdCtx<'_>, request: crate::core::types::Recor
         path = %active.file_path.display(),
         "Recording stopped"
     );
+}
+
+fn sync_recording_subscription(ctx: &mut HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId) {
+    let Some(active) = ctx.recording.as_mut() else {
+        return;
+    };
+    if !active.auto_subscribe_audio {
+        return;
+    }
+    let user_id = UserId(user_id.as_i32());
+    ctx.async_client.with_client_mut(|client_ref| {
+        if user_id == client_ref.my_id() {
+            return;
+        }
+        if active.auto_subscribed_users.contains(&user_id) {
+            return;
+        }
+        let _ = client_ref.subscribe(user_id, Subscriptions::all_audio());
+        active.auto_subscribed_users.insert(user_id);
+    });
 }

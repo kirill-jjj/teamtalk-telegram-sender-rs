@@ -84,6 +84,9 @@ pub enum TtCommand {
     StopRecording {
         request: RecordingStopRequest,
     },
+    SyncRecordingSubscription {
+        user_id: TtUserId,
+    },
 }
 
 #[derive(Debug, Clone)]

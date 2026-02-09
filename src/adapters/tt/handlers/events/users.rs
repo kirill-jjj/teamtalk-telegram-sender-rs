@@ -236,6 +236,14 @@ pub(super) fn handle_user_logged_in(
                     .await;
             });
         }
+
+        let tx_tt_cmd = ctx.tx_tt_cmd.clone();
+        let user_id = TtUserId::from(user.id.0);
+        tokio::task::spawn_local(async move {
+            let _ = tx_tt_cmd
+                .send(crate::core::types::TtCommand::SyncRecordingSubscription { user_id })
+                .await;
+        });
     }
 }
 
@@ -252,6 +260,14 @@ pub(super) fn handle_user_joined(client: &Client, ctx: &WorkerContext, msg: &Mes
             channel_name,
         };
         ctx.state.notify_upsert_online_user(lite_user);
+
+        let tx_tt_cmd = ctx.tx_tt_cmd.clone();
+        let user_id = TtUserId::from(user.id.0);
+        tokio::task::spawn_local(async move {
+            let _ = tx_tt_cmd
+                .send(crate::core::types::TtCommand::SyncRecordingSubscription { user_id })
+                .await;
+        });
     }
 }
 
