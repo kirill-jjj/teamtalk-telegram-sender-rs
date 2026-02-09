@@ -1,4 +1,5 @@
 //! `TeamTalk` 5 to Telegram bridge bot.
+extern crate teloxide_ng as teloxide;
 
 use self_update::cargo_crate_version;
 
