@@ -1,6 +1,6 @@
 use super::{
-    JoinGender, LanguageCode, NotificationType, TgChatId, TgMessageId, TtChannelId, TtChannelName,
-    TtNickname, TtServerName, TtUserId, TtUsername,
+    JoinGender, LanguageCode, NotificationType, RecordingFileFormat, TgChatId, TgMessageId,
+    TtChannelId, TtChannelName, TtNickname, TtServerName, TtUserId, TtUsername,
 };
 use std::path::PathBuf;
 
@@ -35,6 +35,7 @@ pub enum BridgeEvent {
         chat_id: TgChatId,
         file_path: PathBuf,
         caption: Option<String>,
+        delete_after_send: bool,
     },
 }
 
@@ -78,9 +79,24 @@ pub enum TtCommand {
     },
     LoadAccounts,
     StartRecording {
-        notify_chat: Option<TgChatId>,
+        request: RecordingStartRequest,
     },
     StopRecording {
-        notify_chat: Option<TgChatId>,
+        request: RecordingStopRequest,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct RecordingStartRequest {
+    pub notify_chat: Option<TgChatId>,
+    pub output_path: PathBuf,
+    pub format: RecordingFileFormat,
+    pub auto_subscribe_audio: bool,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct RecordingStopRequest {
+    pub notify_chat: Option<TgChatId>,
+    pub caption: Option<String>,
+    pub delete_after_send: bool,
 }

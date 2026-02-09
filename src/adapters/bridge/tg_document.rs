@@ -11,6 +11,7 @@ pub(super) async fn handle_tg_document(
     chat_id: TgChatId,
     file_path: PathBuf,
     caption: Option<String>,
+    delete_after_send: bool,
 ) {
     let bot = deps.msg_bot.or(if deps.message_token_present {
         deps.event_bot
@@ -39,5 +40,20 @@ pub(super) async fn handle_tg_document(
             error = %error,
             "Failed to send document to Telegram"
         );
+        return;
+    }
+
+    if delete_after_send {
+        let delete_path = file_path.clone();
+        tokio::task::spawn_blocking(move || {
+            if let Err(error) = std::fs::remove_file(&delete_path) {
+                tracing::warn!(
+                    component = "bridge",
+                    path = %delete_path.display(),
+                    error = %error,
+                    "Failed to delete sent recording file"
+                );
+            }
+        });
     }
 }

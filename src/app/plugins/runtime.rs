@@ -1,4 +1,7 @@
-use crate::core::types::{TgChatId, TtChannelId, TtCommand, TtUserId};
+use crate::core::types::{
+    RecordingFileFormat, RecordingStartRequest, RecordingStopRequest, TgChatId, TtChannelId,
+    TtCommand, TtUserId,
+};
 use mlua::{Function, Lua, LuaSerdeExt, Table, Value};
 use serde::Deserialize;
 use serde_json::{Value as JsonValue, json};
@@ -323,14 +326,41 @@ fn parse_tt_command(name: &str, args: &[String]) -> Option<TtCommand> {
                 .first()
                 .and_then(|value| value.parse::<i64>().ok())
                 .map(TgChatId::from);
-            Some(TtCommand::StartRecording { notify_chat })
+            let output_path = args.get(1).map(std::path::PathBuf::from)?;
+            let format = args
+                .get(2)
+                .and_then(|value| RecordingFileFormat::try_from(value.as_str()).ok())
+                .unwrap_or(RecordingFileFormat::ChannelCodec);
+            let auto_subscribe_audio = args
+                .get(3)
+                .and_then(|value| value.parse::<bool>().ok())
+                .unwrap_or(true);
+            Some(TtCommand::StartRecording {
+                request: RecordingStartRequest {
+                    notify_chat,
+                    output_path,
+                    format,
+                    auto_subscribe_audio,
+                },
+            })
         }
         "record_stop" => {
             let notify_chat = args
                 .first()
                 .and_then(|value| value.parse::<i64>().ok())
                 .map(TgChatId::from);
-            Some(TtCommand::StopRecording { notify_chat })
+            let caption = args.get(1).cloned();
+            let delete_after_send = args
+                .get(2)
+                .and_then(|value| value.parse::<bool>().ok())
+                .unwrap_or(true);
+            Some(TtCommand::StopRecording {
+                request: RecordingStopRequest {
+                    notify_chat,
+                    caption,
+                    delete_after_send,
+                },
+            })
         }
         _ => None,
     }

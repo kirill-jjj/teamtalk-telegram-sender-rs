@@ -3,7 +3,7 @@ use crate::app::plugins::runtime::{
     normalized_tt_context, should_disable,
 };
 use crate::app::plugins::{parse_command_text, plugin_name_from_path};
-use crate::core::types::{TgChatId, TtCommand, TtUserId, TtUsername};
+use crate::core::types::{RecordingFileFormat, TgChatId, TtCommand, TtUserId, TtUsername};
 use serde_json::json;
 use std::collections::VecDeque;
 use std::path::Path;
@@ -211,7 +211,7 @@ fn tt_command_record_start_maps_to_tt_command() {
         &entry_path,
         r#"
 register_command("rec", function(args, ctx)
-    tt.command("record_start", {"123"})
+    tt.command("record_start", {"123", "recordings/test.ogg", "channel_codec", "true"})
     return true
 end)
 "#,
@@ -239,8 +239,11 @@ end)
     assert!(matches!(
         cmd,
         PluginAction::Tt(TtCommand::StartRecording {
-            notify_chat: Some(chat_id)
-        }) if chat_id == TgChatId::from(123_i64)
+            request
+        }) if request.notify_chat == Some(TgChatId::from(123_i64))
+            && request.output_path == std::path::Path::new("recordings/test.ogg")
+            && request.format == RecordingFileFormat::ChannelCodec
+            && request.auto_subscribe_audio
     ));
     let _ = std::fs::remove_dir_all(temp_dir);
 }
@@ -253,7 +256,7 @@ fn tt_command_record_stop_maps_to_tt_command() {
         &entry_path,
         r#"
 register_command("rec", function(args, ctx)
-    tt.command("record_stop", {})
+    tt.command("record_stop", {"0", "done", "false"})
     return true
 end)
 "#,
@@ -280,7 +283,10 @@ end)
     let cmd = rx.try_recv().expect("record stop command expected");
     assert!(matches!(
         cmd,
-        PluginAction::Tt(TtCommand::StopRecording { notify_chat: None })
+        PluginAction::Tt(TtCommand::StopRecording { request })
+            if request.notify_chat == Some(TgChatId::from(0_i64))
+                && request.caption == Some("done".to_string())
+                && !request.delete_after_send
     ));
     let _ = std::fs::remove_dir_all(temp_dir);
 }

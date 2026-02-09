@@ -135,8 +135,10 @@ async fn handle_bridge_event(deps: &BridgeDeps<'_>, event: BridgeEvent) {
             chat_id,
             file_path,
             caption,
+            delete_after_send,
         } => {
-            tg_document::handle_tg_document(deps, chat_id, file_path, caption).await;
+            tg_document::handle_tg_document(deps, chat_id, file_path, caption, delete_after_send)
+                .await;
         }
     }
 }

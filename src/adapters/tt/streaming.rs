@@ -1,11 +1,12 @@
 use super::context::WorkerContext;
-use crate::core::types::{TtChannelId, TtCommand};
+use crate::core::types::{RecordingFileFormat, TtChannelId, TtCommand};
+use std::collections::HashSet;
 use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 use teamtalk::Client;
-use teamtalk::types::{ChannelId, UserId};
+use teamtalk::types::{ChannelId, Subscriptions, UserId};
 use tokio::sync::mpsc::Sender;
 
 pub struct StreamItem {
@@ -20,6 +21,8 @@ pub struct ActiveRecording {
     pub channel_id: TtChannelId,
     pub file_path: PathBuf,
     pub notify_chat: Option<crate::core::types::TgChatId>,
+    pub auto_subscribe_audio: bool,
+    pub auto_subscribed_users: HashSet<UserId>,
 }
 
 pub type StartNextFn = dyn Fn(&Client, &mut VecDeque<StreamItem>, &mut Option<StreamItem>, &Sender<TtCommand>)
@@ -66,8 +69,8 @@ pub fn handle_cmd(cmd: TtCommand, ctx: &mut HandleCmdCtx<'_>) -> bool {
             reply_to,
         } => send_who(ctx, chat_id, lang, reply_to),
         TtCommand::LoadAccounts => request_accounts(ctx),
-        TtCommand::StartRecording { notify_chat } => start_recording(ctx, notify_chat),
-        TtCommand::StopRecording { notify_chat } => stop_recording(ctx, notify_chat),
+        TtCommand::StartRecording { request } => start_recording(ctx, &request),
+        TtCommand::StopRecording { request } => stop_recording(ctx, request),
     }
     false
 }
@@ -189,7 +192,10 @@ fn request_accounts(ctx: &mut HandleCmdCtx<'_>) {
     });
 }
 
-fn start_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::types::TgChatId>) {
+fn start_recording(
+    ctx: &mut HandleCmdCtx<'_>,
+    request: &crate::core::types::RecordingStartRequest,
+) {
     if ctx.recording.is_some() {
         tracing::warn!(component = "tt_worker", "Recording already active");
         return;
@@ -205,8 +211,10 @@ fn start_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::
             return;
         }
 
-        let mut dir = PathBuf::from("recordings");
-        if let Err(error) = std::fs::create_dir_all(&dir) {
+        if let Some(parent) = request.output_path.parent()
+            && !parent.as_os_str().is_empty()
+            && let Err(error) = std::fs::create_dir_all(parent)
+        {
             tracing::error!(
                 component = "tt_worker",
                 error = %error,
@@ -214,34 +222,54 @@ fn start_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::
             );
             return;
         }
-        let stamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-        dir.push(format!("tt_record_{stamp}.ogg"));
+        let audio_format = match request.format {
+            RecordingFileFormat::ChannelCodec => {
+                teamtalk::client::ffi::AudioFileFormat::AFF_CHANNELCODEC_FORMAT
+            }
+            RecordingFileFormat::Wave => teamtalk::client::ffi::AudioFileFormat::AFF_WAVE_FORMAT,
+            RecordingFileFormat::Mp3_128 => {
+                teamtalk::client::ffi::AudioFileFormat::AFF_MP3_128KBIT_FORMAT
+            }
+        };
 
         let ok = client_ref.start_recording_channel(
             channel_id,
-            dir.to_string_lossy().as_ref(),
-            teamtalk::client::ffi::AudioFileFormat::AFF_CHANNELCODEC_FORMAT,
+            request.output_path.to_string_lossy().as_ref(),
+            audio_format,
         );
         if !ok {
             tracing::error!(component = "tt_worker", "Failed to start recording");
             return;
         }
 
+        let mut auto_subscribed_users = HashSet::new();
+        if request.auto_subscribe_audio {
+            for user in client_ref.get_channel_users(ChannelId(channel_id)) {
+                if user.id == client_ref.my_id() {
+                    continue;
+                }
+                let _ = client_ref.subscribe(user.id, Subscriptions::all_audio());
+                auto_subscribed_users.insert(user.id);
+            }
+        }
+
         *ctx.recording = Some(ActiveRecording {
             channel_id: TtChannelId::from(channel_id),
-            file_path: dir.clone(),
-            notify_chat,
+            file_path: request.output_path.clone(),
+            notify_chat: request.notify_chat,
+            auto_subscribe_audio: request.auto_subscribe_audio,
+            auto_subscribed_users,
         });
         tracing::info!(
             component = "tt_worker",
-            path = %dir.display(),
+            path = %request.output_path.display(),
             channel_id,
             "Recording started"
         );
     });
 }
 
-fn stop_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::types::TgChatId>) {
+fn stop_recording(ctx: &mut HandleCmdCtx<'_>, request: crate::core::types::RecordingStopRequest) {
     let Some(active) = ctx.recording.take() else {
         tracing::warn!(component = "tt_worker", "Recording is not active");
         return;
@@ -250,6 +278,11 @@ fn stop_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::t
     let mut stop_ok = false;
     ctx.async_client.with_client_mut(|client_ref| {
         stop_ok = client_ref.stop_recording_channel(active.channel_id.as_i32());
+        if active.auto_subscribe_audio {
+            for user_id in &active.auto_subscribed_users {
+                let _ = client_ref.unsubscribe(*user_id, Subscriptions::all_audio());
+            }
+        }
     });
 
     if !stop_ok {
@@ -257,7 +290,7 @@ fn stop_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::t
         return;
     }
 
-    let target_chat = notify_chat.or(active.notify_chat);
+    let target_chat = request.notify_chat.or(active.notify_chat);
     if let Some(chat_id) = target_chat {
         let _ = ctx
             .worker_ctx
@@ -265,7 +298,8 @@ fn stop_recording(ctx: &mut HandleCmdCtx<'_>, notify_chat: Option<crate::core::t
             .try_send(crate::core::types::BridgeEvent::TgDocument {
                 chat_id,
                 file_path: active.file_path.clone(),
-                caption: Some("Запись готова".to_string()),
+                caption: request.caption,
+                delete_after_send: request.delete_after_send,
             });
     }
 

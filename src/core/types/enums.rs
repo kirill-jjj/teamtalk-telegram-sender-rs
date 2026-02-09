@@ -161,6 +161,26 @@ pub enum NotificationType {
     Leave,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RecordingFileFormat {
+    ChannelCodec,
+    Wave,
+    Mp3_128,
+}
+
+impl TryFrom<&str> for RecordingFileFormat {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_ascii_lowercase().as_str() {
+            "channel_codec" | "ogg" => Ok(Self::ChannelCodec),
+            "wave" | "wav" => Ok(Self::Wave),
+            "mp3_128" | "mp3" => Ok(Self::Mp3_128),
+            _ => Err("unsupported recording file format"),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum JoinGender {
     Male,
