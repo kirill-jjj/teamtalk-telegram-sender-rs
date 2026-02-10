@@ -1,17 +1,17 @@
 use crate::adapters::tg::state::AppState;
 use crate::core::types::TtCommand;
 use std::time::{SystemTime, UNIX_EPOCH};
-use teloxide::net::Download;
-use teloxide::prelude::*;
-use teloxide::types::Voice;
+use teloxide_ng::net::Download;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::Voice;
 use tokio::fs::File;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StreamVoiceError {
     #[error("Telegram request failed: {0}")]
-    Telegram(#[from] teloxide::RequestError),
+    Telegram(#[from] teloxide_ng::RequestError),
     #[error("Telegram download failed: {0}")]
-    Download(#[from] teloxide::DownloadError),
+    Download(#[from] teloxide_ng::DownloadError),
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
     #[error("Failed to send TeamTalk stream command: {0}")]

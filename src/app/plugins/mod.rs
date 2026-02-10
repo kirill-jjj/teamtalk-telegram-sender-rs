@@ -6,7 +6,7 @@ use crate::core::types::{TtCommand, TtUserId, TtUsername};
 use serde_json::Value;
 use std::path::Path;
 use std::sync::Arc;
-use teloxide::Bot;
+use teloxide_ng::Bot;
 use tokio::sync::mpsc::Sender;
 use tokio_util::sync::CancellationToken;
 

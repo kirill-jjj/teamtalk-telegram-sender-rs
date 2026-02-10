@@ -6,7 +6,7 @@ use crate::app::services::tg_search_actions as tg_search_actions_service;
 use crate::core::callbacks::{AdminAction, CallbackAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use crate::adapters::tg::handlers::search::context::SearchCandidate;
 

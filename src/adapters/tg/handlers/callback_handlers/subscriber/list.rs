@@ -8,7 +8,7 @@ use crate::app::services::tg_admin as tg_admin_service;
 use crate::app::services::tg_subscribers as tg_subscribers_service;
 use crate::core::types::{AdminErrorContext, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::SubCtx;
 

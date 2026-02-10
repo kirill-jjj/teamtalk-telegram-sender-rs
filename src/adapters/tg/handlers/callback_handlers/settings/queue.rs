@@ -7,7 +7,7 @@ use crate::app::services::tg_queue_settings as tg_queue_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::AppState;
 use crate::infra::db::types::UserSettings;

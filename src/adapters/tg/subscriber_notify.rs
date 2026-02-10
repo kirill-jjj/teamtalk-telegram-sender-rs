@@ -4,8 +4,8 @@ use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, Telegr
 use crate::infra::db::Database;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
-use teloxide::prelude::Requester;
-use teloxide::types::ChatId;
+use teloxide_ng::prelude::Requester;
+use teloxide_ng::types::ChatId;
 
 const OUTBOX_BATCH_LIMIT: i64 = 100;
 
@@ -17,7 +17,7 @@ pub struct AdminActor {
 }
 
 impl AdminActor {
-    pub fn from_telegram_user(user: &teloxide::types::User) -> Option<Self> {
+    pub fn from_telegram_user(user: &teloxide_ng::types::User) -> Option<Self> {
         let telegram_id = TelegramId::try_from(user.id.0).ok()?;
         let full_name = user.last_name.as_ref().map_or_else(
             || user.first_name.clone(),
@@ -54,7 +54,7 @@ pub enum SubscriberChangeKind {
 }
 
 pub async fn notify_subscriber_change(
-    bot: &teloxide::Bot,
+    bot: &teloxide_ng::Bot,
     db: &Database,
     target_telegram_id: TelegramId,
     actor: &AdminActor,
@@ -101,7 +101,7 @@ pub async fn notify_subscriber_change(
 }
 
 pub fn spawn_subscriber_notify_retry_worker(
-    bot: teloxide::Bot,
+    bot: teloxide_ng::Bot,
     db: Database,
     retry_interval_seconds: u64,
     retry_backoff_seconds: u64,
@@ -124,7 +124,7 @@ pub fn spawn_subscriber_notify_retry_worker(
 }
 
 async fn flush_subscriber_notify_outbox(
-    bot: &teloxide::Bot,
+    bot: &teloxide_ng::Bot,
     db: &Database,
     backoff_seconds: u64,
     max_attempts: u32,

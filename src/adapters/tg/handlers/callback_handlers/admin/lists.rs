@@ -9,7 +9,7 @@ use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 pub(super) async fn handle_kick_list(
     bot: &Bot,
@@ -114,8 +114,8 @@ async fn send_or_edit_list(
     msg: &Message,
     page: usize,
     title: String,
-    keyboard: teloxide::types::InlineKeyboardMarkup,
-) -> ResponseResult<teloxide::types::MessageId> {
+    keyboard: teloxide_ng::types::InlineKeyboardMarkup,
+) -> ResponseResult<teloxide_ng::types::MessageId> {
     if should_send_page(msg, page) {
         let sent = bot
             .send_message(msg.chat.id, title)

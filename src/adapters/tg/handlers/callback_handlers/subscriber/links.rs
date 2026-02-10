@@ -7,7 +7,7 @@ use crate::app::services::tg_sub_links as tg_sub_links_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtUsername};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::SubCtx;
 

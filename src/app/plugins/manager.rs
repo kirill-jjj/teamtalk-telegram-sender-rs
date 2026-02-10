@@ -9,9 +9,9 @@ use std::collections::{HashMap, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
-use teloxide::Bot;
-use teloxide::prelude::Requester;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::Bot;
+use teloxide_ng::prelude::Requester;
+use teloxide_ng::sugar::request::RequestReplyExt;
 use tokio::sync::Mutex;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
 use tokio_util::sync::CancellationToken;
@@ -416,11 +416,11 @@ async fn process_actions(
                     PluginAction::TgSend { chat_id, text, reply_to } => {
                         if let Some(bot) = &event_bot {
                             if let Some(reply_to) = reply_to {
-                                let _ = bot.send_message(teloxide::types::ChatId(chat_id), text)
-                                    .reply_to(teloxide::types::MessageId(reply_to))
+                                let _ = bot.send_message(teloxide_ng::types::ChatId(chat_id), text)
+                                    .reply_to(teloxide_ng::types::MessageId(reply_to))
                                     .await;
                             } else {
-                                let _ = bot.send_message(teloxide::types::ChatId(chat_id), text).await;
+                                let _ = bot.send_message(teloxide_ng::types::ChatId(chat_id), text).await;
                             }
                         }
                     }

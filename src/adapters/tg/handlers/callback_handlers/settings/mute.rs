@@ -2,7 +2,7 @@ use crate::adapters::tg::presenter::settings::send_mute_menu;
 use crate::adapters::tg::utils::TgErrorReporter;
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::AppState;
 

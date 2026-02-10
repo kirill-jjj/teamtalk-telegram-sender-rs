@@ -9,7 +9,7 @@ use crate::core::callbacks::SubAction;
 use crate::core::types::AdminErrorContext;
 use crate::core::types::{LanguageCode, TelegramId, TtCommand};
 use crate::infra::db::Database;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 mod admin;
 mod links;
@@ -27,13 +27,13 @@ struct SubCtx<'a> {
     search_contexts: &'a std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,
     >,
     lang: LanguageCode,
-    q_id: &'a teloxide::types::CallbackQueryId,
+    q_id: &'a teloxide_ng::types::CallbackQueryId,
     admin_chat_id: TelegramId,
     actor: AdminActor,
 }
@@ -49,7 +49,7 @@ pub async fn handle_subscriber_actions(
     else {
         return Ok(());
     };
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
+    let Some(teloxide_ng::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
     let db = &state.db;

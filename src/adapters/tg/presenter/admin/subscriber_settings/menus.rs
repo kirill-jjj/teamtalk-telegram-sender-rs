@@ -3,8 +3,8 @@ use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
 use crate::core::types::{LanguageCode, NotificationSetting, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::InlineKeyboardMarkup;
 
 pub async fn send_sub_lang_menu(
     bot: &Bot,

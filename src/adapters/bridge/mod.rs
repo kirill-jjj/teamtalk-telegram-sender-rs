@@ -4,7 +4,7 @@ use crate::bootstrap::config::Config;
 use crate::core::types::{self, BridgeEvent, LanguageCode};
 use crate::infra::db::Database;
 use std::sync::Arc;
-use teloxide::prelude::Bot;
+use teloxide_ng::prelude::Bot;
 use tokio::sync::mpsc::Sender;
 
 mod admin;
@@ -20,7 +20,7 @@ struct BridgeDeps<'a> {
     msg_bot: Option<&'a Bot>,
     message_token_present: bool,
     default_lang: LanguageCode,
-    admin_id: teloxide::types::ChatId,
+    admin_id: teloxide_ng::types::ChatId,
     tx_tt_cmd: &'a Sender<types::TtCommand>,
 }
 
@@ -50,7 +50,7 @@ pub async fn run_bridge(
         cancel_token,
     } = ctx;
     let default_lang = config.general.default_lang;
-    let admin_id = teloxide::types::ChatId(config.telegram.admin_chat_id.as_i64());
+    let admin_id = teloxide_ng::types::ChatId(config.telegram.admin_chat_id.as_i64());
     let deps = BridgeDeps {
         services: TtServiceContext::new(db_clone.clone(), state.clone()),
         state: &state,

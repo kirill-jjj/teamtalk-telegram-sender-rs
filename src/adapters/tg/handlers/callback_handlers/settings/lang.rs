@@ -5,8 +5,8 @@ use crate::app::services::tg_settings as tg_settings_service;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::InlineKeyboardMarkup;
 
 use super::AppState;
 

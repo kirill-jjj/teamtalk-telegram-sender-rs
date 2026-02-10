@@ -4,7 +4,7 @@ use crate::app::services::tg_search as tg_search_service;
 use crate::core::callbacks::{AdminAction, CallbackAction, MuteAction, SubAction};
 use crate::core::types::{LanguageCode, MuteListMode, TtUsername};
 use crate::infra::db::types::BanEntry;
-use teloxide::prelude::{Bot, ResponseResult};
+use teloxide_ng::prelude::{Bot, ResponseResult};
 
 use super::context::{SearchCandidate, SearchListType, format_display_subscriber};
 

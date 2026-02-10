@@ -1,4 +1,4 @@
-pub fn format_tg_user(chat: &teloxide::types::ChatFullInfo) -> String {
+pub fn format_tg_user(chat: &teloxide_ng::types::ChatFullInfo) -> String {
     let full_name = match (chat.first_name(), chat.last_name()) {
         (Some(f), Some(l)) => format!("{f} {l}"),
         (Some(f), None) => f.to_string(),

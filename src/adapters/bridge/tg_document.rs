@@ -1,8 +1,8 @@
 use crate::core::types::TgChatId;
 use std::path::PathBuf;
-use teloxide::payloads::SendDocumentSetters;
-use teloxide::prelude::Requester;
-use teloxide::types::{ChatId, InputFile};
+use teloxide_ng::payloads::SendDocumentSetters;
+use teloxide_ng::prelude::Requester;
+use teloxide_ng::types::{ChatId, InputFile};
 
 use super::BridgeDeps;
 

@@ -3,7 +3,7 @@ use crate::adapters::tg::presenter::admin::subscriber_settings::{
 };
 use crate::app::services::tg_search as tg_search_service;
 use crate::core::types::TelegramId;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::SubCtx;
 

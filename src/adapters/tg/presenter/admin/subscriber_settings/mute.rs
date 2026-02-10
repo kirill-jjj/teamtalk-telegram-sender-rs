@@ -3,8 +3,8 @@ use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
 use crate::core::types::{LanguageCode, MuteListMode, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::InlineKeyboardMarkup;
 
 pub async fn send_sub_mute_mode_menu(
     bot: &Bot,

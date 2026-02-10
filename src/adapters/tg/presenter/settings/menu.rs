@@ -2,15 +2,15 @@ use crate::adapters::tg::presenter::keyboards::callback_button;
 use crate::core::callbacks::{CallbackAction, SettingsAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
-use teloxide::types::{InlineKeyboardMarkup, ParseMode};
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
+use teloxide_ng::types::{InlineKeyboardMarkup, ParseMode};
 
 pub async fn send_main_settings(
     bot: &Bot,
-    chat_id: teloxide::types::ChatId,
+    chat_id: teloxide_ng::types::ChatId,
     lang: LanguageCode,
-    reply_to: Option<teloxide::types::MessageId>,
+    reply_to: Option<teloxide_ng::types::MessageId>,
 ) -> ResponseResult<()> {
     let text = locales::get_text(lang.as_str(), locales::LocaleKey::SettingsTitle, None);
     let keyboard = main_settings_keyboard(lang);

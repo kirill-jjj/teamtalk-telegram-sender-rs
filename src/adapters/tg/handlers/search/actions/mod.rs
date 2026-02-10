@@ -5,7 +5,7 @@ mod subscribers;
 use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::telegram_id_from_user;
 use crate::core::types::{LanguageCode, TelegramId};
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::context::{SearchCandidate, SearchContext, SearchListType};
 

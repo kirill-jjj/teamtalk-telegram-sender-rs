@@ -15,9 +15,9 @@ use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand}
 use crate::infra::locales;
 use serde_json::json;
 use std::sync::Arc;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
-use teloxide::utils::command::BotCommands;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
+use teloxide_ng::utils::command::BotCommands;
 
 use self::replies::{ChannelReplyCtx, ChannelReplyInput, handle_channel_reply};
 use self::reply_users::handle_user_reply;

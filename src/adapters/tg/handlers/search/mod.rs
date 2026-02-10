@@ -2,8 +2,8 @@ use crate::adapters::tg::state::AppState;
 use crate::args;
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
 
 mod actions;
 mod context;

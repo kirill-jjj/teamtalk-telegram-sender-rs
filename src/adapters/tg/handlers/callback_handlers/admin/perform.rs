@@ -5,7 +5,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand, TtUserId};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 pub(super) async fn handle_kick_perform(
     bot: &Bot,

@@ -10,7 +10,7 @@ use crate::core::types::{
     AdminErrorContext, LanguageCode, MuteListMode, NotificationSetting, TelegramId,
 };
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::SubCtx;
 

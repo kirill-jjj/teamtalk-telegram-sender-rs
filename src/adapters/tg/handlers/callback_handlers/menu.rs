@@ -6,8 +6,8 @@ use crate::adapters::tg::utils::{
 use crate::core::callbacks::{CallbackAction, MenuAction, UnsubAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::ParseMode;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::ParseMode;
 
 pub async fn handle_menu(
     bot: Bot,
@@ -17,7 +17,7 @@ pub async fn handle_menu(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let admin_id = telegram_id_from_callback_query(&q, "handle_menu");
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
+    let Some(teloxide_ng::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
     let chat_id = msg.chat.id;

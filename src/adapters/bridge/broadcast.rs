@@ -8,10 +8,10 @@ use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
 use std::collections::HashMap;
-use teloxide::ApiError;
-use teloxide::RequestError;
-use teloxide::payloads::SendMessageSetters;
-use teloxide::prelude::{Bot, Requester};
+use teloxide_ng::ApiError;
+use teloxide_ng::RequestError;
+use teloxide_ng::payloads::SendMessageSetters;
+use teloxide_ng::prelude::{Bot, Requester};
 use tokio::task::JoinSet;
 
 use super::BridgeDeps;
@@ -49,7 +49,7 @@ pub(super) async fn handle_broadcast(
         }
     };
 
-    let escaped_server = teloxide::utils::html::escape(server_name.as_str());
+    let escaped_server = teloxide_ng::utils::html::escape(server_name.as_str());
 
     let key = match event_type {
         crate::core::types::NotificationType::Join => match gender {
@@ -79,9 +79,9 @@ pub(super) async fn handle_broadcast(
 
         let lang = sub.language_code;
         let escaped_nick = if !nickname.as_str().trim().is_empty() {
-            teloxide::utils::html::escape(nickname.as_str())
+            teloxide_ng::utils::html::escape(nickname.as_str())
         } else if !related_tt_username.as_str().trim().is_empty() {
-            teloxide::utils::html::escape(related_tt_username.as_str())
+            teloxide_ng::utils::html::escape(related_tt_username.as_str())
         } else {
             locales::get_text(lang.as_str(), LocaleKey::DisplayUnknownUser, None)
         };
@@ -112,7 +112,7 @@ struct BroadcastTaskCtx {
     bot: Bot,
     state: crate::app::state::StateHandle,
     services: crate::app::services::tt_context::TtServiceContext,
-    admin_id: teloxide::types::ChatId,
+    admin_id: teloxide_ng::types::ChatId,
     default_lang: LanguageCode,
     related_tt_username: TtUsername,
 }
@@ -143,8 +143,8 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
 
     let res = ctx
         .bot
-        .send_message(teloxide::types::ChatId(sub.telegram_id.as_i64()), text)
-        .parse_mode(teloxide::types::ParseMode::Html)
+        .send_message(teloxide_ng::types::ChatId(sub.telegram_id.as_i64()), text)
+        .parse_mode(teloxide_ng::types::ParseMode::Html)
         .disable_notification(send_silent)
         .await;
 

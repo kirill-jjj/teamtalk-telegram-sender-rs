@@ -8,7 +8,7 @@ use crate::app::services::tg_settings as tg_settings_service;
 use crate::core::callbacks::UnsubAction;
 use crate::core::types::{AdminErrorContext, LanguageCode};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 pub async fn handle_unsub_action(
     bot: Bot,
@@ -20,7 +20,7 @@ pub async fn handle_unsub_action(
     let Some(telegram_id) = telegram_id_from_callback_query(&q, "handle_unsub_action") else {
         return Ok(());
     };
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
+    let Some(teloxide_ng::types::MaybeInaccessibleMessage::Regular(msg)) = q.message else {
         return Ok(());
     };
     let db = &state.db;

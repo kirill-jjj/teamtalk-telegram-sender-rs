@@ -14,7 +14,10 @@ pub struct AppState {
     pub state: StateHandle,
     pub search_contexts: Arc<
         Mutex<
-            HashMap<teloxide::types::ChatId, crate::adapters::tg::handlers::search::SearchContext>,
+            HashMap<
+                teloxide_ng::types::ChatId,
+                crate::adapters::tg::handlers::search::SearchContext,
+            >,
         >,
     >,
     pub tx_tt: Sender<TtCommand>,

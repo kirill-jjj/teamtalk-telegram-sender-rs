@@ -1,8 +1,8 @@
 use crate::core::types::{LanguageCode, MuteListMode, TelegramId, TtUsername};
 use std::collections::HashMap;
 use std::sync::Arc;
-use teloxide::prelude::ChatId;
-use teloxide::types::MessageId;
+use teloxide_ng::prelude::ChatId;
+use teloxide_ng::types::MessageId;
 use tokio::sync::Mutex;
 
 #[derive(Debug, Clone)]

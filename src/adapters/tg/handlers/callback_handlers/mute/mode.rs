@@ -4,7 +4,7 @@ use crate::app::services::tg_sub_settings as tg_sub_settings_service;
 use crate::args;
 use crate::core::types::{AdminErrorContext, LanguageCode, MuteListMode, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::AppState;
 

@@ -1,7 +1,7 @@
 use crate::adapters::tg::state::AppState;
 use crate::core::callbacks::AdminAction;
 use crate::core::types::LanguageCode;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 mod lists;
 mod perform;
@@ -15,7 +15,7 @@ pub async fn handle_admin(
     action: AdminAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(ref msg)) = q.message else {
+    let Some(teloxide_ng::types::MaybeInaccessibleMessage::Regular(ref msg)) = q.message else {
         return Ok(());
     };
     let msg = msg.as_ref();

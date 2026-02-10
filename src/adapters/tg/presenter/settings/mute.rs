@@ -8,8 +8,8 @@ use crate::core::types::{LanguageCode, MuteListMode, TtUsername};
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
 use teamtalk::types::UserAccount;
-use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardMarkup, ParseMode};
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::{InlineKeyboardMarkup, ParseMode};
 
 const fn mute_mode_desc_key(current_mode: &MuteListMode) -> LocaleKey {
     match current_mode {

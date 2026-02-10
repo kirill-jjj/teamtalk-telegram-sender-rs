@@ -7,7 +7,7 @@ use anyhow::{Result, anyhow};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use teamtalk::Client;
-use teloxide::{Bot, prelude::Requester};
+use teloxide_ng::{Bot, prelude::Requester};
 use tokio::sync::mpsc as tokio_mpsc;
 use tokio::sync::oneshot;
 use tokio::time::Duration;

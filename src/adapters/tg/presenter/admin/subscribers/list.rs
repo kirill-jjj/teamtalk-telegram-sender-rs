@@ -5,26 +5,26 @@ use crate::adapters::tg::presenter::keyboards::{back_btn, create_user_list_keybo
 use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction, SubAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
 
 use super::display::SubDisplayInfo;
 
 pub async fn send_subscribers_list(
     bot: &Bot,
-    chat_id: teloxide::types::ChatId,
+    chat_id: teloxide_ng::types::ChatId,
     display_list: Vec<SubDisplayInfo>,
     search_contexts: &std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,
     >,
     lang: LanguageCode,
     page: usize,
-    reply_to: Option<teloxide::types::MessageId>,
+    reply_to: Option<teloxide_ng::types::MessageId>,
 ) -> ResponseResult<()> {
     if display_list.is_empty() {
         let req = bot.send_message(
@@ -88,7 +88,7 @@ pub async fn edit_subscribers_list(
     search_contexts: &std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,

@@ -2,7 +2,7 @@ use crate::core::callbacks::{AsCallbackData, CallbackAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide_ng::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 pub fn callback_button<T, A>(text: T, action: A) -> InlineKeyboardButton
 where

@@ -6,24 +6,24 @@ use crate::core::callbacks::{AdminAction, CallbackAction, MenuAction};
 use crate::core::types::LanguageCode;
 use crate::infra::db::types::BanEntry;
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
 
 pub async fn send_unban_list(
     bot: &Bot,
-    chat_id: teloxide::types::ChatId,
+    chat_id: teloxide_ng::types::ChatId,
     entries: Vec<BanEntry>,
     search_contexts: &std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,
     >,
     lang: LanguageCode,
     page: usize,
-    reply_to: Option<teloxide::types::MessageId>,
+    reply_to: Option<teloxide_ng::types::MessageId>,
 ) -> ResponseResult<()> {
     if entries.is_empty() {
         let req = bot.send_message(
@@ -103,7 +103,7 @@ pub async fn edit_unban_list(
     search_contexts: &std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,

@@ -8,8 +8,8 @@ use crate::core::types::{
     ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TelegramId, TtUsername,
 };
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
 
 use crate::adapters::tg::handlers::search::context::SearchCandidate;
 

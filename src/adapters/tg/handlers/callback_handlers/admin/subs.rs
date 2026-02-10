@@ -5,7 +5,7 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::{answer_callback_empty, answer_cmd_error_callback};
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::types::LanguageCode;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::lists::should_send_page;
 

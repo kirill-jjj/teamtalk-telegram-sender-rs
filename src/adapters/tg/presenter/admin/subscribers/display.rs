@@ -1,7 +1,7 @@
 use crate::adapters::tg::presenter::admin::utils::format_tg_user;
 use crate::core::types::{TelegramId, TtUsername};
 use crate::infra::db::types::SubscriberInfo;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 #[derive(Clone)]
 pub struct SubDisplayInfo {
@@ -14,7 +14,7 @@ pub async fn prepare_display_list(bot: &Bot, subs: Vec<SubscriberInfo>) -> Vec<S
     let mut display_list = Vec::new();
     for sub in subs {
         let display_name = match bot
-            .get_chat(teloxide::types::ChatId(sub.telegram_id.as_i64()))
+            .get_chat(teloxide_ng::types::ChatId(sub.telegram_id.as_i64()))
             .await
         {
             Ok(chat) => format_tg_user(&chat),

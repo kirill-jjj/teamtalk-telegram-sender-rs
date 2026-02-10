@@ -4,9 +4,9 @@ use crate::args;
 use crate::bootstrap::config::Config;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand, TtUsername};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
-use teloxide::types::Voice;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
+use teloxide_ng::types::Voice;
 
 use super::format_duration;
 use super::voice::stream_voice;

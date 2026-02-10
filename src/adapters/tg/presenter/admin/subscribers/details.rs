@@ -5,8 +5,8 @@ use crate::core::callbacks::{AdminAction, CallbackAction, SubAction};
 use crate::core::types::{LanguageCode, MuteListMode, NotificationSetting, TelegramId};
 use crate::infra::db::types::UserSettings;
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardMarkup, ParseMode};
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::{InlineKeyboardMarkup, ParseMode};
 
 pub struct SubscriberDetailsArgs<'a> {
     pub bot: &'a Bot,
@@ -23,7 +23,7 @@ pub struct SubscriberDetailsArgs<'a> {
 pub async fn send_subscriber_details(args: SubscriberDetailsArgs<'_>) -> ResponseResult<()> {
     let display_name = (args
         .bot
-        .get_chat(teloxide::types::ChatId(args.sub_id.as_i64()))
+        .get_chat(teloxide_ng::types::ChatId(args.sub_id.as_i64()))
         .await)
         .map_or_else(|_| args.sub_id.to_string(), |chat| format_tg_user(&chat));
 

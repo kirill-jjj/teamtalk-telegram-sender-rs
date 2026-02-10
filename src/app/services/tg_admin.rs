@@ -5,7 +5,7 @@ use crate::app::state::StateHandle;
 use crate::core::types::{LiteUser, TelegramId, TtUserId};
 use crate::infra::db::Database;
 use anyhow::Result;
-use teloxide::prelude::Requester;
+use teloxide_ng::prelude::Requester;
 
 #[derive(Debug)]
 pub enum AdminError {
@@ -131,7 +131,7 @@ pub async fn broadcast(
 }
 
 pub async fn send_direct_message(
-    bot: &teloxide::prelude::Bot,
+    bot: &teloxide_ng::prelude::Bot,
     subs: &[crate::infra::db::types::SubscriberInfo],
     sender: TelegramId,
     text: &str,
@@ -142,7 +142,7 @@ pub async fn send_direct_message(
         if sub.telegram_id == sender {
             continue;
         }
-        let chat_id = teloxide::types::ChatId(sub.telegram_id.as_i64());
+        let chat_id = teloxide_ng::types::ChatId(sub.telegram_id.as_i64());
         match bot.send_message(chat_id, text.to_string()).await {
             Ok(_) => sent += 1,
             Err(e) => {

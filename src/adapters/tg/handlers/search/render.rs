@@ -3,8 +3,8 @@ use crate::args;
 use crate::core::callbacks::{AdminAction, CallbackAction, MuteAction, SubAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardButton, InlineKeyboardMarkup};
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::{InlineKeyboardButton, InlineKeyboardMarkup};
 
 use super::context::{SearchCandidate, SearchContext, SearchListType};
 

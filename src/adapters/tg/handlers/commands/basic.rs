@@ -11,9 +11,9 @@ use crate::args;
 use crate::core::callbacks::{CallbackAction, UnsubAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
-use teloxide::types::ParseMode;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
+use teloxide_ng::types::ParseMode;
 
 use super::CommandCtx;
 

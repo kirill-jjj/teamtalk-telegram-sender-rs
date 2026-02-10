@@ -8,8 +8,8 @@ use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
 
 use crate::adapters::tg::handlers::search::context::SearchCandidate;
 

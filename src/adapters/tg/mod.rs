@@ -15,8 +15,8 @@ use crate::core::types::{
 use crate::infra::db::Database;
 use crate::infra::locales;
 use std::sync::Arc;
-use teloxide::error_handlers::ErrorHandler;
-use teloxide::{
+use teloxide_ng::error_handlers::ErrorHandler;
+use teloxide_ng::{
     prelude::*,
     types::{BotCommand, BotCommandScope, Recipient},
 };
@@ -91,8 +91,8 @@ fn build_state(
 fn make_error_handler(
     admin_bot: Bot,
     admin_config: Arc<Config>,
-) -> std::sync::Arc<dyn ErrorHandler<teloxide::errors::RequestError> + Send + Sync> {
-    std::sync::Arc::new(move |err: teloxide::errors::RequestError| {
+) -> std::sync::Arc<dyn ErrorHandler<teloxide_ng::errors::RequestError> + Send + Sync> {
+    std::sync::Arc::new(move |err: teloxide_ng::errors::RequestError| {
         let admin_bot = admin_bot.clone();
         let admin_config = admin_config.clone();
         async move {
@@ -166,8 +166,8 @@ async fn run_event_bot(
 async fn run_dispatcher(
     dispatcher: &mut Dispatcher<
         Bot,
-        teloxide::errors::RequestError,
-        teloxide::dispatching::DefaultKey,
+        teloxide_ng::errors::RequestError,
+        teloxide_ng::dispatching::DefaultKey,
     >,
     cancel_token: tokio_util::sync::CancellationToken,
 ) {
@@ -244,7 +244,7 @@ async fn set_bot_commands(
 
         bot.set_my_commands(admin_cmds)
             .scope(BotCommandScope::Chat {
-                chat_id: Recipient::Id(teloxide::types::ChatId(admin_id.as_i64())),
+                chat_id: Recipient::Id(teloxide_ng::types::ChatId(admin_id.as_i64())),
             })
             .await
             .unwrap_or_else(|e| {
@@ -253,7 +253,7 @@ async fn set_bot_commands(
                     error = %e,
                     "Failed to set admin commands"
                 );
-                teloxide::types::True
+                teloxide_ng::types::True
             });
     }
 

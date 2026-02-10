@@ -4,8 +4,8 @@ use crate::core::callbacks::{CallbackAction, SettingsAction};
 use crate::core::types::LanguageCode;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
-use teloxide::prelude::*;
-use teloxide::types::{InlineKeyboardMarkup, ParseMode};
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::{InlineKeyboardMarkup, ParseMode};
 
 pub async fn send_notif_settings(
     bot: &Bot,

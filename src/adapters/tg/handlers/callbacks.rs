@@ -11,8 +11,8 @@ use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId};
 use crate::infra::locales;
 use std::str::FromStr;
 use std::sync::Arc;
-use teloxide::prelude::*;
-use teloxide::types::MaybeInaccessibleMessage;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::MaybeInaccessibleMessage;
 
 pub async fn answer_callback(
     bot: Bot,
@@ -64,7 +64,7 @@ async fn load_user_lang(
     config: &crate::bootstrap::config::Config,
     telegram_id: TelegramId,
     default_lang: LanguageCode,
-    query_id: teloxide::types::CallbackQueryId,
+    query_id: teloxide_ng::types::CallbackQueryId,
 ) -> ResponseResult<LanguageCode> {
     let errors = TgErrorReporter::new(bot, config, telegram_id, default_lang);
     match tg_callbacks_service::load_user_lang(db, telegram_id, default_lang).await {
@@ -91,7 +91,7 @@ async fn ensure_subscribed(
     config: &crate::bootstrap::config::Config,
     telegram_id: TelegramId,
     lang: LanguageCode,
-    query_id: teloxide::types::CallbackQueryId,
+    query_id: teloxide_ng::types::CallbackQueryId,
 ) -> ResponseResult<bool> {
     let errors = TgErrorReporter::new(bot, config, telegram_id, lang);
     match tg_callbacks_service::ensure_subscribed(db, telegram_id).await {
@@ -130,7 +130,7 @@ fn parse_action(callback_data_str: &str) -> Result<CallbackAction, anyhow::Error
 async fn handle_invalid_callback_data(
     bot: &Bot,
     config: &crate::bootstrap::config::Config,
-    query_id: teloxide::types::CallbackQueryId,
+    query_id: teloxide_ng::types::CallbackQueryId,
     telegram_id: TelegramId,
     lang: LanguageCode,
     callback_data: &str,

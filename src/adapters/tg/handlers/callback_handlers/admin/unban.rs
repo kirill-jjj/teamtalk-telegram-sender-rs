@@ -7,7 +7,7 @@ use crate::adapters::tg::utils::{
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::types::{AdminErrorContext, DbBanId, LanguageCode};
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::lists::should_send_page;
 

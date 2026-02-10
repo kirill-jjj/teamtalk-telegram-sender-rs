@@ -4,7 +4,7 @@ use crate::adapters::tg::utils::telegram_id_from_callback_query;
 use crate::app::services::tg_admin as tg_admin_service;
 use crate::core::callbacks::SettingsAction;
 use crate::core::types::LanguageCode;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 mod lang;
 mod mute;
@@ -19,7 +19,7 @@ pub async fn handle_settings(
     action: SettingsAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(ref msg)) = q.message else {
+    let Some(teloxide_ng::types::MaybeInaccessibleMessage::Regular(ref msg)) = q.message else {
         return Ok(());
     };
     let msg = msg.as_ref();

@@ -6,9 +6,9 @@ use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtUsername
 use crate::infra::db::Database;
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
-use teloxide::types::ParseMode;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
+use teloxide_ng::types::ParseMode;
 
 pub async fn ensure_subscribed(
     bot: &Bot,
@@ -83,14 +83,14 @@ pub fn telegram_id_from_user_id(user_id: u64, context: &'static str) -> Option<T
 }
 
 pub fn telegram_id_from_callback_query(
-    q: &teloxide::types::CallbackQuery,
+    q: &teloxide_ng::types::CallbackQuery,
     context: &'static str,
 ) -> Option<TelegramId> {
     telegram_id_from_user_id(q.from.id.0, context)
 }
 
 pub fn telegram_id_from_user(
-    user: &teloxide::types::User,
+    user: &teloxide_ng::types::User,
     context: &'static str,
 ) -> Option<TelegramId> {
     telegram_id_from_user_id(user.id.0, context)
@@ -157,7 +157,7 @@ impl<'a> TgErrorReporter<'a> {
             .await;
 
             self.bot
-                .answer_callback_query(teloxide::types::CallbackQueryId(query_id.to_string()))
+                .answer_callback_query(teloxide_ng::types::CallbackQueryId(query_id.to_string()))
                 .text(cmd_error_text(self.lang))
                 .show_alert(true)
                 .await?;
@@ -170,7 +170,7 @@ impl<'a> TgErrorReporter<'a> {
 
 pub async fn answer_cmd_error_callback(
     bot: &Bot,
-    query_id: &teloxide::types::CallbackQueryId,
+    query_id: &teloxide_ng::types::CallbackQueryId,
     lang: LanguageCode,
     show_alert: bool,
 ) -> ResponseResult<()> {
@@ -185,7 +185,7 @@ pub async fn notify_admin_error(
     error: &str,
     lang: LanguageCode,
 ) {
-    let admin_chat_id = teloxide::types::ChatId(config.telegram.admin_chat_id.as_i64());
+    let admin_chat_id = teloxide_ng::types::ChatId(config.telegram.admin_chat_id.as_i64());
     let context_key = match context {
         AdminErrorContext::Command => LocaleKey::AdminErrorContextCommand,
         AdminErrorContext::Callback => LocaleKey::AdminErrorContextCallback,
@@ -211,7 +211,7 @@ pub async fn notify_admin_error(
 
 pub async fn answer_callback(
     bot: &Bot,
-    query_id: &teloxide::types::CallbackQueryId,
+    query_id: &teloxide_ng::types::CallbackQueryId,
     text: String,
     alert: bool,
 ) -> ResponseResult<()> {
@@ -226,7 +226,7 @@ pub async fn answer_callback(
 
 pub async fn answer_callback_empty(
     bot: &Bot,
-    query_id: &teloxide::types::CallbackQueryId,
+    query_id: &teloxide_ng::types::CallbackQueryId,
 ) -> ResponseResult<()> {
     bot.answer_callback_query(query_id.clone()).await?;
     Ok(())
@@ -234,10 +234,10 @@ pub async fn answer_callback_empty(
 
 pub async fn send_text_key(
     bot: &Bot,
-    chat_id: teloxide::types::ChatId,
+    chat_id: teloxide_ng::types::ChatId,
     lang: LanguageCode,
     key: LocaleKey,
-    reply_to: Option<teloxide::types::MessageId>,
+    reply_to: Option<teloxide_ng::types::MessageId>,
 ) -> ResponseResult<()> {
     let req = bot.send_message(chat_id, locales::get_text(lang.as_str(), key, None));
     if let Some(reply_to) = reply_to {
@@ -319,7 +319,7 @@ pub async fn notify_admins_subscription_event(
             .as_ref(),
         );
         if let Err(err) = bot
-            .send_message(teloxide::types::ChatId(admin_id.as_i64()), text)
+            .send_message(teloxide_ng::types::ChatId(admin_id.as_i64()), text)
             .parse_mode(ParseMode::Html)
             .await
         {

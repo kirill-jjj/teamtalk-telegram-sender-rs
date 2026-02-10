@@ -2,8 +2,8 @@ use crate::adapters::tg::utils::TgErrorReporter;
 use crate::app::services::tg_replies as tg_replies_service;
 use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtCommand};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::sugar::request::RequestReplyExt;
+use teloxide_ng::prelude::*;
+use teloxide_ng::sugar::request::RequestReplyExt;
 
 use super::replies::load_pending_reply;
 use crate::adapters::tg::state::AppState;

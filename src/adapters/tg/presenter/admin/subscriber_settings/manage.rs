@@ -8,8 +8,8 @@ use crate::args;
 use crate::core::callbacks::{CallbackAction, SubAction};
 use crate::core::types::{LanguageCode, TelegramId, TtUsername};
 use crate::infra::locales;
-use teloxide::prelude::*;
-use teloxide::types::InlineKeyboardMarkup;
+use teloxide_ng::prelude::*;
+use teloxide_ng::types::InlineKeyboardMarkup;
 
 pub async fn send_sub_manage_tt_menu(
     bot: &Bot,
@@ -71,7 +71,7 @@ pub struct SubLinkAccountListArgs<'a> {
     pub search_contexts: &'a std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,
@@ -159,7 +159,7 @@ pub struct SubMuteListArgs<'a> {
     pub search_contexts: &'a std::sync::Arc<
         tokio::sync::Mutex<
             std::collections::HashMap<
-                teloxide::types::ChatId,
+                teloxide_ng::types::ChatId,
                 crate::adapters::tg::handlers::search::SearchContext,
             >,
         >,

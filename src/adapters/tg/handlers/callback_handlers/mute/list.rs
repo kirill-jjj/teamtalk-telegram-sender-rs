@@ -9,7 +9,7 @@ use crate::core::types::{
     ActionStatus, AdminErrorContext, LanguageCode, MuteListMode, TelegramId, TtUsername,
 };
 use crate::infra::locales;
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 use super::{AppState, MuteCtx};
 

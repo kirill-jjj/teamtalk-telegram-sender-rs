@@ -3,7 +3,7 @@ use crate::adapters::tg::state::AppState;
 use crate::adapters::tg::utils::telegram_id_from_callback_query;
 use crate::core::callbacks::MuteAction;
 use crate::core::types::{LanguageCode, TelegramId};
-use teloxide::prelude::*;
+use teloxide_ng::prelude::*;
 
 mod list;
 mod mode;
@@ -16,7 +16,7 @@ pub async fn handle_mute(
     action: MuteAction,
     lang: LanguageCode,
 ) -> ResponseResult<()> {
-    let Some(teloxide::types::MaybeInaccessibleMessage::Regular(msg)) = &q.message else {
+    let Some(teloxide_ng::types::MaybeInaccessibleMessage::Regular(msg)) = &q.message else {
         return Ok(());
     };
     let Some(telegram_id) = telegram_id_from_callback_query(&q, "handle_mute") else {

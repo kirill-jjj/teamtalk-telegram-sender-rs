@@ -5,9 +5,9 @@ use crate::args;
 use crate::core::types::{LanguageCode, TtNickname, TtServerName, TtUserId, TtUsername};
 use crate::infra::locales;
 use crate::infra::locales::LocaleKey;
-use teloxide::payloads::SendMessageSetters;
-use teloxide::prelude::Requester;
-use teloxide::utils::html;
+use teloxide_ng::payloads::SendMessageSetters;
+use teloxide_ng::prelude::Requester;
+use teloxide_ng::utils::html;
 
 use super::BridgeDeps;
 
@@ -63,7 +63,7 @@ pub(super) async fn handle_to_admin(
 
     let res = bot
         .send_message(deps.admin_id, &text_admin)
-        .parse_mode(teloxide::types::ParseMode::Html)
+        .parse_mode(teloxide_ng::types::ParseMode::Html)
         .await;
     if let Ok(msg) = &res
         && let Err(e) = pending_service::add_pending_reply(
