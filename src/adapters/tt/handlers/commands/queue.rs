@@ -97,8 +97,12 @@ async fn handle_user_toggle(ctx: &UserCtx, tg_id: TelegramId, enabled: bool) {
     let text_key = match global_enabled {
         Ok(false) => locales::LocaleKey::TtQueueGlobalDisabledUser,
         Ok(true) => {
-            let current =
-                reply_queue_service::get_reply_queue_user_enabled(&ctx.services.db, tg_id).await;
+            let current = reply_queue_service::get_reply_queue_user_enabled(
+                &ctx.services.db,
+                tg_id,
+                ctx.reply_lang,
+            )
+            .await;
             match current {
                 Ok(val) if val == enabled => {
                     if enabled {

@@ -31,7 +31,7 @@ pub async fn handle_unsub_action(
             let tt_username = match tg_settings_service::load_settings(
                 db,
                 telegram_id,
-                LanguageCode::En,
+                state.config.general.default_lang,
             )
             .await
             {

@@ -54,8 +54,9 @@ pub async fn set_reply_queue_global_enabled(db: &impl ReplyQueueRepo, enabled: b
 pub async fn get_reply_queue_user_enabled(
     db: &impl ReplyQueueRepo,
     telegram_id: TelegramId,
+    default_lang: LanguageCode,
 ) -> Result<bool> {
-    let user = db.get_or_create_user(telegram_id, LanguageCode::En).await?;
+    let user = db.get_or_create_user(telegram_id, default_lang).await?;
     Ok(user.reply_queue_enabled)
 }
 
@@ -77,7 +78,7 @@ pub async fn is_reply_queue_enabled_for_tt_user(
     let Some(tg_id) = db.fetch_telegram_id_by_tt_user(tt_username).await else {
         return Ok(false);
     };
-    get_reply_queue_user_enabled(db, tg_id).await
+    get_reply_queue_user_enabled(db, tg_id, LanguageCode::En).await
 }
 
 pub async fn add_reply_queue_item(

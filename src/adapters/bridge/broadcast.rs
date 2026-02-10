@@ -117,6 +117,7 @@ struct BroadcastTaskCtx {
     related_tt_username: TtUsername,
 }
 
+#[allow(clippy::too_many_lines)]
 async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, text: String) {
     let mut send_silent = false;
 
@@ -148,77 +149,123 @@ async fn send_broadcast_to_recipient(ctx: BroadcastTaskCtx, sub: UserSettings, t
         .disable_notification(send_silent)
         .await;
 
-    if let Ok(msg) = &res
-        && sub.telegram_id.as_i64() == ctx.admin_id.0
-        && !ctx.related_tt_username.as_str().is_empty()
-        && let Err(e) = pending_service::add_pending_reply(
-            &ctx.services.db,
-            crate::core::types::TgMessageId::from(msg.id.0),
-            crate::core::types::TtUserId::from(0),
-            Some(&ctx.related_tt_username),
-        )
+    maybe_save_pending_reply_for_broadcast(&ctx, &sub, &res).await;
+
+    if let Err(e) = res {
+        handle_send_error_for_broadcast(&ctx, &sub, &e).await;
+    }
+}
+
+async fn maybe_save_pending_reply_for_broadcast(
+    ctx: &BroadcastTaskCtx,
+    sub: &UserSettings,
+    res: &Result<teloxide_ng::types::Message, RequestError>,
+) {
+    if sub.telegram_id.as_i64() != ctx.admin_id.0 || ctx.related_tt_username.as_str().is_empty() {
+        return;
+    }
+    let Ok(msg) = res else {
+        return;
+    };
+    match ctx
+        .state
+        .user_id_by_username(&ctx.related_tt_username)
         .await
+    {
+        Ok(Some(tt_user_id)) => {
+            if let Err(e) = pending_service::add_pending_reply(
+                &ctx.services.db,
+                crate::core::types::TgMessageId::from(msg.id.0),
+                tt_user_id,
+                Some(&ctx.related_tt_username),
+            )
+            .await
+            {
+                tracing::error!(
+                    component = "bridge",
+                    message_id = msg.id.0,
+                    tt_username = %ctx.related_tt_username,
+                    error = %e,
+                    "Failed to save pending reply for broadcast"
+                );
+            }
+        }
+        Ok(None) => {
+            tracing::warn!(
+                component = "bridge",
+                message_id = msg.id.0,
+                tt_username = %ctx.related_tt_username,
+                "Skipping pending reply save: TeamTalk user id not found"
+            );
+        }
+        Err(e) => {
+            tracing::error!(
+                component = "bridge",
+                message_id = msg.id.0,
+                tt_username = %ctx.related_tt_username,
+                error = %e,
+                "Failed to resolve TeamTalk user id for pending reply"
+            );
+        }
+    }
+}
+
+async fn handle_send_error_for_broadcast(
+    ctx: &BroadcastTaskCtx,
+    sub: &UserSettings,
+    e: &RequestError,
+) {
+    tracing::warn!(
+        component = "bridge",
+        telegram_id = sub.telegram_id.as_i64(),
+        tt_username = ?sub.teamtalk_username,
+        error = %e,
+        "Failed to send notification"
+    );
+
+    let RequestError::Api(api_err) = e else {
+        return;
+    };
+    if !matches!(
+        api_err,
+        ApiError::BotBlocked | ApiError::UserDeactivated | ApiError::ChatNotFound
+    ) {
+        return;
+    }
+
+    tracing::info!(
+        component = "bridge",
+        telegram_id = sub.telegram_id.as_i64(),
+        tt_username = ?sub.teamtalk_username,
+        api_error = ?api_err,
+        "Cleaning up unreachable user"
+    );
+    if let Err(db_err) = subscription_service::unsubscribe(&ctx.services.db, sub.telegram_id).await
     {
         tracing::error!(
             component = "bridge",
-            message_id = msg.id.0,
-            tt_username = %ctx.related_tt_username,
-            error = %e,
-            "Failed to save pending reply for broadcast"
-        );
-    }
-
-    if let Err(e) = res {
-        tracing::warn!(
-            component = "bridge",
             telegram_id = sub.telegram_id.as_i64(),
             tt_username = ?sub.teamtalk_username,
-            error = %e,
-            "Failed to send notification"
+            error = %db_err,
+            "DB error during auto-cleanup"
         );
-
-        if let RequestError::Api(api_err) = e {
-            match api_err {
-                ApiError::BotBlocked | ApiError::UserDeactivated | ApiError::ChatNotFound => {
-                    tracing::info!(
-                        component = "bridge",
-                        telegram_id = sub.telegram_id.as_i64(),
-                        tt_username = ?sub.teamtalk_username,
-                        api_error = ?api_err,
-                        "Cleaning up unreachable user"
-                    );
-
-                    if let Err(db_err) =
-                        subscription_service::unsubscribe(&ctx.services.db, sub.telegram_id).await
-                    {
-                        tracing::error!(
-                            component = "bridge",
-                            telegram_id = sub.telegram_id.as_i64(),
-                            tt_username = ?sub.teamtalk_username,
-                            error = %db_err,
-                            "DB error during auto-cleanup"
-                        );
-                    } else {
-                        tracing::info!(
-                            component = "bridge",
-                            telegram_id = sub.telegram_id.as_i64(),
-                            tt_username = ?sub.teamtalk_username,
-                            "Profile removed successfully"
-                        );
-                        notify_admins_subscription_event(
-                            &ctx.bot,
-                            &ctx.services.db,
-                            ctx.default_lang,
-                            crate::core::types::TelegramId::from(ctx.admin_id.0),
-                            sub.telegram_id,
-                            sub.teamtalk_username.as_ref(),
-                            AdminSubEventKind::Unsubscribed,
-                        )
-                        .await;
-                    }
-                }
-                _ => {}
-            }
-        }
+        return;
     }
+
+    tracing::info!(
+        component = "bridge",
+        telegram_id = sub.telegram_id.as_i64(),
+        tt_username = ?sub.teamtalk_username,
+        "Profile removed successfully"
+    );
+    notify_admins_subscription_event(
+        &ctx.bot,
+        &ctx.services.db,
+        ctx.default_lang,
+        crate::core::types::TelegramId::from(ctx.admin_id.0),
+        sub.telegram_id,
+        sub.teamtalk_username.as_ref(),
+        AdminSubEventKind::Unsubscribed,
+    )
+    .await;
 }

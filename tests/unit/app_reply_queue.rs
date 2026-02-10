@@ -117,7 +117,7 @@ async fn user_enabled_reads_settings() {
         tt_to_tg: None,
     };
     assert!(
-        get_reply_queue_user_enabled(&repo, TelegramId::from(1))
+        get_reply_queue_user_enabled(&repo, TelegramId::from(1), LanguageCode::En)
             .await
             .unwrap()
     );

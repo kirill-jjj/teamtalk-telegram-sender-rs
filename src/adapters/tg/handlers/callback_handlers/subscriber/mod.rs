@@ -143,8 +143,12 @@ impl SubCtx<'_> {
         let is_main_admin = self.admin_chat_id == self.config.telegram.admin_chat_id;
         let mut is_admin = false;
         let mut settings = default_user_settings(sub_id);
-        match tg_search_actions_service::load_subscriber_details(self.db, sub_id, LanguageCode::En)
-            .await
+        match tg_search_actions_service::load_subscriber_details(
+            self.db,
+            sub_id,
+            self.config.general.default_lang,
+        )
+        .await
         {
             Ok(details) => {
                 settings = details.settings;

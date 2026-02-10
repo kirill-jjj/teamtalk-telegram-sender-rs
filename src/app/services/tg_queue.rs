@@ -1,7 +1,7 @@
 use crate::app::services::{
     reply_queue as reply_queue_service, subscribers as subscribers_service,
 };
-use crate::core::types::TelegramId;
+use crate::core::types::{LanguageCode, TelegramId};
 use crate::infra::db::Database;
 use anyhow::Result;
 
@@ -50,6 +50,7 @@ pub async fn handle_queue(
     db: &Database,
     telegram_id: TelegramId,
     is_admin: bool,
+    default_lang: LanguageCode,
     text: &str,
 ) -> Result<QueueOutcome, QueueError> {
     let cmd = parse_queue_command(text);
@@ -83,9 +84,10 @@ pub async fn handle_queue(
             if !global_enabled {
                 return Ok(QueueOutcome::GlobalDisabledForUser);
             }
-            let current = reply_queue_service::get_reply_queue_user_enabled(db, telegram_id)
-                .await
-                .map_err(QueueError::Silent)?;
+            let current =
+                reply_queue_service::get_reply_queue_user_enabled(db, telegram_id, default_lang)
+                    .await
+                    .map_err(QueueError::Silent)?;
             if current == enabled {
                 return Ok(QueueOutcome::UserAlready { enabled });
             }

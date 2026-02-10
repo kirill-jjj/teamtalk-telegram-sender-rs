@@ -5,7 +5,7 @@ use crate::adapters::tg::subscriber_notify::SubscriberChangeKind;
 use crate::adapters::tg::utils::{answer_callback, answer_callback_empty};
 use crate::app::services::tg_sub_links as tg_sub_links_service;
 use crate::args;
-use crate::core::types::{AdminErrorContext, LanguageCode, TelegramId, TtUsername};
+use crate::core::types::{AdminErrorContext, TelegramId, TtUsername};
 use crate::infra::locales;
 use teloxide_ng::prelude::*;
 
@@ -16,16 +16,18 @@ pub(super) async fn manage_tt(
     sub_id: TelegramId,
     page: usize,
 ) -> ResponseResult<()> {
-    let settings = match tg_sub_links_service::load_settings(ctx.db, sub_id, LanguageCode::En).await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            ctx.errors()
-                .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
-                .await?;
-            return Ok(());
-        }
-    };
+    let settings =
+        match tg_sub_links_service::load_settings(ctx.db, sub_id, ctx.config.general.default_lang)
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                ctx.errors()
+                    .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
+                    .await?;
+                return Ok(());
+            }
+        };
     send_sub_manage_tt_menu(
         ctx.bot,
         ctx.msg,
@@ -66,16 +68,18 @@ pub(super) async fn unlink(
         true,
     )
     .await?;
-    let settings = match tg_sub_links_service::load_settings(ctx.db, sub_id, LanguageCode::En).await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            ctx.errors()
-                .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
-                .await?;
-            return Ok(());
-        }
-    };
+    let settings =
+        match tg_sub_links_service::load_settings(ctx.db, sub_id, ctx.config.general.default_lang)
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                ctx.errors()
+                    .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
+                    .await?;
+                return Ok(());
+            }
+        };
     send_sub_manage_tt_menu(
         ctx.bot,
         ctx.msg,
@@ -140,16 +144,18 @@ pub(super) async fn link_perform(
         true,
     )
     .await?;
-    let settings = match tg_sub_links_service::load_settings(ctx.db, sub_id, LanguageCode::En).await
-    {
-        Ok(s) => s,
-        Err(e) => {
-            ctx.errors()
-                .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
-                .await?;
-            return Ok(());
-        }
-    };
+    let settings =
+        match tg_sub_links_service::load_settings(ctx.db, sub_id, ctx.config.general.default_lang)
+            .await
+        {
+            Ok(s) => s,
+            Err(e) => {
+                ctx.errors()
+                    .check_db_err(&ctx.q_id.0, Err(e), AdminErrorContext::Callback)
+                    .await?;
+                return Ok(());
+            }
+        };
     send_sub_manage_tt_menu(
         ctx.bot,
         ctx.msg,

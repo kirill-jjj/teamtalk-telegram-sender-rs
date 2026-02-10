@@ -18,7 +18,7 @@ pub(super) async fn handle_sub_select(
     let settings = match tg_settings_service::load_settings(
         &state.db,
         telegram_id,
-        LanguageCode::En,
+        state.config.general.default_lang,
     )
     .await
     {

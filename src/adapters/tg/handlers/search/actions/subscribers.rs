@@ -29,8 +29,12 @@ pub(super) async fn handle_subscribers(
     let is_main_admin = requester_id == state.config.telegram.admin_chat_id;
     let mut settings = subscribers_logic::default_user_settings(*sub_id);
     let mut is_admin = false;
-    match tg_search_actions_service::load_subscriber_details(&state.db, *sub_id, LanguageCode::En)
-        .await
+    match tg_search_actions_service::load_subscriber_details(
+        &state.db,
+        *sub_id,
+        state.config.general.default_lang,
+    )
+    .await
     {
         Ok(details) => {
             settings = details.settings;
@@ -84,16 +88,19 @@ pub(super) async fn handle_link_list(
         .and_then(AdminActor::from_telegram_user)
         .or_else(|| {
             super::requester_id_from_message(msg, "search_link_tt_actor").map(AdminActor::fallback)
-        })
-        .unwrap_or_else(|| AdminActor::fallback(TelegramId::from(0)));
-    crate::adapters::tg::subscriber_notify::notify_subscriber_change(
-        bot,
-        &state.db,
-        sub_id,
-        &actor,
-        SubscriberChangeKind::Linked(username.clone()),
-    )
-    .await;
+        });
+    if let Some(actor) = actor {
+        crate::adapters::tg::subscriber_notify::notify_subscriber_change(
+            bot,
+            &state.db,
+            sub_id,
+            &actor,
+            SubscriberChangeKind::Linked(username.clone()),
+        )
+        .await;
+    } else {
+        tracing::warn!("Skipping subscriber change notify: actor is missing");
+    }
     let args = args!(user = username.to_string());
     let text = locales::get_text(
         lang.as_str(),
@@ -101,22 +108,25 @@ pub(super) async fn handle_link_list(
         args.as_ref(),
     );
     bot.send_message(msg.chat.id, text).reply_to(msg.id).await?;
-    let settings =
-        match tg_search_actions_service::load_user_settings(&state.db, sub_id, LanguageCode::En)
-            .await
-        {
-            Ok(s) => s,
-            Err(e) => {
-                if let Some(requester_id) =
-                    super::requester_id_from_message(msg, "search_load_settings")
-                {
-                    TgErrorReporter::new(bot, &state.config, requester_id, lang)
-                        .notify(AdminErrorContext::Callback, &e.to_string())
-                        .await;
-                }
-                return Ok(true);
+    let settings = match tg_search_actions_service::load_user_settings(
+        &state.db,
+        sub_id,
+        state.config.general.default_lang,
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            if let Some(requester_id) =
+                super::requester_id_from_message(msg, "search_load_settings")
+            {
+                TgErrorReporter::new(bot, &state.config, requester_id, lang)
+                    .notify(AdminErrorContext::Callback, &e.to_string())
+                    .await;
             }
-        };
+            return Ok(true);
+        }
+    };
     subscriber_settings_logic::send_sub_manage_tt_menu(
         bot,
         msg,

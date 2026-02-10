@@ -9,7 +9,7 @@ use crate::app::services::tg_basic as tg_basic_service;
 use crate::app::services::tg_settings as tg_settings_service;
 use crate::args;
 use crate::core::callbacks::{CallbackAction, UnsubAction};
-use crate::core::types::{AdminErrorContext, LanguageCode, TtCommand};
+use crate::core::types::{AdminErrorContext, TtCommand};
 use crate::infra::locales;
 use teloxide_ng::prelude::*;
 use teloxide_ng::sugar::request::RequestReplyExt;
@@ -130,7 +130,13 @@ async fn notify_subscribe_event(ctx: &CommandCtx<'_>, with_tt_username: bool) {
 async fn load_tt_username_for_notify(
     ctx: &CommandCtx<'_>,
 ) -> Option<crate::core::types::TtUsername> {
-    match tg_settings_service::load_settings(ctx.db, ctx.telegram_id, LanguageCode::En).await {
+    match tg_settings_service::load_settings(
+        ctx.db,
+        ctx.telegram_id,
+        ctx.config.general.default_lang,
+    )
+    .await
+    {
         Ok(settings) => settings.teamtalk_username,
         Err(err) => {
             tracing::warn!(error = %err, "Failed to load user settings for admin subscription notification");

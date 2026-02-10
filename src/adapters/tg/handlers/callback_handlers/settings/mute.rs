@@ -15,7 +15,13 @@ pub(super) async fn handle_mute_manage(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
-    match tg_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En).await {
+    match tg_settings_service::load_settings(
+        &state.db,
+        telegram_id,
+        state.config.general.default_lang,
+    )
+    .await
+    {
         Ok(u) => {
             let mode = u.mute_list_mode;
             let has_guest = state.config.teamtalk.guest_username.is_some();

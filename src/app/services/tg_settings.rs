@@ -32,8 +32,12 @@ pub async fn toggle_noon(db: &Database, telegram_id: TelegramId) -> Result<bool>
     user_settings_service::toggle_noon(db, telegram_id).await
 }
 
-pub async fn admin_sub_events_enabled(db: &Database, telegram_id: TelegramId) -> Result<bool> {
-    Ok(load_settings(db, telegram_id, LanguageCode::En)
+pub async fn admin_sub_events_enabled(
+    db: &Database,
+    telegram_id: TelegramId,
+    default_lang: LanguageCode,
+) -> Result<bool> {
+    Ok(load_settings(db, telegram_id, default_lang)
         .await?
         .admin_sub_events_enabled)
 }

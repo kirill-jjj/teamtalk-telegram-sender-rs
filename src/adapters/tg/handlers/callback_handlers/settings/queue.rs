@@ -17,8 +17,12 @@ async fn load_settings_or_reply(
     q_id: &str,
     state: &AppState,
 ) -> ResponseResult<Option<UserSettings>> {
-    match tg_queue_settings_service::load_settings(&state.db, errors.user_id(), LanguageCode::En)
-        .await
+    match tg_queue_settings_service::load_settings(
+        &state.db,
+        errors.user_id(),
+        state.config.general.default_lang,
+    )
+    .await
     {
         Ok(s) => Ok(Some(s)),
         Err(e) => {
@@ -58,7 +62,7 @@ pub(super) async fn handle_queue_menu(
     let settings = match tg_queue_settings_service::load_settings(
         &state.db,
         telegram_id,
-        LanguageCode::En,
+        state.config.general.default_lang,
     )
     .await
     {

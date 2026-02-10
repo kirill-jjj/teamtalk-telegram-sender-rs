@@ -84,7 +84,15 @@ async fn send_outcome(
 }
 
 pub(super) async fn handle_queue(ctx: &CommandCtx<'_>, text: String) -> ResponseResult<()> {
-    match tg_queue_service::handle_queue(ctx.db, ctx.telegram_id, ctx.is_admin, &text).await {
+    match tg_queue_service::handle_queue(
+        ctx.db,
+        ctx.telegram_id,
+        ctx.is_admin,
+        ctx.config.general.default_lang,
+        &text,
+    )
+    .await
+    {
         Ok(outcome) => {
             send_outcome(ctx, outcome).await?;
         }

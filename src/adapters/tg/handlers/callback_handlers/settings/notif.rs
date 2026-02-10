@@ -19,7 +19,7 @@ pub(super) async fn handle_notif_select(
     let settings = match tg_settings_service::load_settings(
         &state.db,
         telegram_id,
-        LanguageCode::En,
+        state.config.general.default_lang,
     )
     .await
     {
@@ -33,7 +33,13 @@ pub(super) async fn handle_notif_select(
     };
     let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
     let admin_sub_events_enabled = if is_admin {
-        match tg_settings_service::admin_sub_events_enabled(&state.db, telegram_id).await {
+        match tg_settings_service::admin_sub_events_enabled(
+            &state.db,
+            telegram_id,
+            state.config.general.default_lang,
+        )
+        .await
+        {
             Ok(enabled) => Some(enabled),
             Err(e) => {
                 tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load admin subscription events setting");
@@ -62,16 +68,21 @@ pub(super) async fn handle_noon_toggle(
     lang: LanguageCode,
 ) -> ResponseResult<()> {
     let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
-    let user_settings =
-        match tg_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En).await {
-            Ok(u) => u,
-            Err(e) => {
-                errors
-                    .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
-                    .await?;
-                return Ok(());
-            }
-        };
+    let user_settings = match tg_settings_service::load_settings(
+        &state.db,
+        telegram_id,
+        state.config.general.default_lang,
+    )
+    .await
+    {
+        Ok(u) => u,
+        Err(e) => {
+            errors
+                .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
+            return Ok(());
+        }
+    };
 
     if user_settings.teamtalk_username.is_none() {
         answer_callback(
@@ -106,21 +117,30 @@ pub(super) async fn handle_noon_toggle(
                 tracing::error!(error = %e, "Failed to send noon update callback");
             }
 
-            let settings =
-                match tg_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En)
-                    .await
-                {
-                    Ok(s) => s,
-                    Err(e) => {
-                        errors
-                            .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
-                            .await?;
-                        return Ok(());
-                    }
-                };
+            let settings = match tg_settings_service::load_settings(
+                &state.db,
+                telegram_id,
+                state.config.general.default_lang,
+            )
+            .await
+            {
+                Ok(s) => s,
+                Err(e) => {
+                    errors
+                        .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                        .await?;
+                    return Ok(());
+                }
+            };
             let is_admin = tg_admin_service::is_admin(&state.db, &state.config, telegram_id).await;
             let admin_sub_events_enabled = if is_admin {
-                match tg_settings_service::admin_sub_events_enabled(&state.db, telegram_id).await {
+                match tg_settings_service::admin_sub_events_enabled(
+                    &state.db,
+                    telegram_id,
+                    state.config.general.default_lang,
+                )
+                .await
+                {
                     Ok(enabled) => Some(enabled),
                     Err(e) => {
                         tracing::error!(telegram_id = telegram_id.as_i64(), error = %e, "Failed to load admin subscription events setting");
@@ -168,7 +188,12 @@ pub(super) async fn handle_admin_sub_events_toggle(
     }
 
     let errors = TgErrorReporter::new(bot, &state.config, telegram_id, lang);
-    let current = match tg_settings_service::admin_sub_events_enabled(&state.db, telegram_id).await
+    let current = match tg_settings_service::admin_sub_events_enabled(
+        &state.db,
+        telegram_id,
+        state.config.general.default_lang,
+    )
+    .await
     {
         Ok(value) => value,
         Err(e) => {
@@ -205,16 +230,21 @@ pub(super) async fn handle_admin_sub_events_toggle(
     )
     .await?;
 
-    let settings =
-        match tg_settings_service::load_settings(&state.db, telegram_id, LanguageCode::En).await {
-            Ok(s) => s,
-            Err(e) => {
-                errors
-                    .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
-                    .await?;
-                return Ok(());
-            }
-        };
+    let settings = match tg_settings_service::load_settings(
+        &state.db,
+        telegram_id,
+        state.config.general.default_lang,
+    )
+    .await
+    {
+        Ok(s) => s,
+        Err(e) => {
+            errors
+                .check_db_err(&q.id.0, Err(e), AdminErrorContext::Callback)
+                .await?;
+            return Ok(());
+        }
+    };
     send_notif_settings(
         bot,
         msg,
