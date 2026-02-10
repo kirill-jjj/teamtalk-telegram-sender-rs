@@ -209,6 +209,33 @@ pub async fn notify_admin_error(
     }
 }
 
+pub async fn notify_admin_system_error(
+    bot: &Bot,
+    config: &Config,
+    context: AdminErrorContext,
+    error: &str,
+    lang: LanguageCode,
+) {
+    let admin_chat_id = teloxide_ng::types::ChatId(config.telegram.admin_chat_id.as_i64());
+    let context_key = match context {
+        AdminErrorContext::Command => LocaleKey::AdminErrorContextCommand,
+        AdminErrorContext::Callback => LocaleKey::AdminErrorContextCallback,
+        AdminErrorContext::Subscription => LocaleKey::AdminErrorContextSubscription,
+        AdminErrorContext::TtCommand => LocaleKey::AdminErrorContextTtCommand,
+        AdminErrorContext::UpdateListener => LocaleKey::AdminErrorContextUpdateListener,
+    };
+    let context_text = locales::get_text(lang.as_str(), context_key, None);
+    let args = crate::args!(context = context_text, error = error.to_string());
+    let text = locales::get_text(
+        lang.as_str(),
+        locales::LocaleKey::AdminErrorSystem,
+        args.as_ref(),
+    );
+    if let Err(e) = bot.send_message(admin_chat_id, text).await {
+        tracing::error!(error = %e, "Failed to notify admin about system error");
+    }
+}
+
 pub async fn answer_callback(
     bot: &Bot,
     query_id: &teloxide_ng::types::CallbackQueryId,

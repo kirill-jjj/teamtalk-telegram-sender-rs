@@ -43,6 +43,7 @@ pub enum LocaleKey {
     AdminErrorContextSubscription,
     AdminErrorContextTtCommand,
     AdminErrorContextUpdateListener,
+    AdminErrorSystem,
     AdminErrorUser,
     AdminSubEventSubscribed,
     AdminSubEventUnsubscribed,
