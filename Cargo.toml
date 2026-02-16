@@ -36,7 +36,7 @@ strum = { version = "0.27.2", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-log = "0.2"
-futures-util = "0.3.31"
+futures-util = "0.3.32"
 async-trait = "0.1.89"
 thiserror = "2.0.18"
 serde_with = "3.16.1"
