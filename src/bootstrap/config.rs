@@ -106,6 +106,10 @@ const fn default_tt_bridge_disabled_reply_cooldown_seconds() -> u64 {
     120
 }
 
+const fn default_follow_owner_enabled() -> bool {
+    false
+}
+
 #[derive(Deserialize, Clone)]
 pub struct DatabaseConfig {
     pub db_file: PathBuf,
@@ -135,6 +139,8 @@ pub struct TeamTalkConfig {
     #[serde(default)]
     pub global_ignore_usernames: Vec<TtUsername>,
     pub guest_username: Option<TtUsername>,
+    #[serde(default)]
+    pub follow_owner: FollowOwnerConfig,
 }
 
 impl TeamTalkConfig {
@@ -145,6 +151,27 @@ impl TeamTalkConfig {
             .filter(|s| !s.is_empty())
             .unwrap_or(self.host_name.as_str())
     }
+}
+
+#[derive(Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum FollowOfflinePolicy {
+    #[default]
+    LeaveRoot,
+    Stay,
+    FallbackChannel,
+}
+
+#[derive(Deserialize, Clone, Default)]
+pub struct FollowOwnerConfig {
+    #[serde(default = "default_follow_owner_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub offline_policy: FollowOfflinePolicy,
+    #[serde(default)]
+    pub fallback_channel: Option<TtChannelName>,
+    #[serde(default)]
+    pub fallback_channel_password: Option<TtChannelPassword>,
 }
 
 fn default_plugins_dir() -> PathBuf {

@@ -1,5 +1,5 @@
 use super::*;
-use crate::bootstrap::config::TeamTalkConfig;
+use crate::bootstrap::config::{FollowOwnerConfig, TeamTalkConfig};
 use crate::core::types::{
     TtChannelName, TtClientName, TtHostName, TtLoginName, TtNickname, TtPassword, TtServerName,
 };
@@ -19,6 +19,7 @@ fn base_config() -> TeamTalkConfig {
         server_name: None,
         global_ignore_usernames: Vec::new(),
         guest_username: None,
+        follow_owner: FollowOwnerConfig::default(),
     }
 }
 

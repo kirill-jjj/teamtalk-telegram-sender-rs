@@ -5,12 +5,20 @@ use super::Database;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AppSettingKey {
     ReplyQueueEnabledGlobal,
+    FollowOwnerEnabledOverride,
+    FollowOwnerPolicyOverride,
+    FollowOwnerFallbackChannelOverride,
+    FollowOwnerFallbackPasswordOverride,
 }
 
 impl AppSettingKey {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::ReplyQueueEnabledGlobal => "reply_queue_enabled_global",
+            Self::FollowOwnerEnabledOverride => "follow_owner_enabled_override",
+            Self::FollowOwnerPolicyOverride => "follow_owner_policy_override",
+            Self::FollowOwnerFallbackChannelOverride => "follow_owner_fallback_channel_override",
+            Self::FollowOwnerFallbackPasswordOverride => "follow_owner_fallback_password_override",
         }
     }
 }

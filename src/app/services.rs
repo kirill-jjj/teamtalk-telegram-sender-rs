@@ -25,5 +25,6 @@ pub mod tg_sub_settings;
 pub mod tg_subscribers;
 pub mod tt_cache;
 pub mod tt_context;
+pub mod tt_follow;
 pub mod tt_users;
 pub mod user_settings;

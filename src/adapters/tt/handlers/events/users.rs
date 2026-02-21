@@ -1,3 +1,4 @@
+use super::follow;
 use crate::adapters::tt::{WorkerContext, resolve_channel_name, resolve_server_name};
 use crate::app::services::reply_queue as reply_queue_service;
 use crate::app::services::tt_users as tt_users_service;
@@ -244,10 +245,19 @@ pub(super) fn handle_user_logged_in(
                 .send(crate::core::types::TtCommand::SyncRecordingSubscription { user_id })
                 .await;
         });
+
+        if ready_time.is_some_and(|t| t.elapsed() >= Duration::from_secs(2)) {
+            follow::handle_admin_join_or_login(client, ctx, &user);
+        }
     }
 }
 
-pub(super) fn handle_user_joined(client: &Client, ctx: &WorkerContext, msg: &Message) {
+pub(super) fn handle_user_joined(
+    client: &Client,
+    ctx: &WorkerContext,
+    msg: &Message,
+    ready_time: Option<&std::time::Instant>,
+) {
     if let Some(user) = msg.user()
         && user.id != client.my_id()
     {
@@ -268,6 +278,10 @@ pub(super) fn handle_user_joined(client: &Client, ctx: &WorkerContext, msg: &Mes
                 .send(crate::core::types::TtCommand::SyncRecordingSubscription { user_id })
                 .await;
         });
+
+        if ready_time.is_some_and(|t| t.elapsed() >= Duration::from_secs(2)) {
+            follow::handle_admin_join_or_login(client, ctx, &user);
+        }
     }
 }
 
@@ -278,6 +292,7 @@ pub(super) fn handle_user_logged_out(
     ready_time: Option<&std::time::Instant>,
 ) {
     if let Some(user) = msg.user() {
+        follow::handle_admin_logout(client, ctx, &user);
         let is_ready = ready_time.is_some_and(|t| t.elapsed() >= Duration::from_secs(2));
         let real_name = client.get_server_properties().map(|p| p.name);
         let server_name = resolve_server_name(&ctx.config.teamtalk, real_name.as_deref());

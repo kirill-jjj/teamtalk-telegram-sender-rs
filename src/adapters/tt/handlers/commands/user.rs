@@ -10,7 +10,7 @@ use teamtalk::types::TextMessage;
 use tokio::sync::Mutex;
 use tokio::task::spawn_local;
 
-use super::{admin, bridge, help, plugins, queue, skip, sub};
+use super::{admin, bridge, follow, help, plugins, queue, skip, sub};
 use crate::app::services::tt_users as tt_users_service;
 
 fn bridge_reply_config(ctx: &WorkerContext) -> (bool, Duration) {
@@ -43,6 +43,7 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
     let tt_bridge_disabled_reply_state = ctx.tt_bridge_disabled_reply_state.clone();
     let plugins = ctx.plugins.clone();
     let plugins_disabled = ctx.config.plugins.disabled.clone();
+    let follow_state = ctx.follow_state.clone();
     let (message_token_present, tt_bridge_disabled_reply_cooldown) = bridge_reply_config(ctx);
 
     spawn_local(async move {
@@ -115,22 +116,9 @@ pub(super) fn handle_user_message(client: &Client, ctx: &WorkerContext, msg: &Te
             message_token_present,
             tt_bridge_disabled_reply_cooldown,
             tt_bridge_disabled_reply_state,
+            follow_state,
         };
-        if handle_plugin_command(&ctx, &cmd, &cmd_args).await {
-            return;
-        }
-
-        match cmd.as_str() {
-            "/sub" => sub::handle_sub(&ctx).await,
-            "/unsub" => sub::handle_unsub(&ctx).await,
-            "/help" => help::handle_help(&ctx).await,
-            "/skip" => skip::handle_skip(&ctx).await,
-            "/queue" => queue::handle_queue(&ctx).await,
-            "/plugins" => plugins::handle_plugins(&ctx).await,
-            "/add_admin" => admin::handle_add_admin(&ctx).await,
-            "/remove_admin" => admin::handle_remove_admin(&ctx).await,
-            _ => bridge::handle_admin_bridge(&ctx).await,
-        }
+        dispatch_user_command(ctx, cmd, cmd_args).await;
     });
 }
 
@@ -153,6 +141,7 @@ pub(super) struct UserCtx {
     pub message_token_present: bool,
     pub tt_bridge_disabled_reply_cooldown: Duration,
     pub tt_bridge_disabled_reply_state: Arc<Mutex<HashMap<TtUserId, Instant>>>,
+    pub follow_state: Arc<std::sync::Mutex<crate::adapters::tt::context::FollowRuntimeState>>,
 }
 
 impl UserCtx {
@@ -209,4 +198,22 @@ async fn handle_plugin_command(ctx: &UserCtx, command: &str, args: &[String]) ->
             },
         )
         .await
+}
+
+async fn dispatch_user_command(ctx: UserCtx, cmd: String, cmd_args: Vec<String>) {
+    if handle_plugin_command(&ctx, &cmd, &cmd_args).await {
+        return;
+    }
+    match cmd.as_str() {
+        "/sub" => sub::handle_sub(&ctx).await,
+        "/unsub" => sub::handle_unsub(&ctx).await,
+        "/help" => help::handle_help(&ctx).await,
+        "/skip" => skip::handle_skip(&ctx).await,
+        "/queue" => queue::handle_queue(&ctx).await,
+        "/plugins" => plugins::handle_plugins(&ctx).await,
+        "/follow" => follow::handle_follow(&ctx).await,
+        "/add_admin" => admin::handle_add_admin(&ctx).await,
+        "/remove_admin" => admin::handle_remove_admin(&ctx).await,
+        _ => bridge::handle_admin_bridge(&ctx).await,
+    }
 }

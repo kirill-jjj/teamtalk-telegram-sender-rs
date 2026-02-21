@@ -2,6 +2,7 @@ mod driver;
 mod setup;
 
 use super::context::RunTeamtalkArgs;
+use crate::app::services::tt_follow;
 use crate::core::types::TtCommand;
 use std::collections::VecDeque;
 
@@ -25,6 +26,14 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         .operational_parameters
         .tt_reconnect_check_interval;
     let ctx = setup::build_worker_context(&args);
+    let permanent_override = tt_follow::load_permanent_override(&args.db).await;
+    {
+        let mut follow = ctx
+            .follow_state
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        follow.permanent_override = permanent_override;
+    }
 
     let mut rx_cmd = args.rx_cmd;
     let tx_cmd_clone = args.tx_cmd_clone.clone();
