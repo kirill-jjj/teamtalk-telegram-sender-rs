@@ -13,6 +13,12 @@ server_name = ""
 status_text = "Bot status text"
 global_ignore_usernames = ["admin_bot"]
 
+[teamtalk.follow_owner]
+enabled = false
+offline_policy = "leave_root" # leave_root | stay | fallback_channel
+fallback_channel = ""
+fallback_channel_password = ""
+
 [telegram]
 message_token = "YOUR_TELEGRAM_BOT_TOKEN_HERE"
 event_token = "YOUR_EVENT_BOT_TOKEN_HERE"
