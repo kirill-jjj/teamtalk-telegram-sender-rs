@@ -8,7 +8,6 @@ channel = "/"
 channel_password = ""
 encrypted = false
 client_name = "telegrambot"
-gender = "male"
 server_name = ""
 status_text = "Bot status text"
 global_ignore_usernames = ["admin_bot"]
@@ -22,6 +21,7 @@ admin_chat_id = 123456789
 admin_username = "AdminTG"
 default_lang = "ru"
 log_level = "info"
+gender = "male"
 
 [database]
 db_file = "bot_data.db"

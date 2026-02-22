@@ -35,6 +35,7 @@
 - Prefer `Result` with contextual errors over `unwrap` in non-test code.
 - Keep modules focused; avoid widening `pub` visibility unless needed.
 - Completely avoid adding code comments unless explicitly requested.
+- Do not change linting/tooling policy (`clippy` flags, rustfmt toolchain, lefthook, CI lint steps) unless explicitly requested.
 - `Cargo.lock` is committed in this repo; avoid manual edits and prefer `cargo update` when needed.
 - When asked to commit and push, split commits by type (e.g., docs + code), propose commit messages, and wait for confirmation before pushing. If explicit permission is given to do everything once, proceed; for later push requests, ask again.
 - Cargo registry cache lives under `%USERPROFILE%\.cargo\registry\` (e.g., `src` and `cache`). Use it to inspect crate sources (example: find teloxide reply helpers in `teloxide-0.17.0\src\sugar\request.rs`); cache keeps old versions for speed and is safe to read.
@@ -69,7 +70,9 @@
 ## Security & Configuration Tips
 - Do not log secrets (tokens, chat IDs, DB URLs).
 - Config is read from a local file (default `config.toml`); keep real credentials out of the repo.
-- Start from `config.toml.example`; required sections are `[teamtalk]`, `[telegram]`, `[database]`, plus `[general]` for defaults and optional `[operational_parameters]` overrides.
+- Start from `config.toml.example`; required sections are `[teamtalk]`, `[telegram]`, `[database]`, `[general]`.
+- `[plugins]` and `[operational_parameters]` are optional (defaults are applied in code).
+- Keep `gender` under `[general]` (not `[teamtalk]`).
 
 ## Architecture Overview
 - The TeamTalk client runs in a dedicated OS thread (via `tt_worker`) and communicates over channels to avoid blocking the Tokio runtime.
