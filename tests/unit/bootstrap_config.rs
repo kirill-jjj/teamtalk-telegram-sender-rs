@@ -1,5 +1,4 @@
 use super::*;
-use crate::bootstrap::config::FollowOfflinePolicy;
 
 fn parse_config(toml_str: &str) -> Config {
     toml::from_str::<Config>(toml_str).unwrap()
@@ -97,18 +96,6 @@ fn defaults_are_applied() {
     assert_eq!(cfg.general.default_lang, LanguageCode::En);
     assert_eq!(cfg.general.log_level.as_str(), "info");
     assert_eq!(cfg.general.gender, GenderConfig::Neutral);
-    assert!(!cfg.teamtalk.follow_owner.enabled);
-    assert_eq!(
-        cfg.teamtalk.follow_owner.offline_policy,
-        FollowOfflinePolicy::LeaveRoot
-    );
-    assert!(cfg.teamtalk.follow_owner.fallback_channel.is_none());
-    assert!(
-        cfg.teamtalk
-            .follow_owner
-            .fallback_channel_password
-            .is_none()
-    );
     assert_eq!(cfg.operational_parameters.deeplink_ttl, 300);
     assert_eq!(cfg.operational_parameters.tt_reconnect_retry, 10);
     assert_eq!(
@@ -127,62 +114,6 @@ fn defaults_are_applied() {
         cfg.operational_parameters
             .tt_bridge_disabled_reply_cooldown_seconds,
         120
-    );
-}
-
-#[test]
-fn follow_owner_section_overrides_defaults() {
-    let cfg = parse_config(
-        r#"
-            [general]
-            admin_username = "admin"
-
-            [database]
-            db_file = "test.db"
-
-            [telegram]
-            event_token = "t"
-            message_token = "m"
-            admin_chat_id = 1
-
-            [teamtalk]
-            host_name = "host"
-            port = 1
-            encrypted = false
-            user_name = "u"
-            password = "p"
-            channel = "/"
-            nick_name = "n"
-            client_name = "c"
-
-            [teamtalk.follow_owner]
-            enabled = true
-            offline_policy = "fallback_channel"
-            fallback_channel = "/Music"
-            fallback_channel_password = "secret"
-            "#,
-    );
-
-    assert!(cfg.teamtalk.follow_owner.enabled);
-    assert_eq!(
-        cfg.teamtalk.follow_owner.offline_policy,
-        FollowOfflinePolicy::FallbackChannel
-    );
-    assert_eq!(
-        cfg.teamtalk
-            .follow_owner
-            .fallback_channel
-            .as_ref()
-            .map(TtChannelName::as_str),
-        Some("/Music")
-    );
-    assert_eq!(
-        cfg.teamtalk
-            .follow_owner
-            .fallback_channel_password
-            .as_ref()
-            .map(TtChannelPassword::as_str),
-        Some("secret")
     );
 }
 

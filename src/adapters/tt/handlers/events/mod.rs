@@ -8,7 +8,6 @@ use teamtalk::{Client, Event, Message};
 
 mod accounts;
 mod connection;
-mod follow;
 mod streaming;
 mod text;
 mod users;
@@ -51,13 +50,10 @@ pub fn handle_sdk_event(
             users::handle_user_logged_in(client, ctx, msg, ready_time.as_ref());
         }
         Event::UserJoined => {
-            users::handle_user_joined(client, ctx, msg, ready_time.as_ref());
+            users::handle_user_joined(client, ctx, msg);
         }
         Event::UserLoggedOut => {
             users::handle_user_logged_out(client, ctx, msg, ready_time.as_ref());
-        }
-        Event::CmdSuccess | Event::CmdError => {
-            follow::handle_command_result(event, ctx, msg);
         }
         Event::UserLeft => {
             users::handle_user_left(client, ctx, msg);

@@ -5,7 +5,6 @@ use teamtalk::types::TextMessage;
 mod admin;
 mod bridge;
 mod channel;
-mod follow;
 mod help;
 mod plugins;
 mod queue;

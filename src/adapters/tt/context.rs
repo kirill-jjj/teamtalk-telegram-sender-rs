@@ -1,6 +1,5 @@
 use crate::app::plugins::PluginManagerHandle;
 use crate::app::services::tt_context::TtServiceContext;
-use crate::app::services::tt_follow::FollowOverride;
 use crate::app::state::StateHandle;
 use crate::bootstrap::config::Config;
 use crate::core::types::{
@@ -8,7 +7,7 @@ use crate::core::types::{
 };
 use crate::infra::db::Database;
 use crate::infra::locales;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 use teamtalk::Client;
@@ -66,7 +65,6 @@ pub struct WorkerContext {
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
     pub tt_bridge_disabled_reply_state: Arc<Mutex<HashMap<TtUserId, Instant>>>,
-    pub follow_state: Arc<std::sync::Mutex<FollowRuntimeState>>,
     pub plugins: PluginManagerHandle,
 }
 
@@ -87,18 +85,4 @@ pub struct RunTeamtalkArgs {
     pub plugins: PluginManagerHandle,
     pub client: Client,
     pub tx_init: oneshot::Sender<Result<(), String>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct PendingFollowCmd {
-    pub action: &'static str,
-    pub target_channel: Option<TtChannelName>,
-}
-
-#[derive(Debug, Default)]
-pub struct FollowRuntimeState {
-    pub session_override: FollowOverride,
-    pub permanent_override: FollowOverride,
-    pub admin_sessions: HashSet<TtUserId>,
-    pub pending_cmds: HashMap<i32, PendingFollowCmd>,
 }

@@ -78,15 +78,6 @@ global_ignore_usernames = ["admin_bot"]
 # Optional guest username for filtering
 guest_username = ""
 
-[teamtalk.follow_owner]
-# Follow main admin (from [general].admin_username)
-enabled = false
-# leave_root | stay | fallback_channel
-offline_policy = "leave_root"
-# Used when offline_policy = "fallback_channel"
-fallback_channel = ""
-fallback_channel_password = ""
-
 [telegram]
 # Token for the main interaction bot (optional, disables TG interactions if missing)
 event_token = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
@@ -108,27 +99,6 @@ tt_reconnect_check_interval_seconds = 30
 [database]
 db_file = "bot_data.db"
 ```
-
-### Follow Owner parameters
-
-`[teamtalk.follow_owner]`:
-
-| Parameter | Type | Allowed values | Default | Description |
-|---|---|---|---|---|
-| `enabled` | `bool` | `true` / `false` | `false` | Enables follow mode for `general.admin_username`. |
-| `offline_policy` | `string` | `leave_root`, `stay`, `fallback_channel` | `leave_root` | Action when the main admin goes fully offline. |
-| `fallback_channel` | `string` | TeamTalk channel path (e.g. `/Music`) or empty string | empty | Target channel when `offline_policy = "fallback_channel"`. |
-| `fallback_channel_password` | `string` | channel password or empty string | empty | Password for `fallback_channel` if needed. |
-
-Runtime control from TeamTalk private messages (main admin only):
-
-| Command | Description |
-|---|---|
-| `/follow status` | Shows effective state and source (`config`, `session`, `permanent`). |
-| `/follow on [session\|permanent]` | Enables follow mode in runtime (`session` default). |
-| `/follow off [session\|permanent]` | Disables follow mode in runtime (`session` default). |
-| `/follow policy <leave_root\|stay\|fallback_channel> [session\|permanent]` | Changes offline behavior. |
-| `/follow fallback <channel_path> [password] [session\|permanent]` | Sets fallback channel/password. Use `none` to clear channel. |
 
 ## 🏃‍♂️ Running
 

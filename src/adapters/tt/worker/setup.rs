@@ -213,9 +213,6 @@ pub(super) fn build_worker_context(args: &RunTeamtalkArgs) -> WorkerContext {
         tt_bridge_disabled_reply_state: Arc::new(tokio::sync::Mutex::new(
             std::collections::HashMap::new(),
         )),
-        follow_state: Arc::new(std::sync::Mutex::new(
-            crate::adapters::tt::context::FollowRuntimeState::default(),
-        )),
         plugins: args.plugins.clone(),
     }
 }
