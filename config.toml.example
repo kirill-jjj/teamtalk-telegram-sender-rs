@@ -26,6 +26,13 @@ gender = "male"
 [database]
 db_file = "bot_data.db"
 
+[afk_notifications]
+enabled_default = false
+threshold_minutes_default = 10
+list_mode_default = "none"
+cooldown_seconds_default = 0
+poll_interval_seconds = 15
+
 [plugins]
 enabled = true
 dir = "plugins"

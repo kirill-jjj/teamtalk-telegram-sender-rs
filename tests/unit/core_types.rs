@@ -39,6 +39,21 @@ fn mute_list_mode_roundtrip() {
 }
 
 #[test]
+fn afk_list_mode_roundtrip() {
+    assert_eq!(AfkListMode::try_from("none").unwrap(), AfkListMode::None);
+    assert_eq!(
+        AfkListMode::try_from("blacklist").unwrap(),
+        AfkListMode::Blacklist
+    );
+    assert_eq!(
+        AfkListMode::try_from("whitelist").unwrap(),
+        AfkListMode::Whitelist
+    );
+    assert!(AfkListMode::try_from("invalid").is_err());
+    assert_eq!(AfkListMode::None.to_string(), "none");
+}
+
+#[test]
 fn deeplink_action_roundtrip() {
     assert_eq!(
         DeeplinkAction::try_from("subscribe").unwrap(),

@@ -1,6 +1,6 @@
 use super::{
-    JoinGender, LanguageCode, NotificationType, RecordingFileFormat, TgChatId, TgMessageId,
-    TtChannelId, TtChannelName, TtNickname, TtServerName, TtUserId, TtUsername,
+    JoinGender, LanguageCode, NotificationType, RecordingFileFormat, TelegramId, TgChatId,
+    TgMessageId, TtChannelId, TtChannelName, TtNickname, TtServerName, TtUserId, TtUsername,
 };
 use std::path::PathBuf;
 
@@ -36,6 +36,11 @@ pub enum BridgeEvent {
         file_path: PathBuf,
         caption: Option<String>,
         delete_after_send: bool,
+    },
+    AfkStatus {
+        recipient: TelegramId,
+        nickname: TtNickname,
+        is_afk: bool,
     },
 }
 

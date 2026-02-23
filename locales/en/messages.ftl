@@ -76,9 +76,38 @@ msg-choose-lang = Please choose your language:
 btn-lang = Language
 btn-sub-settings = Subscription Settings
 btn-notif-settings = Notification Settings
+btn-afk-settings = AFK settings
+btn-afk-toggle = AFK: { $status }
+btn-afk-threshold-minus = Threshold -1
+btn-afk-threshold-plus = Threshold +1
+btn-afk-cooldown-minus = Cooldown -5
+btn-afk-cooldown-plus = Cooldown +5
+btn-afk-manage-blacklist = Manage blacklist
+btn-afk-manage-whitelist = Manage whitelist
+btn-afk-manage-overrides = Manage overrides
+btn-afk-mode-none = { $marker } None
+btn-afk-mode-blacklist = { $marker } BL
+btn-afk-mode-whitelist = { $marker } WL
 
 # Notification Settings
 notif-settings-title = <b>Notification Settings</b>
+afk-settings-title = <b>AFK settings</b>
+    Status: { $status }
+    Threshold: { $threshold } min
+    Mode: { $mode }
+    Cooldown: { $cooldown } sec
+afk-list-title-blacklist = AFK blacklist
+afk-list-title-whitelist = AFK whitelist
+afk-list-title-none = AFK list (mode none)
+afk-overrides-title = AFK overrides (tap row: add 10m or delete existing)
+toast-afk-updated = AFK updated
+toast-afk-threshold-updated = AFK threshold updated
+toast-afk-cooldown-updated = AFK cooldown updated
+toast-afk-mode-updated = AFK mode updated
+toast-afk-list-updated = AFK list updated
+toast-afk-override-deleted = AFK override deleted
+toast-afk-override-updated = Override { $user } to { $minutes }m
+toast-afk-switch-mode-first = Switch mode to blacklist or whitelist first
 btn-noon = Offline-only: { $status }
 btn-admin-sub-events = Admin sub/unsub alerts: { $status }
 btn-mute-manage = Manage Mute List
@@ -243,6 +272,8 @@ tt-sub-link = Click this link to subscribe: { $link }
 tt-unsub-link = Click this link to unsubscribe: { $link }
 tt-error-generic = Error. Try again.
 tt-bridge-disabled-user = Direct messages to the admin are currently disabled. Please try again later.
+tt-afk-status-away = { $nickname } AFK
+tt-afk-status-back = { $nickname } is back
 
 # Icons & Symbols
 icon-muted = 🔇

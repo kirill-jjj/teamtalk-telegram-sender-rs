@@ -1,4 +1,5 @@
 mod admin;
+mod afk;
 mod basic;
 mod queue;
 mod replies;
@@ -54,6 +55,8 @@ pub enum Command {
     Message(String),
     #[command(description = "Reply Queue")]
     Queue(String),
+    #[command(description = "AFK notifications")]
+    Afk(String),
     #[command(description = "Plugins (Admin)")]
     Plugins(String),
 }
@@ -186,6 +189,7 @@ impl<'a> CommandCtx<'a> {
             Command::Broadcast(text) => self.broadcast(text).await,
             Command::Message(text) => self.message(text).await,
             Command::Queue(text) => self.queue(text).await,
+            Command::Afk(text) => self.afk(text).await,
             Command::Plugins(text) => self.plugins(text).await,
         }
     }
@@ -240,6 +244,10 @@ impl<'a> CommandCtx<'a> {
 
     async fn queue(&self, text: String) -> ResponseResult<()> {
         queue::handle_queue(self, text).await
+    }
+
+    async fn afk(&self, text: String) -> ResponseResult<()> {
+        afk::handle_afk(self, text).await
     }
 
     async fn plugins(&self, text: String) -> ResponseResult<()> {
@@ -409,6 +417,7 @@ fn parse_command_from_enum(command: &Command) -> Option<(String, Vec<String>)> {
         Command::Broadcast(text) => Some(("broadcast".to_string(), vec![text.clone()])),
         Command::Message(text) => Some(("message".to_string(), vec![text.clone()])),
         Command::Queue(text) => parse_command_text(&format!("/queue {text}")),
+        Command::Afk(text) => parse_command_text(&format!("/afk {text}")),
         Command::Plugins(text) => parse_command_text(&format!("/plugins {text}")),
     }
 }

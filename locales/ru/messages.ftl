@@ -78,9 +78,38 @@ msg-choose-lang = Пожалуйста, выберите ваш язык:
 btn-lang = Язык (Language)
 btn-sub-settings = Настройки подписки
 btn-notif-settings = Настройки уведомлений
+btn-afk-settings = AFK настройки
+btn-afk-toggle = AFK: { $status }
+btn-afk-threshold-minus = Порог -1
+btn-afk-threshold-plus = Порог +1
+btn-afk-cooldown-minus = Кулдаун -5
+btn-afk-cooldown-plus = Кулдаун +5
+btn-afk-manage-blacklist = Управлять черным списком
+btn-afk-manage-whitelist = Управлять белым списком
+btn-afk-manage-overrides = Управлять override
+btn-afk-mode-none = { $marker } Нет
+btn-afk-mode-blacklist = { $marker } ЧС
+btn-afk-mode-whitelist = { $marker } БС
 
 # Notification Settings
 notif-settings-title = <b>Настройки уведомлений</b>
+afk-settings-title = <b>AFK настройки</b>
+    Статус: { $status }
+    Порог: { $threshold } мин
+    Режим: { $mode }
+    Кулдаун: { $cooldown } сек
+afk-list-title-blacklist = AFK черный список
+afk-list-title-whitelist = AFK белый список
+afk-list-title-none = AFK список (режим none)
+afk-overrides-title = AFK overrides (нажми: добавить 10м или удалить)
+toast-afk-updated = AFK обновлен
+toast-afk-threshold-updated = AFK порог обновлен
+toast-afk-cooldown-updated = AFK кулдаун обновлен
+toast-afk-mode-updated = AFK режим обновлен
+toast-afk-list-updated = AFK список обновлен
+toast-afk-override-deleted = AFK override удален
+toast-afk-override-updated = Override { $user } to { $minutes }m
+toast-afk-switch-mode-first = Сначала выберите режим: черный или белый список
 btn-noon = Только офлайн: { $status }
 btn-admin-sub-events = Оповещения админу о подписке: { $status }
 btn-mute-manage = Управление списком игнора
@@ -250,6 +279,8 @@ tt-sub-link = Нажмите на эту ссылку, чтобы подписа
 tt-unsub-link = Нажмите на эту ссылку, чтобы отписаться от уведомлений: { $link }
 tt-error-generic = Ошибка. Попробуйте позже.
 tt-bridge-disabled-user = Личные сообщения администратору сейчас отключены. Попробуйте позже.
+tt-afk-status-away = { $nickname } AFK
+tt-afk-status-back = { $nickname } вернулся
 
 # Icons & Symbols
 icon-muted = 🔇

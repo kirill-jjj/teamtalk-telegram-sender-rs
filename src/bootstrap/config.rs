@@ -14,10 +14,58 @@ pub struct Config {
     pub telegram: TelegramConfig,
     pub teamtalk: TeamTalkConfig,
     #[serde(default)]
+    pub afk_notifications: AfkNotificationsConfig,
+    #[serde(default)]
     pub plugins: PluginsConfig,
 
     #[serde(default)]
     pub operational_parameters: OperationalParameters,
+}
+
+const fn default_afk_enabled() -> bool {
+    false
+}
+
+const fn default_afk_threshold_minutes() -> i64 {
+    10
+}
+
+const fn default_afk_list_mode() -> crate::core::types::AfkListMode {
+    crate::core::types::AfkListMode::None
+}
+
+const fn default_afk_cooldown_seconds() -> i64 {
+    0
+}
+
+const fn default_afk_poll_interval_seconds() -> u64 {
+    15
+}
+
+#[derive(Deserialize, Clone)]
+pub struct AfkNotificationsConfig {
+    #[serde(default = "default_afk_enabled")]
+    pub enabled_default: bool,
+    #[serde(default = "default_afk_threshold_minutes")]
+    pub threshold_minutes_default: i64,
+    #[serde(default = "default_afk_list_mode")]
+    pub list_mode_default: crate::core::types::AfkListMode,
+    #[serde(default = "default_afk_cooldown_seconds")]
+    pub cooldown_seconds_default: i64,
+    #[serde(default = "default_afk_poll_interval_seconds")]
+    pub poll_interval_seconds: u64,
+}
+
+impl Default for AfkNotificationsConfig {
+    fn default() -> Self {
+        Self {
+            enabled_default: default_afk_enabled(),
+            threshold_minutes_default: default_afk_threshold_minutes(),
+            list_mode_default: default_afk_list_mode(),
+            cooldown_seconds_default: default_afk_cooldown_seconds(),
+            poll_interval_seconds: default_afk_poll_interval_seconds(),
+        }
+    }
 }
 
 #[serde_as]

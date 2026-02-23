@@ -98,6 +98,13 @@ tt_reconnect_check_interval_seconds = 30
 
 [database]
 db_file = "bot_data.db"
+
+[afk_notifications]
+enabled_default = false
+threshold_minutes_default = 10
+list_mode_default = "none" # none|blacklist|whitelist
+cooldown_seconds_default = 0
+poll_interval_seconds = 15
 ```
 
 ## 🏃‍♂️ Running
@@ -136,6 +143,7 @@ docker run --rm \
 *   `/menu` - Open the main interactive menu.
 *   `/who` - Show a list of online users in TeamTalk grouped by channel.
 *   `/settings` - Open subscription and notification settings.
+*   `/afk` - Manage AFK notifications (`on|off`, threshold, mode, list, overrides).
 *   `/unsub` - Unsubscribe from notifications.
 
 ### Admin Commands (Restricted)

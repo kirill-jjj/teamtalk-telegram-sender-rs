@@ -44,6 +44,101 @@ pub(super) fn spawn_cache_refresh(
     });
 }
 
+pub(super) fn spawn_afk_monitor(ctx: WorkerContext) {
+    let configured = ctx.config.afk_notifications.poll_interval_seconds;
+    let interval_seconds = configured.max(1);
+    if configured == 0 {
+        tracing::warn!(
+            component = "tt_worker",
+            configured_poll_interval_seconds = configured,
+            used_poll_interval_seconds = interval_seconds,
+            "AFK poll interval cannot be 0; falling back to 1 second"
+        );
+    }
+    let poll_interval = Duration::from_secs(interval_seconds);
+    tokio::task::spawn_local(async move {
+        let mut tick = interval(poll_interval);
+        loop {
+            tick.tick().await;
+            let snapshot = {
+                let state = ctx.afk_state.lock().await;
+                state
+                    .iter()
+                    .map(|(k, v)| (*k, v.clone()))
+                    .collect::<Vec<_>>()
+            };
+
+            let now = std::time::Instant::now();
+            let mut to_notify: Vec<(
+                crate::core::types::TtUserId,
+                crate::core::types::TelegramId,
+                crate::core::types::TtNickname,
+            )> = Vec::new();
+            for (user_id, afk) in snapshot {
+                if !afk.is_away {
+                    continue;
+                }
+                if afk.username.as_str().trim().is_empty() {
+                    continue;
+                }
+                let elapsed = afk.away_since.map(|v| now.saturating_duration_since(v));
+                let Some(elapsed) = elapsed else {
+                    continue;
+                };
+
+                let recipients = match ctx.db.get_afk_recipients_for_username(&afk.username).await {
+                    Ok(items) if !items.is_empty() => items,
+                    Ok(_) => continue,
+                    Err(err) => {
+                        tracing::error!(
+                            component = "tt_worker",
+                            tt_username = %afk.username,
+                            error = %err,
+                            "Failed to load AFK recipients in monitor"
+                        );
+                        continue;
+                    }
+                };
+                for recipient in recipients {
+                    if afk.notified_recipients.contains(&recipient.telegram_id) {
+                        continue;
+                    }
+                    let threshold_seconds = recipient.threshold_minutes.max(1).cast_unsigned() * 60;
+                    let cooldown_seconds = recipient.cooldown_seconds.max(0).cast_unsigned();
+                    let effective = Duration::from_secs(threshold_seconds.max(cooldown_seconds));
+                    if elapsed >= effective {
+                        to_notify.push((user_id, recipient.telegram_id, afk.nickname.clone()));
+                    }
+                }
+            }
+
+            if to_notify.is_empty() {
+                continue;
+            }
+
+            {
+                let mut state = ctx.afk_state.lock().await;
+                for (user_id, recipient, _) in &to_notify {
+                    if let Some(s) = state.get_mut(user_id) {
+                        s.notified_recipients.insert(*recipient);
+                    }
+                }
+            }
+
+            for (_, recipient, nickname) in to_notify {
+                let _ = ctx
+                    .tx_bridge
+                    .send(crate::core::types::BridgeEvent::AfkStatus {
+                        recipient,
+                        nickname,
+                        is_afk: true,
+                    })
+                    .await;
+            }
+        }
+    });
+}
+
 pub(super) async fn preload_caches(services: &crate::app::services::tt_context::TtServiceContext) {
     if !tt_cache_service::preload_all_ctx(services).await {
         tracing::warn!(component = "tt_worker", "Failed to preload TT user caches");
@@ -213,6 +308,7 @@ pub(super) fn build_worker_context(args: &RunTeamtalkArgs) -> WorkerContext {
         tt_bridge_disabled_reply_state: Arc::new(tokio::sync::Mutex::new(
             std::collections::HashMap::new(),
         )),
+        afk_state: Arc::new(tokio::sync::Mutex::new(std::collections::HashMap::new())),
         plugins: args.plugins.clone(),
     }
 }

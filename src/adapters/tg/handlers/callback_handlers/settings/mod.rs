@@ -12,6 +12,7 @@ mod notif;
 mod queue;
 mod sub;
 
+#[allow(clippy::too_many_lines)]
 pub async fn handle_settings(
     bot: Bot,
     q: CallbackQuery,
@@ -46,6 +47,9 @@ pub async fn handle_settings(
         SettingsAction::NotifSelect => {
             notif::handle_notif_select(&bot, msg, state, telegram_id, lang).await?;
         }
+        SettingsAction::AfkMenu => {
+            notif::handle_afk_menu(&bot, msg, state, telegram_id, lang).await?;
+        }
         SettingsAction::NoonToggle => {
             notif::handle_noon_toggle(&bot, &q, state, msg, telegram_id, lang).await?;
         }
@@ -70,6 +74,74 @@ pub async fn handle_settings(
         }
         SettingsAction::QueueClearAll => {
             queue::handle_queue_clear_all(&bot, &q, state, msg, telegram_id, lang).await?;
+        }
+        SettingsAction::AfkToggle => {
+            notif::handle_afk_toggle(&bot, &q, state, msg, telegram_id, lang).await?;
+        }
+        SettingsAction::AfkThresholdStep { delta } => {
+            notif::handle_afk_threshold_step(&bot, &q, state, msg, telegram_id, lang, delta)
+                .await?;
+        }
+        SettingsAction::AfkCooldownStep { delta } => {
+            notif::handle_afk_cooldown_step(&bot, &q, state, msg, telegram_id, lang, delta).await?;
+        }
+        SettingsAction::AfkModeSet { mode } => {
+            notif::handle_afk_mode_set(&bot, &q, state, msg, telegram_id, lang, mode).await?;
+        }
+        SettingsAction::AfkList { mode, page } => {
+            notif::handle_afk_list(&bot, &q, state, msg, telegram_id, lang, mode, page).await?;
+        }
+        SettingsAction::AfkListToggle {
+            mode,
+            username,
+            page,
+        } => {
+            notif::handle_afk_list_toggle(
+                &bot,
+                &q,
+                state,
+                msg,
+                telegram_id,
+                lang,
+                mode,
+                username,
+                page,
+            )
+            .await?;
+        }
+        SettingsAction::AfkOverrides { page } => {
+            notif::handle_afk_overrides(&bot, &q, state, msg, telegram_id, lang, page).await?;
+        }
+        SettingsAction::AfkOverrideDelete { username, page } => {
+            notif::handle_afk_override_delete(
+                &bot,
+                &q,
+                state,
+                msg,
+                telegram_id,
+                lang,
+                username,
+                page,
+            )
+            .await?;
+        }
+        SettingsAction::AfkOverrideSetPreset {
+            username,
+            minutes,
+            page,
+        } => {
+            notif::handle_afk_override_set_preset(
+                &bot,
+                &q,
+                state,
+                msg,
+                telegram_id,
+                lang,
+                username,
+                minutes,
+                page,
+            )
+            .await?;
         }
     }
     Ok(())

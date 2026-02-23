@@ -108,6 +108,59 @@ pub(super) async fn handle_broadcast(
     }
 }
 
+pub(super) async fn handle_afk_status(
+    deps: &BridgeDeps<'_>,
+    recipient: crate::core::types::TelegramId,
+    nickname: TtNickname,
+    is_afk: bool,
+) {
+    let Some(bot) = deps.event_bot else {
+        return;
+    };
+    let lang = match deps
+        .services
+        .db
+        .get_or_create_user(recipient, deps.default_lang)
+        .await
+    {
+        Ok(settings) => settings.language_code,
+        Err(err) => {
+            tracing::warn!(
+                component = "bridge",
+                telegram_id = recipient.as_i64(),
+                error = %err,
+                "Failed to resolve recipient settings for AFK status"
+            );
+            deps.default_lang
+        }
+    };
+    let display_name = if nickname.as_str().trim().is_empty() {
+        locales::get_text(lang.as_str(), LocaleKey::DisplayUnknownUser, None)
+    } else {
+        nickname.as_str().to_string()
+    };
+    let text = locales::get_text(
+        lang.as_str(),
+        if is_afk {
+            LocaleKey::TtAfkStatusAway
+        } else {
+            LocaleKey::TtAfkStatusBack
+        },
+        args!(nickname = display_name).as_ref(),
+    );
+    if let Err(err) = bot
+        .send_message(teloxide_ng::types::ChatId(recipient.as_i64()), text)
+        .await
+    {
+        tracing::warn!(
+            component = "bridge",
+            telegram_id = recipient.as_i64(),
+            error = %err,
+            "Failed to deliver AFK notification"
+        );
+    }
+}
+
 struct BroadcastTaskCtx {
     bot: Bot,
     state: crate::app::state::StateHandle,

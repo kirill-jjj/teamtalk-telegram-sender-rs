@@ -25,6 +25,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         .operational_parameters
         .tt_reconnect_check_interval;
     let ctx = setup::build_worker_context(&args);
+    setup::spawn_afk_monitor(ctx.clone());
 
     let mut rx_cmd = args.rx_cmd;
     let tx_cmd_clone = args.tx_cmd_clone.clone();

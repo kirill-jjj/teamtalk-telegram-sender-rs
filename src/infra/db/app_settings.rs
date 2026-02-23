@@ -5,12 +5,20 @@ use super::Database;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AppSettingKey {
     ReplyQueueEnabledGlobal,
+    AfkDefaultEnabled,
+    AfkDefaultThresholdMinutes,
+    AfkDefaultListMode,
+    AfkDefaultCooldownSeconds,
 }
 
 impl AppSettingKey {
     pub const fn as_str(self) -> &'static str {
         match self {
             Self::ReplyQueueEnabledGlobal => "reply_queue_enabled_global",
+            Self::AfkDefaultEnabled => "afk_default_enabled",
+            Self::AfkDefaultThresholdMinutes => "afk_default_threshold_minutes",
+            Self::AfkDefaultListMode => "afk_default_list_mode",
+            Self::AfkDefaultCooldownSeconds => "afk_default_cooldown_seconds",
         }
     }
 }

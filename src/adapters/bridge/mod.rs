@@ -140,5 +140,12 @@ async fn handle_bridge_event(deps: &BridgeDeps<'_>, event: BridgeEvent) {
             tg_document::handle_tg_document(deps, chat_id, file_path, caption, delete_after_send)
                 .await;
         }
+        types::BridgeEvent::AfkStatus {
+            recipient,
+            nickname,
+            is_afk,
+        } => {
+            broadcast::handle_afk_status(deps, recipient, nickname, is_afk).await;
+        }
     }
 }

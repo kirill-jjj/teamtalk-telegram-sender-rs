@@ -108,6 +108,14 @@ pub enum MuteListMode {
     Whitelist,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
+pub enum AfkListMode {
+    None,
+    Blacklist,
+    Whitelist,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ActionStatus {
     Toggled,
@@ -142,6 +150,29 @@ impl TryFrom<&str> for MuteListMode {
             "blacklist" => Ok(Self::Blacklist),
             "whitelist" => Ok(Self::Whitelist),
             _ => Err(MuteListModeParseError),
+        }
+    }
+}
+
+impl fmt::Display for AfkListMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Blacklist => write!(f, "blacklist"),
+            Self::Whitelist => write!(f, "whitelist"),
+        }
+    }
+}
+
+impl TryFrom<&str> for AfkListMode {
+    type Error = &'static str;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "none" => Ok(Self::None),
+            "blacklist" => Ok(Self::Blacklist),
+            "whitelist" => Ok(Self::Whitelist),
+            _ => Err("unsupported afk list mode"),
         }
     }
 }

@@ -8,6 +8,7 @@ use crate::core::types::{
 use crate::infra::db::Database;
 use crate::infra::locales;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Instant;
 use teamtalk::Client;
@@ -55,6 +56,7 @@ pub fn resolve_channel_name(
     }
 }
 
+#[derive(Clone)]
 pub struct WorkerContext {
     pub config: Arc<Config>,
     pub state: StateHandle,
@@ -65,6 +67,7 @@ pub struct WorkerContext {
     pub is_streaming: Arc<std::sync::atomic::AtomicBool>,
     pub tt_msg_sem: Arc<Semaphore>,
     pub tt_bridge_disabled_reply_state: Arc<Mutex<HashMap<TtUserId, Instant>>>,
+    pub afk_state: Arc<Mutex<HashMap<TtUserId, AfkSessionState>>>,
     pub plugins: PluginManagerHandle,
 }
 
@@ -72,6 +75,16 @@ impl WorkerContext {
     pub fn services(&self) -> TtServiceContext {
         TtServiceContext::new(self.db.clone(), self.state.clone())
     }
+}
+
+#[derive(Debug, Clone)]
+pub struct AfkSessionState {
+    pub is_away: bool,
+    pub away_since: Option<Instant>,
+    pub notified_recipients: HashSet<crate::core::types::TelegramId>,
+    pub last_transition_at: Instant,
+    pub username: TtUsername,
+    pub nickname: crate::core::types::TtNickname,
 }
 
 pub struct RunTeamtalkArgs {

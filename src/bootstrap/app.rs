@@ -3,6 +3,7 @@ use crate::bootstrap::config::Config;
 use crate::bootstrap::config_errors::load_config;
 use crate::core::types::TtUsername;
 use crate::infra::db::Database;
+use crate::infra::db::app_settings::AppSettingKey;
 use anyhow::{Result, anyhow};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -80,6 +81,7 @@ impl Application {
 
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
         let Self { config, db } = self;
+        ensure_afk_defaults(&db, &config).await;
 
         spawn_deeplink_cleanup_task(
             db.clone(),
@@ -168,6 +170,47 @@ impl Application {
         .await?;
 
         Ok(())
+    }
+}
+
+async fn ensure_afk_defaults(db: &Database, config: &Config) {
+    let defaults = [
+        (
+            AppSettingKey::AfkDefaultEnabled,
+            config.afk_notifications.enabled_default.to_string(),
+        ),
+        (
+            AppSettingKey::AfkDefaultThresholdMinutes,
+            config
+                .afk_notifications
+                .threshold_minutes_default
+                .to_string(),
+        ),
+        (
+            AppSettingKey::AfkDefaultListMode,
+            config.afk_notifications.list_mode_default.to_string(),
+        ),
+        (
+            AppSettingKey::AfkDefaultCooldownSeconds,
+            config
+                .afk_notifications
+                .cooldown_seconds_default
+                .to_string(),
+        ),
+    ];
+
+    for (key, value) in defaults {
+        match db.get_app_setting(key).await {
+            Ok(Some(_)) => {}
+            Ok(None) => {
+                if let Err(err) = db.set_app_setting(key, &value).await {
+                    tracing::error!(error = %err, "Failed to initialize AFK app setting");
+                }
+            }
+            Err(err) => {
+                tracing::error!(error = %err, "Failed to read AFK app setting");
+            }
+        }
     }
 }
 

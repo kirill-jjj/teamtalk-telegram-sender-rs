@@ -1,6 +1,6 @@
 use crate::core::types::{
-    DbBanId, DeeplinkAction, LanguageCode, MuteListMode, NotificationSetting, TelegramId,
-    TtUsername,
+    AfkListMode, DbBanId, DeeplinkAction, LanguageCode, MuteListMode, NotificationSetting,
+    TelegramId, TtUsername,
 };
 use chrono::NaiveDateTime;
 
@@ -37,4 +37,27 @@ pub struct BanEntry {
 pub struct SubscriberInfo {
     pub telegram_id: TelegramId,
     pub teamtalk_username: Option<TtUsername>,
+}
+
+#[derive(sqlx::FromRow, Debug, Clone)]
+pub struct AfkUserSettings {
+    pub enabled: bool,
+    pub threshold_minutes: i64,
+    pub list_mode: AfkListMode,
+    pub cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct AfkResolvedSettings {
+    pub enabled: bool,
+    pub threshold_minutes: i64,
+    pub list_mode: AfkListMode,
+    pub cooldown_seconds: i64,
+}
+
+#[derive(Debug, Clone)]
+pub struct AfkRecipient {
+    pub telegram_id: TelegramId,
+    pub threshold_minutes: i64,
+    pub cooldown_seconds: i64,
 }

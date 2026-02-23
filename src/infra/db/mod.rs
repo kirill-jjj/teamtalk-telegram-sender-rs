@@ -1,4 +1,5 @@
 pub mod admins;
+pub mod afk;
 pub mod app_settings;
 pub mod bans;
 pub mod deeplinks;

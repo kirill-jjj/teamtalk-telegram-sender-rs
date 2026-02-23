@@ -1,5 +1,6 @@
 use crate::core::types::{
-    DbBanId, LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUserId, TtUsername,
+    AfkListMode, DbBanId, LanguageCode, MuteListMode, NotificationSetting, TelegramId, TtUserId,
+    TtUsername,
 };
 use anyhow::{Result, anyhow};
 use derive_more::From;
@@ -44,10 +45,15 @@ pub enum AdminAction {
 pub enum SettingsAction {
     Main,
     LangSelect,
-    LangSet { lang: LanguageCode },
+    LangSet {
+        lang: LanguageCode,
+    },
     SubSelect,
-    SubSet { setting: NotificationSetting },
+    SubSet {
+        setting: NotificationSetting,
+    },
     NotifSelect,
+    AfkMenu,
     NoonToggle,
     AdminSubEventsToggle,
     MuteManage,
@@ -56,6 +62,37 @@ pub enum SettingsAction {
     QueueToggleGlobal,
     QueueClearSelf,
     QueueClearAll,
+    AfkToggle,
+    AfkThresholdStep {
+        delta: i32,
+    },
+    AfkCooldownStep {
+        delta: i32,
+    },
+    AfkModeSet {
+        mode: AfkListMode,
+    },
+    AfkList {
+        mode: AfkListMode,
+        page: usize,
+    },
+    AfkListToggle {
+        mode: AfkListMode,
+        username: TtUsername,
+        page: usize,
+    },
+    AfkOverrides {
+        page: usize,
+    },
+    AfkOverrideDelete {
+        username: TtUsername,
+        page: usize,
+    },
+    AfkOverrideSetPreset {
+        username: TtUsername,
+        minutes: i64,
+        page: usize,
+    },
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]

@@ -111,13 +111,20 @@ async fn flush_reply_queue_on_login(
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    clippy::significant_drop_tightening,
+    clippy::if_not_else
+)]
 pub(super) fn handle_user_update(ctx: &WorkerContext, msg: &Message) {
     if let Some(user) = msg.user() {
         let state = ctx.state.clone();
         let tx_bridge = ctx.tx_bridge.clone();
+        let afk_state = ctx.afk_state.clone();
         let user_id = TtUserId::from(user.id.0);
         let new_username = TtUsername::from(user.username.as_str());
         let new_nickname = TtNickname::from(user.nickname.as_str());
+        let is_away = matches!(user.status.presence, teamtalk::types::UserPresence::Away);
         let new_gender = match user.status.gender {
             teamtalk::types::UserGender::Female => JoinGender::Female,
             teamtalk::types::UserGender::Neutral => JoinGender::Neutral,
@@ -141,6 +148,50 @@ pub(super) fn handle_user_update(ctx: &WorkerContext, msg: &Message) {
                     tracing::error!(error = %e, "Failed to send join broadcast");
                 }
                 return;
+            }
+            let now = std::time::Instant::now();
+            if !new_username.as_str().trim().is_empty() {
+                let recipients_to_notify = {
+                    let mut afk = afk_state.lock().await;
+                    let entry = afk.entry(user_id).or_insert_with(|| {
+                        crate::adapters::tt::context::AfkSessionState {
+                            is_away: false,
+                            away_since: None,
+                            notified_recipients: std::collections::HashSet::new(),
+                            last_transition_at: now,
+                            username: new_username.clone(),
+                            nickname: new_nickname.clone(),
+                        }
+                    });
+                    entry.username = new_username.clone();
+                    entry.nickname = new_nickname.clone();
+
+                    if entry.is_away != is_away {
+                        entry.is_away = is_away;
+                        entry.last_transition_at = now;
+                        if is_away {
+                            entry.away_since = Some(now);
+                            entry.notified_recipients.clear();
+                            Vec::new()
+                        } else {
+                            let recipients = entry.notified_recipients.iter().copied().collect();
+                            entry.away_since = None;
+                            entry.notified_recipients.clear();
+                            recipients
+                        }
+                    } else {
+                        Vec::new()
+                    }
+                };
+                for recipient in recipients_to_notify {
+                    let _ = tx_bridge
+                        .send(BridgeEvent::AfkStatus {
+                            recipient,
+                            nickname: new_nickname.clone(),
+                            is_afk: false,
+                        })
+                        .await;
+                }
             }
             match state.online_user_by_id(user_id).await {
                 Ok(Some(existing)) => {
@@ -283,6 +334,7 @@ pub(super) fn handle_user_logged_out(
         let server_name = resolve_server_name(&ctx.config.teamtalk, real_name.as_deref());
         let tx_bridge = ctx.tx_bridge.clone();
         let state = ctx.state.clone();
+        let afk_state = ctx.afk_state.clone();
         let user_id = TtUserId::from(user.id.0);
         let is_self = user.id == client.my_id();
         let tt_config = ctx.config.teamtalk.clone();
@@ -292,6 +344,10 @@ pub(super) fn handle_user_logged_out(
             teamtalk::types::UserGender::Male => JoinGender::Male,
         };
         tokio::task::spawn_local(async move {
+            {
+                let mut afk = afk_state.lock().await;
+                afk.remove(&user_id);
+            }
             let removed = match state.remove_online_user(user_id).await {
                 Ok(user) => user,
                 Err(err) => {

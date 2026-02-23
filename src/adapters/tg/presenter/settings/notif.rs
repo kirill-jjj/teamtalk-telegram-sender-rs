@@ -49,6 +49,10 @@ pub async fn send_notif_settings(
 
     rows.extend([
         vec![callback_button(
+            locales::get_text(lang.as_str(), locales::LocaleKey::BtnAfkSettings, None),
+            CallbackAction::Settings(SettingsAction::AfkMenu),
+        )],
+        vec![callback_button(
             locales::get_text(lang.as_str(), locales::LocaleKey::BtnMuteManage, None),
             CallbackAction::Settings(SettingsAction::MuteManage),
         )],
