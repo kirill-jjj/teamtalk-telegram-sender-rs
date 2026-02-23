@@ -124,3 +124,14 @@
   - verify plugin parity impact,
   - add mapping or record exception in `docs/internal/plugin-parity.md`,
   - keep CI green (`check`, `clippy`, `test`).
+
+## Regression Prevention (Commands/UI/Runtime)
+- Treat command verbs as strict contracts: `add` must only add, `del/remove` must only remove; never implement explicit verbs via generic toggle unless the command itself is `toggle`.
+- For list-manipulation commands, return explicit outcomes (`already present`, `not present`, `added`, `removed`) and keep behavior deterministic across repeated calls.
+- After editing items from a specific settings screen, return the user to the same screen/context (do not redirect to unrelated menus unless explicitly requested by UX spec).
+- Validate runtime durations/intervals from config before constructing timers; clamp to safe minimums (`>= 1s`) when zero/negative values can panic or break background tasks.
+- When a fallback is applied for invalid config, log both configured value and effective value with `warn` level.
+- Add or update tests for:
+  - command verb determinism (`add/del` idempotent semantics),
+  - callback navigation flow (post-action returns to expected screen),
+  - config edge cases (e.g., zero interval does not crash monitor loop).
