@@ -16,7 +16,7 @@ panic = "abort"
 opt-level = 3
 
 [dependencies]
-tokio = { version = "1.36", features = ["rt-multi-thread", "macros", "net", "time", "sync", "signal"] }
+tokio = { version = "1.50", features = ["rt-multi-thread", "macros", "net", "time", "sync", "signal"] }
 tokio-util = "0.7"
 teloxide_ng = { package = "teloxide-ng", git = "https://github.com/BlindMaster24/teloxide-ng.git", branch = "master", default-features = false, features = ["macros", "native-tls"] }
 sqlx = { version = "0.8", default-features = false, features = ["runtime-tokio-native-tls", "sqlite", "chrono", "macros", "migrate"] }
