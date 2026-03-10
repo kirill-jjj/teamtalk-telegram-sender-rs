@@ -31,7 +31,7 @@ uuid = { version = "1.21", features = ["fast-rng", "v7"] }
 teamtalk = { version = "4.0.0", features = ["async", "async-tokio", "dispatch"] }
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
-self_update = { version = "0.42", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }
+self_update = { version = "0.43", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }
 strum = { version = "0.28.0", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
