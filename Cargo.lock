@@ -3564,9 +3564,9 @@ dependencies = [
 
 [[package]]
 name = "teamtalk"
-version = "4.0.0"
+version = "5.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9de32e9d1b16be0d7ff4f8204e797be44a46a85ab71be16269df09bce19e77da"
+checksum = "0e1b9ccf8fa7e6315447df20be798d023c0a9eb765ac75e9a280c9a52b9f6155"
 dependencies = [
  "dirs",
  "evalexpr",
