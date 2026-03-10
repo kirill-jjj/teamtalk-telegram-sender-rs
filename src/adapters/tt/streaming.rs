@@ -78,20 +78,20 @@ pub fn handle_cmd(cmd: TtCommand, ctx: &mut HandleCmdCtx<'_>) -> bool {
     false
 }
 
-fn send_broadcast(ctx: &mut HandleCmdCtx<'_>, text: &str) {
-    ctx.async_client.with_client_mut(|client_ref| {
+fn send_broadcast(ctx: &HandleCmdCtx<'_>, text: &str) {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.send_to_all(text);
     });
 }
 
-fn send_user_reply(ctx: &mut HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId, text: &str) {
-    ctx.async_client.with_client_mut(|client_ref| {
+fn send_user_reply(ctx: &HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId, text: &str) {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.send_to_user(UserId(user_id.as_i32()), text);
     });
 }
 
-fn send_channel_message(ctx: &mut HandleCmdCtx<'_>, channel_id: TtChannelId, text: &str) {
-    ctx.async_client.with_client_mut(|client_ref| {
+fn send_channel_message(ctx: &HandleCmdCtx<'_>, channel_id: TtChannelId, text: &str) {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.send_to_channel(ChannelId(channel_id.as_i32()), text);
     });
 }
@@ -111,7 +111,7 @@ fn enqueue_stream(
         duration_ms,
         announce_text,
     });
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         (ctx.start_next)(client_ref, ctx.stream_queue, ctx.current_stream, ctx.tx_cmd);
     });
 }
@@ -130,13 +130,13 @@ fn skip_stream(ctx: &mut HandleCmdCtx<'_>) {
     if ctx.current_stream.is_some() {
         stop_current_stream(ctx);
     }
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         (ctx.start_next)(client_ref, ctx.stream_queue, ctx.current_stream, ctx.tx_cmd);
     });
 }
 
 fn stop_current_stream(ctx: &mut HandleCmdCtx<'_>) {
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.stop_streaming_media_file_to_channel();
     });
     let is_streaming = ctx.is_streaming.clone();
@@ -152,24 +152,24 @@ fn stop_current_stream(ctx: &mut HandleCmdCtx<'_>) {
     *ctx.current_stream = None;
 }
 
-fn set_streaming_status(ctx: &mut HandleCmdCtx<'_>, streaming: bool) {
+fn set_streaming_status(ctx: &HandleCmdCtx<'_>, streaming: bool) {
     if !streaming {
         ctx.is_streaming
             .store(false, std::sync::atomic::Ordering::Relaxed);
     }
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         (ctx.set_streaming_status)(client_ref, streaming);
     });
 }
 
-fn kick_user(ctx: &mut HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId) {
-    ctx.async_client.with_client_mut(|client_ref| {
+fn kick_user(ctx: &HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId) {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.kick_user(UserId(user_id.as_i32()), teamtalk::types::ChannelId(0));
     });
 }
 
-fn ban_user(ctx: &mut HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId) {
-    ctx.async_client.with_client_mut(|client_ref| {
+fn ban_user(ctx: &HandleCmdCtx<'_>, user_id: crate::core::types::TtUserId) {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.ban_user(UserId(user_id.as_i32()), client_ref.my_channel_id());
     });
 }
@@ -185,12 +185,12 @@ fn send_who(
     });
 }
 
-fn request_accounts(ctx: &mut HandleCmdCtx<'_>) {
+fn request_accounts(ctx: &HandleCmdCtx<'_>) {
     tracing::info!(
         component = "tt_worker",
         "Requesting full user accounts list"
     );
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         client_ref.list_user_accounts(0, 1000);
     });
 }
@@ -204,7 +204,7 @@ fn start_recording(
         return;
     }
 
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         let channel_id = client_ref.my_channel_id().0;
         if channel_id <= 0 {
             tracing::warn!(
@@ -279,7 +279,7 @@ fn stop_recording(ctx: &mut HandleCmdCtx<'_>, request: crate::core::types::Recor
     };
 
     let mut stop_ok = false;
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         stop_ok = client_ref.stop_recording_channel(active.channel_id.as_i32());
         if active.auto_subscribe_audio {
             for user_id in &active.auto_subscribed_users {
@@ -321,7 +321,7 @@ fn sync_recording_subscription(ctx: &mut HandleCmdCtx<'_>, user_id: crate::core:
         return;
     }
     let user_id = UserId(user_id.as_i32());
-    ctx.async_client.with_client_mut(|client_ref| {
+    ctx.async_client.with_client(|client_ref| {
         if user_id == client_ref.my_id() {
             return;
         }

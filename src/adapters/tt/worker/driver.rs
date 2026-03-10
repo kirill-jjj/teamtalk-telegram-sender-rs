@@ -99,7 +99,7 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
                 });
 
                 if !is_connected {
-                    async_client.with_client_mut(|client_ref| {
+                    async_client.with_client(|client_ref| {
                         client_ref.handle_reconnect(&connect_params, &mut reconnect_handler);
                     });
                 }
@@ -132,17 +132,17 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
     shutdown_driver(async_client, current_stream.is_some(), shutdown);
 }
 
-fn shutdown_driver(mut async_client: teamtalk::AsyncClient, has_stream: bool, shutdown: bool) {
+fn shutdown_driver(async_client: teamtalk::AsyncClient, has_stream: bool, shutdown: bool) {
     if shutdown {
         tracing::info!(component = "tt_worker", "Shutdown requested");
         if has_stream {
             tracing::info!(component = "tt_worker", "Stopping active stream");
-            async_client.with_client_mut(|client_ref| {
+            async_client.with_client(|client_ref| {
                 client_ref.stop_streaming_media_file_to_channel();
             });
         }
         tracing::info!(component = "tt_worker", "Logging out");
-        async_client.with_client_mut(|client_ref| {
+        async_client.with_client(|client_ref| {
             client_ref.logout();
         });
     }
