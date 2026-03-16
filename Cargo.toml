@@ -39,7 +39,7 @@ tracing-log = "0.2"
 futures-util = "0.3.32"
 async-trait = "0.1.89"
 thiserror = "2.0.18"
-serde_with = "3.17.0"
+serde_with = "3.18.0"
 clap = { version = "4.5.60", features = ["derive"] }
 mlua = { version = "0.11.6", features = ["lua54", "vendored", "send", "serialize"] }
 notify = "8"
