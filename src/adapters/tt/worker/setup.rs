@@ -6,8 +6,8 @@ use crate::core::types::TtCommand;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
+use teamtalk::client::ReconnectConfig;
 use teamtalk::client::media::MediaFilePlayback;
-use teamtalk::client::{ConnectParamsOwned, ReconnectConfig};
 use teamtalk::events::Event;
 use teamtalk::types::{ChannelId, UserStatus};
 use teamtalk::{Client, LoginParams};
@@ -189,13 +189,6 @@ pub(super) fn configure_auto_reconnect(client: &Client, config: &crate::bootstra
         config.teamtalk.user_name.as_str(),
         config.teamtalk.password.as_str(),
         config.teamtalk.client_name.as_str(),
-    ));
-
-    client.set_reconnect_params(ConnectParamsOwned::new(
-        config.teamtalk.host_name.as_str(),
-        i32::try_from(config.teamtalk.port).unwrap_or_default(),
-        i32::try_from(config.teamtalk.port).unwrap_or_default(),
-        config.teamtalk.encrypted,
     ));
 }
 

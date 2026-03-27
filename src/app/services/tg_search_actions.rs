@@ -2,6 +2,7 @@ use crate::app::services::admin_bans as admin_bans_service;
 use crate::app::services::mute_lists as mute_lists_service;
 use crate::app::services::subscriber_actions as subscriber_actions_service;
 use crate::app::services::subscribers as subscribers_service;
+use crate::app::services::tg_search as tg_search_service;
 use crate::app::services::user_settings as user_settings_service;
 use crate::app::state::StateHandle;
 use crate::core::types::{LanguageCode, MuteListMode, TelegramId, TtUsername};
@@ -46,25 +47,9 @@ pub async fn list_muted_users(
     telegram_id: TelegramId,
     mode: MuteListMode,
 ) -> Vec<TtUsername> {
-    match mute_lists_service::get_muted_users_list(db, telegram_id, mode).await {
-        Ok(items) => items,
-        Err(err) => {
-            tracing::error!(
-                telegram_id = telegram_id.as_i64(),
-                error = %err,
-                "Failed to list muted users for search actions"
-            );
-            Vec::new()
-        }
-    }
+    tg_search_service::list_muted_users(db, telegram_id, mode).await
 }
 
 pub async fn list_user_accounts(state: &StateHandle) -> Vec<teamtalk::types::UserAccount> {
-    match state.user_accounts_sorted().await {
-        Ok(accounts) => accounts,
-        Err(err) => {
-            tracing::error!(error = %err, "Failed to list TeamTalk accounts for search actions");
-            Vec::new()
-        }
-    }
+    tg_search_service::list_user_accounts(state).await
 }
