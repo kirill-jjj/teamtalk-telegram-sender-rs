@@ -6,10 +6,11 @@ use crate::core::types::TtCommand;
 use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
-use teamtalk::Client;
 use teamtalk::client::media::MediaFilePlayback;
-use teamtalk::client::{ReconnectConfig, ReconnectHandler};
+use teamtalk::client::{ConnectParamsOwned, ReconnectConfig};
+use teamtalk::events::Event;
 use teamtalk::types::{ChannelId, UserStatus};
+use teamtalk::{Client, LoginParams};
 use tokio::sync::Semaphore;
 use tokio::sync::mpsc::Sender;
 use tokio::time::interval;
@@ -172,13 +173,30 @@ pub(super) fn build_set_streaming_status(
     })
 }
 
-pub(super) fn build_reconnect_handler() -> ReconnectHandler {
-    ReconnectHandler::new(ReconnectConfig {
-        min_delay: Duration::from_millis(200),
-        max_delay: Duration::from_secs(60),
-        max_attempts: u32::MAX,
-        stability_threshold: Duration::from_secs(10),
-    })
+pub(super) fn configure_auto_reconnect(client: &Client, config: &crate::bootstrap::config::Config) {
+    client.enable_auto_reconnect_with_events(
+        ReconnectConfig {
+            min_delay: Duration::from_millis(200),
+            max_delay: Duration::from_secs(60),
+            max_attempts: u32::MAX,
+            stability_threshold: Duration::from_secs(10),
+        },
+        vec![Event::MySelfKicked],
+    );
+
+    client.set_login_params(LoginParams::new(
+        config.teamtalk.nick_name.as_str(),
+        config.teamtalk.user_name.as_str(),
+        config.teamtalk.password.as_str(),
+        config.teamtalk.client_name.as_str(),
+    ));
+
+    client.set_reconnect_params(ConnectParamsOwned::new(
+        config.teamtalk.host_name.as_str(),
+        i32::try_from(config.teamtalk.port).unwrap_or_default(),
+        i32::try_from(config.teamtalk.port).unwrap_or_default(),
+        config.teamtalk.encrypted,
+    ));
 }
 
 pub(super) fn connect_teamtalk(
@@ -198,7 +216,7 @@ pub(super) fn connect_teamtalk(
         reconnect_check_interval_seconds,
         "Connecting to TeamTalk"
     );
-    if let Err(e) = client.connect(host.as_str(), port, port, encrypted) {
+    if let Err(e) = client.connect_remember(host.as_str(), port, port, encrypted) {
         tracing::error!(
             host = %host,
             port,

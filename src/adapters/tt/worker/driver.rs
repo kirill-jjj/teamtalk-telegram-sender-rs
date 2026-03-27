@@ -6,7 +6,6 @@ use crate::core::types::TtCommand;
 use futures_util::StreamExt;
 use std::collections::VecDeque;
 use std::sync::Arc;
-use teamtalk::client::{ConnectParams, ReconnectHandler};
 use tokio::sync::mpsc::Sender;
 
 pub(super) struct DriverCtx {
@@ -21,12 +20,7 @@ pub(super) struct DriverCtx {
     pub(super) ctx: WorkerContext,
     pub(super) start_next: Arc<streaming::StartNextFn>,
     pub(super) set_streaming_status: Arc<streaming::SetStreamingStatusFn>,
-    pub(super) tt_host_name: String,
-    pub(super) tt_port: i32,
-    pub(super) tt_encrypted: bool,
-    pub(super) reconnect_handler: ReconnectHandler,
     pub(super) ready_time: Option<std::time::Instant>,
-    pub(super) is_connected: bool,
 }
 
 pub(super) async fn run_driver(ctx: DriverCtx) {
@@ -42,19 +36,8 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
         ctx,
         start_next,
         set_streaming_status,
-        tt_host_name,
-        tt_port,
-        tt_encrypted,
-        mut reconnect_handler,
         mut ready_time,
-        mut is_connected,
     } = ctx;
-    let connect_params = ConnectParams {
-        host: tt_host_name.as_str(),
-        tcp: tt_port,
-        udp: tt_port,
-        encrypted: tt_encrypted,
-    };
     let shutdown = loop {
         tokio::select! {
             received_cmd = cmd_rx.recv() => {
@@ -92,17 +75,9 @@ pub(super) async fn run_driver(ctx: DriverCtx) {
                         &ctx,
                         event,
                         &msg,
-                        &mut is_connected,
-                        &mut reconnect_handler,
                         &mut ready_time,
                     );
                 });
-
-                if !is_connected {
-                    async_client.with_client(|client_ref| {
-                        client_ref.handle_reconnect(&connect_params, &mut reconnect_handler);
-                    });
-                }
                 let mut shutdown_now = false;
                 while let Ok(cmd) = cmd_rx.try_recv() {
                     let mut handle_ctx = HandleCmdCtx {

@@ -1,37 +1,21 @@
 use crate::adapters::tt::WorkerContext;
 use crate::core::types::TtChannelPassword;
 use teamtalk::Client;
-use teamtalk::client::ReconnectHandler;
 use teamtalk::types::UserStatus;
 
 use super::parse_gender_cfg;
 
-pub(super) fn handle_connect_success(
-    client: &Client,
-    ctx: &WorkerContext,
-    is_connected: &mut bool,
-    reconnect_handler: &mut ReconnectHandler,
-) {
-    *is_connected = true;
-    reconnect_handler.mark_connected();
-    let tt_config = &ctx.config.teamtalk;
-    client.login(
-        tt_config.nick_name.as_str(),
-        tt_config.user_name.as_str(),
-        tt_config.password.as_str(),
-        tt_config.client_name.as_str(),
-    );
+pub(super) fn handle_connect_success(client: &Client) {
+    if let Err(err) = client.login_with_params() {
+        tracing::error!(component = "tt_worker", error = %err, "Failed to start TeamTalk login");
+    }
 }
 
 pub(super) fn handle_disconnect(
     ctx: &WorkerContext,
     event: teamtalk::Event,
-    is_connected: &mut bool,
-    reconnect_handler: &mut ReconnectHandler,
     ready_time: &mut Option<std::time::Instant>,
 ) {
-    *is_connected = false;
-    reconnect_handler.mark_disconnected();
     ctx.state.notify_clear_online_users();
     *ready_time = None;
     tracing::warn!(
@@ -55,6 +39,13 @@ pub(super) fn handle_logged_in(
     client.set_status(status, &tt_config.status_text);
     let chan_id = client.get_channel_id_from_path(tt_config.channel.as_str());
     if chan_id.0 > 0 {
+        client.set_last_channel(
+            chan_id,
+            tt_config
+                .channel_password
+                .as_ref()
+                .map(TtChannelPassword::as_str),
+        );
         let cmd_id = client.join_channel(
             chan_id,
             tt_config

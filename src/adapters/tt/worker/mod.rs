@@ -39,7 +39,6 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
 
     let _ = tx_init.send(Ok(()));
     let ready_time: Option<std::time::Instant> = None;
-    let is_connected = false;
     let stream_queue = VecDeque::new();
     let current_stream = None;
     let recording = None;
@@ -49,7 +48,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         tt_status_text,
     );
 
-    let reconnect_handler = setup::build_reconnect_handler();
+    setup::configure_auto_reconnect(&client, &args.config);
 
     setup::connect_teamtalk(
         &client,
@@ -60,9 +59,6 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         reconnect_check_interval_seconds,
     );
 
-    let tt_host_name_for_driver = tt_host_name.clone();
-    let tt_port_for_driver = tt_port;
-    let tt_encrypted_for_driver = tt_encrypted;
     let start_next = setup::build_start_next(is_streaming.clone());
 
     let async_client = client.into_async_with_config(teamtalk::AsyncConfig::new().buffer(1024));
@@ -87,12 +83,7 @@ pub async fn run_teamtalk_worker(args: RunTeamtalkArgs) {
         ctx,
         start_next,
         set_streaming_status,
-        tt_host_name: tt_host_name_for_driver.as_str().to_string(),
-        tt_port: tt_port_for_driver,
-        tt_encrypted: tt_encrypted_for_driver,
-        reconnect_handler,
         ready_time,
-        is_connected,
     }));
 
     if let Err(err) = driver.await {

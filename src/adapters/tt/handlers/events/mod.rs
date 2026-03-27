@@ -3,7 +3,6 @@ use crate::bootstrap::config::GenderConfig;
 use crate::core::types::TtUsername;
 use serde_json::json;
 use std::time::Instant;
-use teamtalk::client::ReconnectHandler;
 use teamtalk::{Client, Event, Message};
 
 mod accounts;
@@ -17,8 +16,6 @@ pub fn handle_sdk_event(
     ctx: &WorkerContext,
     event: Event,
     msg: &Message,
-    is_connected: &mut bool,
-    reconnect_handler: &mut ReconnectHandler,
     ready_time: &mut Option<Instant>,
 ) {
     tracing::trace!(component = "tt_worker", event = ?event, "Event received");
@@ -26,10 +23,10 @@ pub fn handle_sdk_event(
 
     match event {
         Event::ConnectSuccess => {
-            connection::handle_connect_success(client, ctx, is_connected, reconnect_handler);
+            connection::handle_connect_success(client);
         }
         e if e.is_reconnect_needed_with(&[Event::MySelfKicked]) => {
-            connection::handle_disconnect(ctx, e, is_connected, reconnect_handler, ready_time);
+            connection::handle_disconnect(ctx, e, ready_time);
         }
         Event::MySelfLoggedIn => {
             connection::handle_logged_in(client, ctx, ready_time);
