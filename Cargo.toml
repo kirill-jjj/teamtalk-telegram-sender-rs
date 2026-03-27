@@ -28,7 +28,7 @@ derive_more = { version = "2.1", features = ["from"] }
 anyhow = "1.0"
 chrono = { version = "0.4.44", default-features = false, features = ["clock", "serde", "std"] }
 uuid = { version = "1.21", features = ["fast-rng", "v7"] }
-teamtalk = { version = "5.0.0", features = ["async", "async-tokio", "dispatch"] }
+teamtalk = { version = "6.0.0", features = ["async", "async-tokio", "dispatch"] }
 fluent-templates = { version = "0.13", features = ["macros"] }
 unic-langid = "0.9"
 self_update = { version = "0.43", features = ["archive-zip", "archive-tar", "compression-zip-deflate", "compression-flate2"] }
@@ -40,7 +40,7 @@ futures-util = "0.3.32"
 async-trait = "0.1.89"
 thiserror = "2.0.18"
 serde_with = "3.18.0"
-clap = { version = "4.5.60", features = ["derive"] }
+clap = { version = "4.6.0", features = ["derive"] }
 mlua = { version = "0.11.6", features = ["lua54", "vendored", "send", "serialize"] }
 notify = "8"
 serde_json = "1.0"
