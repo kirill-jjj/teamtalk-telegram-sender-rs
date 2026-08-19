@@ -36,7 +36,7 @@ jobs:
           cache-targets: false
 
       - name: sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Install sqlx-cli (sqlite)
         run: cargo install sqlx-cli --no-default-features --features sqlite
@@ -129,7 +129,7 @@ jobs:
           cache-targets: false
 
       - name: sccache
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
 
       - name: Build Release
         run: cargo build --release --verbose
