@@ -40,7 +40,7 @@ pub(super) async fn find_matches(
     };
 
     candidates.retain(|c| c.match_key.to_lowercase().contains(&normalized_query));
-    candidates.sort_by(|a, b| a.label.to_lowercase().cmp(&b.label.to_lowercase()));
+    candidates.sort_by_key(|a| a.label.to_lowercase());
     Ok(candidates)
 }
 

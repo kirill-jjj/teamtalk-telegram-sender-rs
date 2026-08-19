@@ -63,7 +63,7 @@ fn plugin_name_from_path_returns_none_outside_root() {
 #[test]
 fn should_disable_triggers_at_threshold() {
     let mut errors = VecDeque::new();
-    let window = Duration::from_secs(60);
+    let window = Duration::from_mins(1);
     assert!(!should_disable(&mut errors, window, 3));
     assert!(!should_disable(&mut errors, window, 3));
     assert!(should_disable(&mut errors, window, 3));
@@ -72,10 +72,10 @@ fn should_disable_triggers_at_threshold() {
 #[test]
 fn should_disable_drops_old_errors_by_window() {
     let old = Instant::now()
-        .checked_sub(Duration::from_secs(120))
+        .checked_sub(Duration::from_mins(2))
         .expect("instant subtraction should be valid");
     let mut errors = VecDeque::from([old]);
-    let window = Duration::from_secs(60);
+    let window = Duration::from_mins(1);
     assert!(!should_disable(&mut errors, window, 2));
     assert_eq!(errors.len(), 1);
 }

@@ -94,7 +94,7 @@ pub async fn send_sub_link_account_list(args: SubLinkAccountListArgs<'_>) -> Res
         page,
     } = args;
     let mut accounts = accounts;
-    accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
+    accounts.sort_by_key(|a| a.username.to_lowercase());
 
     let keyboard = create_user_list_keyboard(
         &accounts,

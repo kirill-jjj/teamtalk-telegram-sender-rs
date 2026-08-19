@@ -20,7 +20,7 @@ pub(super) fn spawn_cache_refresh(
     services: crate::app::services::tt_context::TtServiceContext,
 ) {
     tokio::task::spawn_local(async move {
-        let mut tick = interval(Duration::from_secs(300));
+        let mut tick = interval(Duration::from_mins(5));
         loop {
             tick.tick().await;
             if !tt_cache_service::preload_all_ctx(&services).await {
@@ -177,7 +177,7 @@ pub(super) fn configure_auto_reconnect(client: &Client, config: &crate::bootstra
     client.enable_auto_reconnect_with_events(
         ReconnectConfig {
             min_delay: Duration::from_millis(200),
-            max_delay: Duration::from_secs(60),
+            max_delay: Duration::from_mins(1),
             max_attempts: u32::MAX,
             stability_threshold: Duration::from_secs(10),
         },
@@ -268,7 +268,7 @@ fn start_next_stream(
                 .send(TtCommand::StopStreamingIf { stream_id })
                 .await;
 
-            tokio::time::sleep(Duration::from_millis(10_000)).await;
+            tokio::time::sleep(Duration::from_secs(10)).await;
             let mut attempts = 0;
             loop {
                 let delete_path_attempt = delete_path.clone();

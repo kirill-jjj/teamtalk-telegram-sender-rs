@@ -15,7 +15,7 @@ impl UserAccountsStore {
 
     pub fn get_sorted(&self) -> Vec<UserAccount> {
         let mut accounts: Vec<UserAccount> = self.user_accounts.values().cloned().collect();
-        accounts.sort_by(|a, b| a.username.to_lowercase().cmp(&b.username.to_lowercase()));
+        accounts.sort_by_key(|a| a.username.to_lowercase());
         accounts
     }
 

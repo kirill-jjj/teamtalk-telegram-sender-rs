@@ -210,7 +210,7 @@ pub fn format_queue_message(
 }
 
 pub fn queue_items_sorted(items: &mut [ReplyQueueItem]) {
-    items.sort_by(|a, b| (a.created_at, a.id).cmp(&(b.created_at, b.id)));
+    items.sort_by_key(|a| (a.created_at, a.id));
 }
 
 #[derive(Clone, Copy)]

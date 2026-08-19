@@ -302,7 +302,7 @@ impl PluginManagerHandle {
             }
         };
         for entry in entries.flatten() {
-            if !entry.file_type().map(|f| f.is_dir()).unwrap_or(false) {
+            if !entry.file_type().is_ok_and(|f| f.is_dir()) {
                 continue;
             }
             let name = entry.file_name().to_string_lossy().to_string();
@@ -373,7 +373,7 @@ impl PluginManagerHandle {
 
 fn spawn_metrics_logger(plugins: PluginManagerHandle, cancel_token: CancellationToken) {
     tokio::spawn(async move {
-        let mut interval = tokio::time::interval(Duration::from_secs(300));
+        let mut interval = tokio::time::interval(Duration::from_mins(5));
         loop {
             tokio::select! {
                 () = cancel_token.cancelled() => break,
