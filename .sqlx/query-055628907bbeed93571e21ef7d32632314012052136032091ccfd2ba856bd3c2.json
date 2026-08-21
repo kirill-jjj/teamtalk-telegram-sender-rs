@@ -6,7 +6,13 @@
       {
         "name": "muted_teamtalk_username",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "muted_users",
+            "name": "muted_teamtalk_username"
+          }
+        }
       }
     ],
     "parameters": {

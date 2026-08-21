@@ -6,12 +6,24 @@
       {
         "name": "telegram_id!: TelegramId",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "subscribed_users",
+            "name": "telegram_id"
+          }
+        }
       },
       {
         "name": "teamtalk_username?: crate::core::types::TtUsername",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_settings",
+            "name": "teamtalk_username"
+          }
+        }
       }
     ],
     "parameters": {

@@ -6,24 +6,42 @@
       {
         "name": "id!: DbReplyQueueId",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reply_queue",
+            "name": "id"
+          }
+        }
       },
       {
         "name": "message_text!",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reply_queue",
+            "name": "message_text"
+          }
+        }
       },
       {
         "name": "created_at!",
         "ordinal": 2,
-        "type_info": "Datetime"
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "reply_queue",
+            "name": "created_at"
+          }
+        }
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true,
+      false,
       false,
       false
     ]

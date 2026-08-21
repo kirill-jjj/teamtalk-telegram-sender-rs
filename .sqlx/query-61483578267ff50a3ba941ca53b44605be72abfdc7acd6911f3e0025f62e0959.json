@@ -6,7 +6,13 @@
       {
         "name": "teamtalk_username?: TtUsername",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_settings",
+            "name": "teamtalk_username"
+          }
+        }
       }
     ],
     "parameters": {

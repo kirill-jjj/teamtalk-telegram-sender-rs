@@ -6,22 +6,46 @@
       {
         "name": "action!: crate::core::types::DeeplinkAction",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "deeplinks",
+            "name": "action"
+          }
+        }
       },
       {
         "name": "payload",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "deeplinks",
+            "name": "payload"
+          }
+        }
       },
       {
         "name": "expected_telegram_id?: crate::core::types::TelegramId",
         "ordinal": 2,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "deeplinks",
+            "name": "expected_telegram_id"
+          }
+        }
       },
       {
         "name": "expiry_time!",
         "ordinal": 3,
-        "type_info": "Datetime"
+        "type_info": "Datetime",
+        "origin": {
+          "Table": {
+            "table": "deeplinks",
+            "name": "expiry_time"
+          }
+        }
       }
     ],
     "parameters": {

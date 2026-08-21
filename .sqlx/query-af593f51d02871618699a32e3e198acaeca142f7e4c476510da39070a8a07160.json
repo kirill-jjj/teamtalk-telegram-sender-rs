@@ -6,7 +6,13 @@
       {
         "name": "language_code!: LanguageCode",
         "ordinal": 0,
-        "type_info": "Text"
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "user_settings",
+            "name": "language_code"
+          }
+        }
       }
     ],
     "parameters": {

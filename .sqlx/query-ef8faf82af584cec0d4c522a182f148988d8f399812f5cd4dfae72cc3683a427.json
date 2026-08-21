@@ -6,14 +6,20 @@
       {
         "name": "telegram_id!: TelegramId",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "user_settings",
+            "name": "telegram_id"
+          }
+        }
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true
+      false
     ]
   },
   "hash": "ef8faf82af584cec0d4c522a182f148988d8f399812f5cd4dfae72cc3683a427"
